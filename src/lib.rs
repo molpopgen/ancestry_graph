@@ -7,10 +7,16 @@ use std::hash::BuildHasherDefault;
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
 struct Node(usize);
 
+impl Node {
+    fn to_index(&self) -> usize {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 enum NodeStatus {
     None,
-    Alive,
+    Birth,
 }
 
 /// TODO: could be a newtype?
@@ -47,11 +53,26 @@ struct Ancestry {
     ancestry: AncestryType,
 }
 
+impl Ancestry {
+    fn birth(genome_length: i64) -> Option<Self> {
+        Some(Self {
+            segment: Segment::new(0, genome_length)?,
+            ancestry: AncestryType::ToSelf,
+        })
+    }
+}
+
 #[derive(Debug)]
 struct Graph {
     status: Vec<NodeStatus>,
     birth_time: Vec<Option<i64>>,
     parents: Vec<NodeHash>,
+    // NOTE: for many scenarios, it may be preferable
+    // to manage a Vec<(Node, Segment)> as the inner
+    // value. We would sort the inner Vec during simplification.
+    // The potential plus is that we'd avoid many hash lookups
+    // during evolution. Also, sorting small Vectors tends
+    // to be really fast.
     children: Vec<ChildMap>,
     ancestry: Vec<Vec<Ancestry>>,
     free_nodes: Vec<usize>,
@@ -122,9 +143,67 @@ impl Graph {
 
     pub fn add_node(&mut self, status: NodeStatus, birth_time: i64) -> Node {
         match self.free_nodes.pop() {
-            Some(index) => todo!("Some"),
-            None => todo!("None"),
+            Some(_index) => todo!("Some"),
+            None => {
+                self.birth_time.push(Some(birth_time));
+                self.status.push(status);
+                self.parents
+                    .push(NodeHash::with_hasher(BuildHasherDefault::default()));
+                self.children
+                    .push(ChildMap::with_hasher(BuildHasherDefault::default()));
+                match status {
+                    NodeStatus::Birth => self
+                        .ancestry
+                        .push(vec![Ancestry::birth(self.genome_length).unwrap()]),
+                    _ => self.ancestry.push(vec![]),
+                }
+                Node(self.birth_time.len() - 1)
+            }
         }
+    }
+
+    // TODO: we need a real error type
+    fn validate_parent_child_birth_time(&self, parent: Node, child: Node) -> Result<(), ()> {
+        let ptime = self
+            .birth_time
+            .get(parent.to_index())
+            .ok_or_else(|| ())?
+            .ok_or_else(|| ())?;
+        let ctime = self
+            .birth_time
+            .get(child.to_index())
+            .ok_or_else(|| ())?
+            .ok_or_else(|| ())?;
+        if ctime > ptime {
+            Ok(())
+        } else {
+            Err(())
+        }
+    }
+
+    // TODO: we need a real error type
+    pub fn record_transmission(
+        &mut self,
+        left: i64,
+        right: i64,
+        parent: Node,
+        child: Node,
+    ) -> Result<(), ()> {
+        self.validate_parent_child_birth_time(parent, child)?;
+        let segment = Segment::new(left, right).ok_or_else(|| ())?;
+        // We now "know" that parent, child are both in range.
+        // (The only uncertainty is that we haven't checked that all our arrays
+        //  are equal length.)
+        let children = &mut self.children[parent.to_index()];
+        match children.get_mut(&child) {
+            Some(ref mut vec) => vec.push(segment),
+            None => {
+                let _ = children.insert(child, vec![segment]);
+            }
+        }
+        let _ = self.parents[child.to_index()].insert(parent);
+
+        Ok(())
     }
 }
 
@@ -144,5 +223,10 @@ fn design_test_1() {
 fn design_test_2() {
     let mut graph = Graph::new(100).unwrap();
     let parent = graph.add_node(NodeStatus::None, 0);
-    let child = graph.add_node(NodeStatus::Alive, 1);
+    let child = graph.add_node(NodeStatus::Birth, 1);
+
+    graph
+        .record_transmission(0, graph.genome_length(), parent, child)
+        .unwrap();
+    todo!("need to actually test something");
 }
