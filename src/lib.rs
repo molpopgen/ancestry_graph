@@ -205,6 +205,11 @@ impl Graph {
 
         Ok(())
     }
+
+    // NOTE: panics if child is out of bounds
+    pub fn parents(&self, child: Node) -> impl Iterator<Item = &Node> + '_ {
+        self.parents[child.to_index()].iter()
+    }
 }
 
 #[test]
@@ -228,5 +233,6 @@ fn design_test_2() {
     graph
         .record_transmission(0, graph.genome_length(), parent, child)
         .unwrap();
+    assert_eq!(graph.parents(child).count(), 1);
     todo!("need to actually test something");
 }
