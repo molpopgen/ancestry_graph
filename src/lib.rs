@@ -228,12 +228,17 @@ fn design_test_1() {
 fn design_test_2() {
     let mut graph = Graph::new(100).unwrap();
     let parent = graph.add_node(NodeStatus::None, 0);
-    let child = graph.add_node(NodeStatus::Birth, 1);
+    let child0 = graph.add_node(NodeStatus::Birth, 1);
+    let child1 = graph.add_node(NodeStatus::Birth, 1);
 
     graph
-        .record_transmission(0, graph.genome_length(), parent, child)
+        .record_transmission(0, graph.genome_length(), parent, child0)
         .unwrap();
-    assert_eq!(graph.parents(child).count(), 1);
+    graph
+        .record_transmission(0, graph.genome_length(), parent, child1)
+        .unwrap();
+    assert_eq!(graph.parents(child0).count(), 1);
+    assert_eq!(graph.parents(child1).count(), 1);
     // WARNING: tests internal details
-    assert_eq!(graph.children[parent.to_index()].len(), 1);
+    assert_eq!(graph.children[parent.to_index()].len(), 2);
 }
