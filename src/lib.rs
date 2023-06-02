@@ -62,6 +62,12 @@ impl Ancestry {
     }
 }
 
+enum AncestryChange {
+    None,
+    Gain((Node, Segment)),
+    Loss((Node, Segment)),
+}
+
 #[derive(Debug)]
 struct Graph {
     status: Vec<NodeStatus>,
