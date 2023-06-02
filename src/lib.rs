@@ -54,6 +54,9 @@ struct Ancestry {
 }
 
 impl Ancestry {
+    /// Create ancestry for a new birth:
+    /// * Maps to self
+    /// * Segment over whole genome.
     fn birth(genome_length: i64) -> Option<Self> {
         Some(Self {
             segment: Segment::new(0, genome_length)?,
@@ -88,6 +91,7 @@ struct Graph {
     genome_length: i64,
 }
 
+// Constructors
 impl Graph {
     fn new(genome_length: i64) -> Option<Self> {
         Self::with_capacity(0, genome_length)
@@ -140,6 +144,26 @@ impl Graph {
         })
     }
 
+    // TODO: rename. This fn really calculates the changes
+    // needed to send to node's parents.
+    // Panics if node is invalid
+    // NOTE: this probably needs to return a Vec<AncestryChange>?
+    // NOTE: OR, instead of a Vec, we push changes to some STACK?
+    // NOTE: OR, it returns an iterator over changes, meaning
+    //       that pushing to some STACK is handled elsewhere?
+    fn calculate_ancestry_changes(&self, node: Node) -> AncestryChange {
+        match self.status[node.to_index()] {
+            NodeStatus::Birth => AncestryChange::Gain((
+                node,
+                Segment {
+                    left: 0,
+                    right: self.genome_length(),
+                },
+            )),
+            _ => todo!(),
+        }
+    }
+
     pub fn genome_length(&self) -> i64 {
         self.genome_length
     }
@@ -147,6 +171,7 @@ impl Graph {
     /// # Complexity
     ///
     /// `O(N)` where `N` is the number of nodes allocated in the graph.
+    // NOTE: this MAY not be pub in the long run
     pub fn iter_nodes_with_ancestry(&self) -> impl Iterator<Item = Node> + '_ {
         self.ancestry
             .iter()
@@ -307,6 +332,9 @@ fn design_test_3() {
     //   overlap with all of the parent ancestry,
     //   updating the parent ancestry to Overlap(...)
     // * ???
+
+    // WARNING: we are probably calling non-public functions below
+    let _ = graph.calculate_ancestry_changes(child0);
     todo!("this test is to work out sending ancestry changes up the tree");
 }
 
