@@ -81,6 +81,9 @@ struct Graph {
     // to be really fast.
     children: Vec<ChildMap>,
     ancestry: Vec<Vec<Ancestry>>,
+    // Used to cache nodes that are born.
+    // Simplification will traverse this.
+    births: Vec<Node>,
     free_nodes: Vec<usize>,
     genome_length: i64,
 }
@@ -99,6 +102,7 @@ impl Graph {
         let birth_time = Vec::with_capacity(capacity);
         let children = Vec::with_capacity(capacity);
         let ancestry = Vec::with_capacity(capacity);
+        let births = vec![];
         let free_nodes = Vec::new();
         Some(Self {
             status,
@@ -106,6 +110,7 @@ impl Graph {
             parents,
             children,
             ancestry,
+            births,
             free_nodes,
             genome_length,
         })
@@ -121,6 +126,7 @@ impl Graph {
             ancestry: AncestryType::ToSelf,
         };
         let ancestry = vec![vec![initial_ancestry]; num_nodes];
+        let births = vec![];
         let free_nodes = Vec::new();
         Some(Self {
             status,
@@ -128,6 +134,7 @@ impl Graph {
             parents,
             children,
             ancestry,
+            births,
             free_nodes,
             genome_length,
         })
@@ -147,6 +154,9 @@ impl Graph {
             .filter_map(|(i, a)| if a.is_empty() { None } else { Some(Node(i)) })
     }
 
+    // NOTE: this probably SHOULD NOT be pub in the long run
+    // What we need instead is a way to separate "start
+    // with a set of initial nodes" from "add a new node that is a birth"
     pub fn add_node(&mut self, status: NodeStatus, birth_time: i64) -> Node {
         match self.free_nodes.pop() {
             Some(_index) => todo!("Some"),
@@ -166,6 +176,30 @@ impl Graph {
                 Node(self.birth_time.len() - 1)
             }
         }
+    }
+
+    // NOTE: this COULD be considered a fallible op?
+    // But, where/how?
+    // Currently, OOM is the only possibility, which
+    // is a panic! in rust.
+    pub fn add_birth(&mut self, birth_time: i64) -> Result<Node, ()> {
+        let rv = self.add_node(NodeStatus::Birth, birth_time);
+        debug_assert_eq!(self.birth_time[rv.to_index()], Some(birth_time));
+        // births are (locally) in increasing order
+        match self.births.len() {
+            i if i > 0 => {
+                if self.birth_time[self.births[self.births.len() - 1].to_index()].unwrap()
+                    > birth_time
+                {
+                    return Err(());
+                } else {
+                    ()
+                }
+            }
+            _ => (),
+        }
+        self.births.push(rv);
+        Ok(rv)
     }
 
     // TODO: we need a real error type
@@ -234,8 +268,8 @@ fn design_test_1() {
 fn design_test_2() {
     let mut graph = Graph::new(100).unwrap();
     let parent = graph.add_node(NodeStatus::None, 0);
-    let child0 = graph.add_node(NodeStatus::Birth, 1);
-    let child1 = graph.add_node(NodeStatus::Birth, 1);
+    let child0 = graph.add_birth(1).unwrap();
+    let child1 = graph.add_birth(1).unwrap();
 
     graph
         .record_transmission(0, graph.genome_length(), parent, child0)
@@ -253,8 +287,8 @@ fn design_test_2() {
 fn design_test_3() {
     let mut graph = Graph::new(100).unwrap();
     let parent = graph.add_node(NodeStatus::None, 0);
-    let child0 = graph.add_node(NodeStatus::Birth, 1);
-    let child1 = graph.add_node(NodeStatus::Birth, 1);
+    let child0 = graph.add_birth(1).unwrap();
+    let child1 = graph.add_birth(1).unwrap();
 
     graph
         .record_transmission(0, graph.genome_length(), parent, child0)
@@ -274,4 +308,12 @@ fn design_test_3() {
     //   updating the parent ancestry to Overlap(...)
     // * ???
     todo!("this test is to work out sending ancestry changes up the tree");
+}
+
+#[test]
+fn test_births_out_of_order() {
+    let mut graph = Graph::new(100).unwrap();
+    let _ = graph.add_node(NodeStatus::None, 0);
+    let _ = graph.add_birth(2).unwrap();
+    assert!(graph.add_birth(1).is_err());
 }
