@@ -234,5 +234,6 @@ fn design_test_2() {
         .record_transmission(0, graph.genome_length(), parent, child)
         .unwrap();
     assert_eq!(graph.parents(child).count(), 1);
-    todo!("need to actually test something");
+    // WARNING: tests internal details
+    assert_eq!(graph.children[parent.to_index()].len(), 1);
 }
