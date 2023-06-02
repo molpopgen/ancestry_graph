@@ -242,3 +242,30 @@ fn design_test_2() {
     // WARNING: tests internal details
     assert_eq!(graph.children[parent.to_index()].len(), 2);
 }
+
+#[test]
+fn design_test_3() {
+    let mut graph = Graph::new(100).unwrap();
+    let parent = graph.add_node(NodeStatus::None, 0);
+    let child0 = graph.add_node(NodeStatus::Birth, 1);
+    let child1 = graph.add_node(NodeStatus::Birth, 1);
+
+    graph
+        .record_transmission(0, graph.genome_length(), parent, child0)
+        .unwrap();
+    graph
+        .record_transmission(0, graph.genome_length(), parent, child1)
+        .unwrap();
+    // TODO:
+    // What needs to happen:
+    // * The child nodes are "born", which means:
+    //   * They have ancestry ToSelf
+    //   * Birth + ToSelf is an ANCESTRY CHANGE
+    // * The ancestry changes need to be sent to the parent.
+    //   * We need something that says "Ancestry ToSelf is coming in from Node Y"
+    // * We need to recoginze that the ancestry changes
+    //   overlap with all of the parent ancestry,
+    //   updating the parent ancestry to Overlap(...)
+    // * ???
+    todo!("this test is to work out sending ancestry changes up the tree");
+}
