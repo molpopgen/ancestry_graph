@@ -152,6 +152,7 @@ impl Graph {
     // NOTE: OR, it returns an iterator over changes, meaning
     //       that pushing to some STACK is handled elsewhere?
     fn calculate_ancestry_changes(&self, node: Node) -> AncestryChange {
+        todo!("the return value needs to be able to match over single changes or many changes");
         match self.status[node.to_index()] {
             NodeStatus::Birth => AncestryChange::Gain((
                 node,
