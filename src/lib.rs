@@ -65,6 +65,7 @@ impl Ancestry {
     }
 }
 
+#[derive(Copy, Clone)]
 enum AncestryChange {
     None,
     Gain((Node, Segment)),
@@ -151,18 +152,40 @@ impl Graph {
     // NOTE: OR, instead of a Vec, we push changes to some STACK?
     // NOTE: OR, it returns an iterator over changes, meaning
     //       that pushing to some STACK is handled elsewhere?
-    fn calculate_ancestry_changes(&self, node: Node) -> AncestryChange {
-        todo!("the return value needs to be able to match over single changes or many changes");
+    fn calculate_ancestry_changes(&self, node: Node) -> Vec<AncestryChange> {
         match self.status[node.to_index()] {
-            NodeStatus::Birth => AncestryChange::Gain((
+            NodeStatus::Birth => vec![AncestryChange::Gain((
                 node,
                 Segment {
                     left: 0,
                     right: self.genome_length(),
                 },
-            )),
+            ))],
             _ => todo!(),
         }
+    }
+
+    fn propagage_ancestry_changes_to(&mut self, parent: Node, changes: &[AncestryChange]) {
+        // TODO list:
+        // * We need to identify all overlaps beteen parent
+        //   ancestry and changes.
+        //   (We can steal ideas from earlier prototypes.)
+        // * Update all current ancestry.
+        // * If there are any changes, propagate them to
+        //   the (unimplemented) changes stack for all of parent's parents.
+        // TECHNICALITIES:
+        // * Imagine current parent ancestry ToSelf.
+        //   The ancestry will be updated to contain Overlap([L/2, L)).
+        // * If the node is a "sample", the ancestry should be updated
+        //   to Unary(parent) and Overlap(...).
+        // QUESTIONS:
+        // * What if parent also has children (births)?
+        // * We have NOT resolved the data model -- is self.children
+        //   children or is it births?
+        //   * If births, then the ancestry changes of these
+        //     MUST be resolved already
+        //   * If children, do we have a problem?
+        todo!()
     }
 
     pub fn genome_length(&self) -> i64 {
@@ -204,10 +227,6 @@ impl Graph {
         }
     }
 
-    // NOTE: this COULD be considered a fallible op?
-    // But, where/how?
-    // Currently, OOM is the only possibility, which
-    // is a panic! in rust.
     pub fn add_birth(&mut self, birth_time: i64) -> Result<Node, ()> {
         let rv = self.add_node(NodeStatus::Birth, birth_time);
         debug_assert_eq!(self.birth_time[rv.to_index()], Some(birth_time));
@@ -273,6 +292,7 @@ impl Graph {
     }
 
     // NOTE: panics if child is out of bounds
+    // NOTE: may not need to be pub
     pub fn parents(&self, child: Node) -> impl Iterator<Item = &Node> + '_ {
         self.parents[child.to_index()].iter()
     }
@@ -335,8 +355,13 @@ fn design_test_3() {
     // * ???
 
     // WARNING: we are probably calling non-public functions below
-    let _ = graph.calculate_ancestry_changes(child0);
-    todo!("this test is to work out sending ancestry changes up the tree");
+    // NOTE: API is "wrong" -- changes "should" be updating
+    // something modeling "The complete set of changes related
+    // to parent 'i'".
+    let mut a0 = graph.calculate_ancestry_changes(child0);
+    let a1 = graph.calculate_ancestry_changes(child1);
+    a0.extend_from_slice(&a1);
+    graph.propagage_ancestry_changes_to(parent, &a0);
 }
 
 #[test]
