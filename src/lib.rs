@@ -854,6 +854,13 @@ fn design_overlapper_test_1() {
     assert_eq!(overlaps, expected_overlaps);
 }
 
+//        3    <- A "recent death"
+//        |
+//     -------
+//     |     |
+//     0     1 <- Births
+//
+// The final ancestry of 3 is Overlap(0), Overlap(1) for "whole genome".
 #[test]
 fn design_ancestry_update_calculation_test_0() {
     let genome_length = 100_i64;
@@ -907,6 +914,15 @@ fn design_ancestry_update_calculation_test_0() {
     todo!("this needs to lead to an API")
 }
 
+//        0    <- Death
+//        |
+//     -------
+//     |     |
+//     |     2 <- Death (loss of ancestry)
+//     |     |
+//     1     3 <- Births
+//
+// The final ancestry of 0 is Overlap(3), Overlap(1) for "whole genome".
 #[test]
 fn design_ancestry_update_calculation_test_1() {
     let genome_length = 100_i64;
@@ -915,6 +931,11 @@ fn design_ancestry_update_calculation_test_1() {
             node: Node(1),
             segment: Segment::new(0, genome_length).unwrap(),
             change_type: AncestryChangeType::ToUnary,
+        },
+        AncestryChange {
+            node: Node(2),
+            segment: Segment::new(0, genome_length).unwrap(),
+            change_type: AncestryChangeType::ToLoss,
         },
         AncestryChange {
             node: Node(3),
@@ -932,7 +953,7 @@ fn design_ancestry_update_calculation_test_1() {
             ancestry: AncestryType::Overlap(Node(2)),
         },
     ];
-    let mut overlapper = AncestryOverlapper::new(Node(3), &parental_ancestry, &ancestry_changes);
+    let mut overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
     let mut new_ancestry: Vec<Ancestry> = vec![];
     // NOTE:
     // what this does NOT accomplish is determine whether
@@ -970,6 +991,18 @@ fn design_ancestry_update_calculation_test_1() {
     todo!("this needs to lead to an API")
 }
 
+//        0    <- A "recent death"
+//        |
+//     -------
+//     |     |
+//     1     2 <- 1 is a birth, 2 is a death/ancestry loss
+//
+// The final ancestry of 0 is Empty:
+// * It starts as Overlap on 1, 2
+// * But the loss of ancestry in 2 and the death of 0
+//   means that 0 ends up Unary(1A)
+// * Since 0 is "not a sample", we do not retain
+//   a single overlp.
 #[test]
 fn design_ancestry_update_calculation_test_2() {
     let genome_length = 100_i64;
@@ -1027,6 +1060,28 @@ fn design_ancestry_update_calculation_test_2() {
     todo!("this needs to lead to an API")
 }
 
+// Tree 0 is on [0, 3)
+//
+//        0
+//        |
+//     -------
+//     |     |
+//     1     2
+//
+// Tree 1 is on [7, 8)
+//
+//        0
+//        |
+//     -------
+//     |     |
+//     1     2
+//
+// * 0 starts out as Overlap(1, 2) for both trees.
+// * Nodes 1, 2 lose ancestry on [0, 3)
+// * Nodes 1, 2 convert to Unary on [7, 8)
+//
+// The result is that 0 loses all ancestry on [0, 3)
+// and has no ancestry change on [7, 8)
 #[test]
 fn design_ancestry_update_calculation_test_3() {
     let ancestry_changes = vec![
