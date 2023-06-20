@@ -377,13 +377,15 @@ impl AncestryOverlap {
     }
 }
 
-fn calculate_parental_ancestry_advance(
+fn queue_identical_parental_segments(
     current_parental_node: &Ancestry,
     parental_node_ancestry: &[Ancestry],
+    queue: &mut Vec<AncestryOverlap>,
 ) -> usize {
     parental_node_ancestry
         .iter()
         .take_while(|x| x.identical_segment(current_parental_node))
+        .inspect(|&x| queue.push(AncestryOverlap::Parental(*x)))
         .count()
 }
 
@@ -402,10 +404,11 @@ fn generate_overlap_queue(
     while d < parental_node_ancestry.len() {
         // Take the current node here to minimize bounds checks
         let current_parental_node = &parental_node_ancestry[d];
-        let update = calculate_parental_ancestry_advance(
+        let update = queue_identical_parental_segments(
             current_parental_node,
             // Another bounds check...
             &parental_node_ancestry[d..],
+            &mut queue,
         );
         for ac in ancestry_changes.iter() {
             if ac.right() > current_parental_node.left()
@@ -429,11 +432,8 @@ fn generate_overlap_queue(
     // "no changes" up to parents.
     assert!(!queue.is_empty());
 
-    parental_node_ancestry
-        .iter()
-        .for_each(|&p| queue.push(AncestryOverlap::Parental(p)));
+    debug_assert!(queue.windows(2).all(|w| w[0].left() <= w[1].left()));
 
-    queue.sort_unstable_by_key(|x| x.left());
     queue
 }
 
