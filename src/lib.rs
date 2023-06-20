@@ -440,7 +440,8 @@ struct AncestryOverlapper {
     parent: Node,
     left: i64,
     right: i64,
-    overlaps: Vec<AncestryOverlap>,
+    overlaps: Vec<Ancestry>,
+    output_nodes: Vec<Node>,
     parental_overlaps: Vec<Ancestry>,
     change_overlaps: Vec<AncestryChange>,
 }
@@ -472,6 +473,7 @@ impl AncestryOverlapper {
             left,
             right,
             overlaps: vec![],
+            output_nodes: vec![],
             parental_overlaps: vec![],
             change_overlaps: vec![],
         }
@@ -495,13 +497,22 @@ impl AncestryOverlapper {
         self.change_overlaps.retain(|x| x.right() > self.left);
     }
 
-    fn make_overlaps(&self) -> Overlaps {
-        Overlaps::new(
+    fn make_overlaps(&mut self) -> Overlaps {
+        let ancestry_change = output_overlaps(
             self.left,
             self.right,
             self.parent,
             &self.parental_overlaps,
             &self.change_overlaps,
+            &mut self.overlaps,
+            &mut self.output_nodes,
+        );
+        Overlaps::new(
+            self.left,
+            self.right,
+            self.parent,
+            &self.overlaps,
+            ancestry_change,
         )
     }
 
@@ -544,139 +555,130 @@ impl AncestryOverlapper {
         }
     }
 
-    fn output_ancestry(self) -> Vec<(Option<AncestryChange>, Vec<Ancestry>)> {
-        let mut overlapper = self;
-        let mut rv = vec![];
-        while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
-            let ancestry_change = overlaps.parental_ancestry_change;
-            if overlaps.overlaps.len() > 1 {
-                rv.push((ancestry_change, overlaps.overlaps.clone()));
-            } else {
-                rv.push((ancestry_change, vec![]));
+    fn output_ancestry(&mut self) -> Option<Overlaps<'_>> {
+        self.calculate_next_overlap_set()
+    }
+}
+
+fn calculate_ancestry_change(
+    left: i64,
+    right: i64,
+    parent: Node,
+    parental_overlaps: &[Ancestry],
+    overlaps: &[Ancestry],
+) -> Option<AncestryChange> {
+    let (parental_node, parental_ancestry) = match parental_overlaps.first() {
+        Some(ancestry) => (parent, ancestry.ancestry),
+        None => panic!(),
+    };
+
+    let change_type = match parental_ancestry {
+        AncestryType::Overlap(_) => {
+            assert!(parental_overlaps.len() > 1);
+            if overlaps.len() > 1 {
+                None
+            }
+            // else if overlaps.len() == 1 {
+            //     Some(AncestryChangeType::ToLoss)
+            // }
+            else {
+                Some(AncestryChangeType::Loss)
             }
         }
-        rv
+        AncestryType::Unary(_) | AncestryType::ToSelf => {
+            assert!(parental_overlaps.len() == 1);
+            if overlaps.len() > 1 {
+                Some(AncestryChangeType::Overlap)
+            }
+            //else if overlaps.len() == 1 {
+            //    Some(AncestryChangeType::ToLoss)
+            //}
+            else {
+                Some(AncestryChangeType::Loss)
+            }
+        }
+    };
+
+    change_type.map(|change_type| AncestryChange {
+        segment: Segment { left, right },
+        node: parental_node,
+        change_type,
+    })
+}
+
+fn output_overlaps(
+    left: i64,
+    right: i64,
+    parent: Node,
+    parental_overlaps: &[Ancestry],
+    change_overlaps: &[AncestryChange],
+    output_ancestry: &mut Vec<Ancestry>,
+    output_nodes: &mut Vec<Node>,
+) -> Option<AncestryChange> {
+    output_ancestry.clear();
+    output_nodes.clear();
+    for co in change_overlaps {
+        if !matches!(co.change_type, AncestryChangeType::Loss) {
+            output_ancestry.push(Ancestry {
+                segment: Segment::new(left, right).unwrap(),
+                ancestry: AncestryType::Overlap(co.node),
+            })
+        }
+        output_nodes.push(co.node);
     }
+    for po in parental_overlaps {
+        match po.ancestry {
+            AncestryType::ToSelf => (),
+            AncestryType::Unary(node) | AncestryType::Overlap(node) => {
+                if !output_nodes.contains(&node) {
+                    output_ancestry.push(Ancestry {
+                        segment: Segment::new(left, right).unwrap(),
+                        ancestry: AncestryType::Overlap(node),
+                    });
+                }
+            }
+        }
+    }
+    calculate_ancestry_change(left, right, parent, parental_overlaps, output_ancestry)
 }
 
 // TODO: we need some data
 // here about the parent (sample?, etc.)
 // and overall policies (keep unary, etc.)
 #[derive(Debug)]
-struct Overlaps {
+struct Overlaps<'overlapper> {
     left: i64,
     right: i64,
     parent: Node,
     parental_ancestry_change: Option<AncestryChange>,
-    overlaps: Vec<Ancestry>,
+    overlaps: &'overlapper [Ancestry],
 }
 
-impl Overlaps {
+impl<'overlapper> Overlaps<'overlapper> {
     fn new(
         left: i64,
         right: i64,
         parent: Node,
-        parental_overlaps: &[Ancestry],
-        change_overlaps: &[AncestryChange],
+        overlaps: &'overlapper [Ancestry],
+        parental_ancestry_change: Option<AncestryChange>,
     ) -> Self {
-        let (overlaps, parental_ancestry) =
-            Self::output_overlaps(left, right, parent, parental_overlaps, change_overlaps);
         Self {
             left,
             right,
             parent,
-            parental_ancestry_change: parental_ancestry,
+            parental_ancestry_change,
             overlaps,
         }
     }
 
-    // TODO: standalone method
-    fn calculate_ancestry_change(
-        left: i64,
-        right: i64,
-        parent: Node,
-        parental_overlaps: &[Ancestry],
-        overlaps: &[Ancestry],
-    ) -> Option<AncestryChange> {
-        let (parental_node, parental_ancestry) = match parental_overlaps.first() {
-            Some(ancestry) => (parent, ancestry.ancestry),
-            None => panic!(),
-        };
-
-        let change_type = match parental_ancestry {
-            AncestryType::Overlap(_) => {
-                assert!(parental_overlaps.len() > 1);
-                if overlaps.len() > 1 {
-                    None
-                }
-                // else if overlaps.len() == 1 {
-                //     Some(AncestryChangeType::ToLoss)
-                // }
-                else {
-                    Some(AncestryChangeType::Loss)
-                }
-            }
-            AncestryType::Unary(_) | AncestryType::ToSelf => {
-                assert!(parental_overlaps.len() == 1);
-                if overlaps.len() > 1 {
-                    Some(AncestryChangeType::Overlap)
-                }
-                //else if overlaps.len() == 1 {
-                //    Some(AncestryChangeType::ToLoss)
-                //}
-                else {
-                    Some(AncestryChangeType::Loss)
-                }
-            }
-        };
-
-        change_type.map(|change_type| AncestryChange {
-            segment: Segment { left, right },
-            node: parental_node,
-            change_type,
-        })
-    }
-
-    // TODO: standalone method
-    fn output_overlaps(
-        left: i64,
-        right: i64,
-        parent: Node,
-        parental_overlaps: &[Ancestry],
-        change_overlaps: &[AncestryChange],
-    ) -> (Vec<Ancestry>, Option<AncestryChange>) {
-        let mut output_nodes = vec![];
-        let mut output_ancestry = vec![];
-        for co in change_overlaps {
-            if !matches!(co.change_type, AncestryChangeType::Loss) {
-                output_ancestry.push(Ancestry {
-                    segment: Segment::new(left, right).unwrap(),
-                    ancestry: AncestryType::Overlap(co.node),
-                })
-            }
-            output_nodes.push(co.node);
+    fn iter_overlaps(&self) -> Option<impl Iterator<Item = &Ancestry> + '_> {
+        match self.parental_ancestry_change {
+            Some(x) => match x.change_type {
+                AncestryChangeType::Loss => None,
+                _ => Some(self.overlaps.iter()),
+            },
+            _ => Some(self.overlaps.iter()),
         }
-        for po in parental_overlaps {
-            match po.ancestry {
-                AncestryType::ToSelf => (),
-                AncestryType::Unary(node) | AncestryType::Overlap(node) => {
-                    if !output_nodes.contains(&node) {
-                        output_ancestry.push(Ancestry {
-                            segment: Segment::new(left, right).unwrap(),
-                            ancestry: AncestryType::Overlap(node),
-                        });
-                    }
-                }
-            }
-        }
-        let change = Self::calculate_ancestry_change(
-            left,
-            right,
-            parent,
-            parental_overlaps,
-            &output_ancestry,
-        );
-        (output_ancestry, change)
     }
 }
 
@@ -781,16 +783,19 @@ fn design_ancestry_update_calculation_test_0() {
         ancestry: AncestryType::ToSelf,
     }];
 
-    let overlapper = AncestryOverlapper::new(Node(3), &parental_ancestry, &ancestry_changes);
+    let mut overlapper = AncestryOverlapper::new(Node(3), &parental_ancestry, &ancestry_changes);
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    for i in overlapper.output_ancestry().into_iter() {
-        changes.push(i.0);
-        for &a in i.1.iter() {
-            new_ancestry.push(a);
+    while let Some(overlaps) = overlapper.output_ancestry() {
+        changes.push(overlaps.parental_ancestry_change);
+        if let Some(iter) = overlaps.iter_overlaps() {
+            for &a in iter {
+                new_ancestry.push(a);
+            }
         }
     }
+
     assert_eq!(new_ancestry.len(), 2);
     for node in [0, 1] {
         assert!(new_ancestry.contains(&Ancestry {
@@ -850,14 +855,16 @@ fn design_ancestry_update_calculation_test_1() {
             ancestry: AncestryType::Overlap(Node(2)),
         },
     ];
-    let overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
+    let mut overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    for i in overlapper.output_ancestry().into_iter() {
-        changes.push(i.0);
-        for &a in i.1.iter() {
-            new_ancestry.push(a);
+    while let Some(overlaps) = overlapper.output_ancestry() {
+        changes.push(overlaps.parental_ancestry_change);
+        if let Some(iter) = overlaps.iter_overlaps() {
+            for &a in iter {
+                new_ancestry.push(a);
+            }
         }
     }
     assert_eq!(new_ancestry.len(), 2);
@@ -910,14 +917,16 @@ fn design_ancestry_update_calculation_test_2() {
             ancestry: AncestryType::Overlap(Node(2)),
         },
     ];
-    let overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
+    let mut overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    for i in overlapper.output_ancestry().into_iter() {
-        changes.push(i.0);
-        for &a in i.1.iter() {
-            new_ancestry.push(a);
+    while let Some(overlaps) = overlapper.output_ancestry() {
+        changes.push(overlaps.parental_ancestry_change);
+        if let Some(iter) = overlaps.iter_overlaps() {
+            for &a in iter {
+                new_ancestry.push(a);
+            }
         }
     }
     assert!(new_ancestry.is_empty());
@@ -999,16 +1008,19 @@ fn design_ancestry_update_calculation_test_3() {
             ancestry: AncestryType::Overlap(Node(2)),
         },
     ];
-    let overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
+    let mut overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    for i in overlapper.output_ancestry().into_iter() {
-        changes.push(i.0);
-        for &a in i.1.iter() {
-            new_ancestry.push(a);
+    while let Some(overlaps) = overlapper.output_ancestry() {
+        changes.push(overlaps.parental_ancestry_change);
+        if let Some(iter) = overlaps.iter_overlaps() {
+            for &a in iter {
+                new_ancestry.push(a);
+            }
         }
     }
+
     assert_eq!(new_ancestry.len(), 2);
     for node in [1_usize, 2] {
         assert!(new_ancestry.contains(&Ancestry {
@@ -1093,14 +1105,16 @@ fn design_ancestry_update_calculation_test_4() {
             ancestry: AncestryType::Overlap(Node(2)),
         },
     ];
-    let overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
+    let mut overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    for i in overlapper.output_ancestry().into_iter() {
-        changes.push(i.0);
-        for &a in i.1.iter() {
-            new_ancestry.push(a);
+    while let Some(overlaps) = overlapper.output_ancestry() {
+        changes.push(overlaps.parental_ancestry_change);
+        if let Some(iter) = overlaps.iter_overlaps() {
+            for &a in iter {
+                new_ancestry.push(a);
+            }
         }
     }
     assert!(new_ancestry.is_empty());
@@ -1178,14 +1192,16 @@ fn design_ancestry_update_calculation_test_5() {
             ancestry: AncestryType::Overlap(Node(4)),
         },
     ];
-    let overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
+    let mut overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    for i in overlapper.output_ancestry().into_iter() {
-        changes.push(i.0);
-        for &a in i.1.iter() {
-            new_ancestry.push(a);
+    while let Some(overlaps) = overlapper.output_ancestry() {
+        changes.push(overlaps.parental_ancestry_change);
+        if let Some(iter) = overlaps.iter_overlaps() {
+            for &a in iter {
+                new_ancestry.push(a);
+            }
         }
     }
     assert_eq!(new_ancestry.len(), 6);
@@ -1278,14 +1294,16 @@ fn design_ancestry_update_calculation_test_6() {
             ancestry: AncestryType::Overlap(Node(2)),
         },
     ];
-    let overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
+    let mut overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    for i in overlapper.output_ancestry().into_iter() {
-        changes.push(i.0);
-        for &a in i.1.iter() {
-            new_ancestry.push(a);
+    while let Some(overlaps) = overlapper.output_ancestry() {
+        changes.push(overlaps.parental_ancestry_change);
+        if let Some(iter) = overlaps.iter_overlaps() {
+            for &a in iter {
+                new_ancestry.push(a);
+            }
         }
     }
     assert_eq!(new_ancestry.len(), 5);
@@ -1344,14 +1362,16 @@ fn design_ancestry_update_calculation_test_7() {
         segment: Segment::new(0, 3).unwrap(),
         ancestry: AncestryType::ToSelf,
     }];
-    let overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
+    let mut overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    for i in overlapper.output_ancestry().into_iter() {
-        changes.push(i.0);
-        for &a in i.1.iter() {
-            new_ancestry.push(a);
+    while let Some(overlaps) = overlapper.output_ancestry() {
+        changes.push(overlaps.parental_ancestry_change);
+        if let Some(iter) = overlaps.iter_overlaps() {
+            for &a in iter {
+                new_ancestry.push(a);
+            }
         }
     }
     assert!(new_ancestry.is_empty());
@@ -1408,13 +1428,13 @@ fn design_ancestry_update_calculation_test_8() {
             change_type: AncestryChangeType::Loss,
         },
     ];
-    let overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
+    let mut overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    for i in overlapper.output_ancestry().into_iter() {
-        changes.push(i.0);
-        for &a in i.1.iter() {
+    while let Some(overlaps) = overlapper.output_ancestry() {
+        changes.push(overlaps.parental_ancestry_change);
+        for &a in overlaps.overlaps.iter() {
             new_ancestry.push(a);
         }
     }
