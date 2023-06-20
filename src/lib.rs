@@ -11,7 +11,7 @@ mod overlapper_experiments;
 struct Node(usize);
 
 impl Node {
-    fn to_index(&self) -> usize {
+    fn as_index(&self) -> usize {
         self.0
     }
 }
@@ -122,11 +122,11 @@ impl AncestryChange {
 // TODO: test PartialOrd, Ord implementations
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum AncestryChangeType {
-    ToOverlap,
+    Overlap,
     // NOTE: ToUnary is overloaded with "Unary and is sample"
     // We may want to un-overload the term later
-    ToUnary,
-    ToLoss,
+    Unary,
+    Loss,
 }
 
 #[derive(Debug)]
@@ -210,14 +210,14 @@ impl Graph {
     // NOTE: OR, it returns an iterator over changes, meaning
     //       that pushing to some STACK is handled elsewhere?
     fn calculate_ancestry_changes(&self, node: Node) -> Vec<AncestryChange> {
-        match self.status[node.to_index()] {
+        match self.status[node.as_index()] {
             NodeStatus::Birth => vec![AncestryChange {
                 node,
                 segment: Segment {
                     left: 0,
                     right: self.genome_length(),
                 },
-                change_type: AncestryChangeType::ToUnary,
+                change_type: AncestryChangeType::Unary,
             }],
             _ => todo!(),
         }
@@ -287,11 +287,11 @@ impl Graph {
 
     pub fn add_birth(&mut self, birth_time: i64) -> Result<Node, ()> {
         let rv = self.add_node(NodeStatus::Birth, birth_time);
-        debug_assert_eq!(self.birth_time[rv.to_index()], Some(birth_time));
+        debug_assert_eq!(self.birth_time[rv.as_index()], Some(birth_time));
         // births are (locally) in increasing order
         match self.births.len() {
             i if i > 0 => {
-                if self.birth_time[self.births[self.births.len() - 1].to_index()].unwrap()
+                if self.birth_time[self.births[self.births.len() - 1].as_index()].unwrap()
                     > birth_time
                 {
                     return Err(());
@@ -309,14 +309,10 @@ impl Graph {
     fn validate_parent_child_birth_time(&self, parent: Node, child: Node) -> Result<(), ()> {
         let ptime = self
             .birth_time
-            .get(parent.to_index())
-            .ok_or_else(|| ())?
-            .ok_or_else(|| ())?;
-        let ctime = self
-            .birth_time
-            .get(child.to_index())
-            .ok_or_else(|| ())?
-            .ok_or_else(|| ())?;
+            .get(parent.as_index())
+            .ok_or(())?
+            .ok_or(())?;
+        let ctime = self.birth_time.get(child.as_index()).ok_or(())?.ok_or(())?;
         if ctime > ptime {
             Ok(())
         } else {
@@ -333,18 +329,18 @@ impl Graph {
         child: Node,
     ) -> Result<(), ()> {
         self.validate_parent_child_birth_time(parent, child)?;
-        let segment = Segment::new(left, right).ok_or_else(|| ())?;
+        let segment = Segment::new(left, right).ok_or(())?;
         // We now "know" that parent, child are both in range.
         // (The only uncertainty is that we haven't checked that all our arrays
         //  are equal length.)
-        let children = &mut self.children[parent.to_index()];
+        let children = &mut self.children[parent.as_index()];
         match children.get_mut(&child) {
             Some(ref mut vec) => vec.push(segment),
             None => {
                 let _ = children.insert(child, vec![segment]);
             }
         }
-        let _ = self.parents[child.to_index()].insert(parent);
+        let _ = self.parents[child.as_index()].insert(parent);
 
         Ok(())
     }
@@ -352,7 +348,7 @@ impl Graph {
     // NOTE: panics if child is out of bounds
     // NOTE: may not need to be pub
     pub fn parents(&self, child: Node) -> impl Iterator<Item = &Node> + '_ {
-        self.parents[child.to_index()].iter()
+        self.parents[child.as_index()].iter()
     }
 }
 
@@ -617,31 +613,28 @@ impl Overlaps {
                 //     Some(AncestryChangeType::ToLoss)
                 // }
                 else {
-                    Some(AncestryChangeType::ToLoss)
+                    Some(AncestryChangeType::Loss)
                 }
             }
             AncestryType::Unary(_) | AncestryType::ToSelf => {
                 assert!(parental_overlaps.len() == 1);
                 if overlaps.len() > 1 {
-                    Some(AncestryChangeType::ToOverlap)
+                    Some(AncestryChangeType::Overlap)
                 }
                 //else if overlaps.len() == 1 {
                 //    Some(AncestryChangeType::ToLoss)
                 //}
                 else {
-                    Some(AncestryChangeType::ToLoss)
+                    Some(AncestryChangeType::Loss)
                 }
             }
         };
 
-        match change_type {
-            None => None,
-            Some(change_type) => Some(AncestryChange {
-                segment: Segment { left, right },
-                node: parental_node,
-                change_type,
-            }),
-        }
+        change_type.map(|change_type| AncestryChange {
+            segment: Segment { left, right },
+            node: parental_node,
+            change_type,
+        })
     }
 
     // TODO: standalone method
@@ -655,7 +648,7 @@ impl Overlaps {
         let mut output_nodes = vec![];
         let mut output_ancestry = vec![];
         for co in change_overlaps {
-            if !matches!(co.change_type, AncestryChangeType::ToLoss) {
+            if !matches!(co.change_type, AncestryChangeType::Loss) {
                 output_ancestry.push(Ancestry {
                     segment: Segment::new(left, right).unwrap(),
                     ancestry: AncestryType::Overlap(co.node),
@@ -715,7 +708,7 @@ fn design_test_2() {
     assert_eq!(graph.parents(child0).count(), 1);
     assert_eq!(graph.parents(child1).count(), 1);
     // WARNING: tests internal details
-    assert_eq!(graph.children[parent.to_index()].len(), 2);
+    assert_eq!(graph.children[parent.as_index()].len(), 2);
 }
 
 //#[test]
@@ -775,12 +768,12 @@ fn design_ancestry_update_calculation_test_0() {
         AncestryChange {
             node: Node(0),
             segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::ToUnary,
+            change_type: AncestryChangeType::Unary,
         },
         AncestryChange {
             node: Node(1),
             segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::ToUnary,
+            change_type: AncestryChangeType::Unary,
         },
     ];
     let parental_ancestry = vec![Ancestry {
@@ -814,7 +807,7 @@ fn design_ancestry_update_calculation_test_0() {
             right: 100
         },
         node: Node(3),
-        change_type: AncestryChangeType::ToOverlap
+        change_type: AncestryChangeType::Overlap
     })),);
 }
 
@@ -834,17 +827,17 @@ fn design_ancestry_update_calculation_test_1() {
         AncestryChange {
             node: Node(1),
             segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::ToUnary,
+            change_type: AncestryChangeType::Unary,
         },
         AncestryChange {
             node: Node(2),
             segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::ToLoss,
+            change_type: AncestryChangeType::Loss,
         },
         AncestryChange {
             node: Node(3),
             segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::ToUnary,
+            change_type: AncestryChangeType::Unary,
         },
     ];
     let parental_ancestry = vec![
@@ -899,12 +892,12 @@ fn design_ancestry_update_calculation_test_2() {
         AncestryChange {
             node: Node(1),
             segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::ToUnary,
+            change_type: AncestryChangeType::Unary,
         },
         AncestryChange {
             node: Node(2),
             segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::ToLoss,
+            change_type: AncestryChangeType::Loss,
         },
     ];
     let parental_ancestry = vec![
@@ -936,7 +929,7 @@ fn design_ancestry_update_calculation_test_2() {
                 right: 100
             },
             node: Node(0),
-            change_type: AncestryChangeType::ToLoss
+            change_type: AncestryChangeType::Loss
         })],
         "CHANGES = {changes:?}"
     )
@@ -970,22 +963,22 @@ fn design_ancestry_update_calculation_test_3() {
         AncestryChange {
             node: Node(1),
             segment: Segment::new(0, 3).unwrap(),
-            change_type: AncestryChangeType::ToLoss,
+            change_type: AncestryChangeType::Loss,
         },
         AncestryChange {
             node: Node(2),
             segment: Segment::new(0, 3).unwrap(),
-            change_type: AncestryChangeType::ToLoss,
+            change_type: AncestryChangeType::Loss,
         },
         AncestryChange {
             node: Node(1),
             segment: Segment::new(7, 8).unwrap(),
-            change_type: AncestryChangeType::ToUnary,
+            change_type: AncestryChangeType::Unary,
         },
         AncestryChange {
             node: Node(2),
             segment: Segment::new(7, 8).unwrap(),
-            change_type: AncestryChangeType::ToUnary,
+            change_type: AncestryChangeType::Unary,
         },
     ];
     let parental_ancestry = vec![
@@ -1029,7 +1022,7 @@ fn design_ancestry_update_calculation_test_3() {
         changes.contains(&Some(AncestryChange {
             segment: Segment { left: 0, right: 3 },
             node: Node(0),
-            change_type: AncestryChangeType::ToLoss
+            change_type: AncestryChangeType::Loss
         })),
         "CHANGES = {changes:?}"
     );
@@ -1064,22 +1057,22 @@ fn design_ancestry_update_calculation_test_4() {
         AncestryChange {
             node: Node(1),
             segment: Segment::new(0, 3).unwrap(),
-            change_type: AncestryChangeType::ToLoss,
+            change_type: AncestryChangeType::Loss,
         },
         AncestryChange {
             node: Node(2),
             segment: Segment::new(0, 3).unwrap(),
-            change_type: AncestryChangeType::ToUnary,
+            change_type: AncestryChangeType::Unary,
         },
         AncestryChange {
             node: Node(1),
             segment: Segment::new(7, 8).unwrap(),
-            change_type: AncestryChangeType::ToLoss,
+            change_type: AncestryChangeType::Loss,
         },
         AncestryChange {
             node: Node(2),
             segment: Segment::new(7, 8).unwrap(),
-            change_type: AncestryChangeType::ToUnary,
+            change_type: AncestryChangeType::Unary,
         },
     ];
     let parental_ancestry = vec![
@@ -1120,7 +1113,7 @@ fn design_ancestry_update_calculation_test_4() {
                     right: losses.1
                 },
                 node: Node(0),
-                change_type: AncestryChangeType::ToLoss
+                change_type: AncestryChangeType::Loss
             })),
             "CHANGES = {changes:?}"
         );
@@ -1159,12 +1152,12 @@ fn design_ancestry_update_calculation_test_5() {
         AncestryChange {
             node: Node(1),
             segment: Segment::new(0, 3).unwrap(),
-            change_type: AncestryChangeType::ToUnary,
+            change_type: AncestryChangeType::Unary,
         },
         AncestryChange {
             node: Node(2),
             segment: Segment::new(0, 3).unwrap(),
-            change_type: AncestryChangeType::ToUnary,
+            change_type: AncestryChangeType::Unary,
         },
     ];
     let parental_ancestry = vec![
@@ -1265,7 +1258,7 @@ fn design_ancestry_update_calculation_test_6() {
     let ancestry_changes = vec![AncestryChange {
         node: Node(3),
         segment: Segment::new(0, 5).unwrap(),
-        change_type: AncestryChangeType::ToUnary,
+        change_type: AncestryChangeType::Unary,
     }];
     let parental_ancestry = vec![
         Ancestry {
@@ -1345,7 +1338,7 @@ fn design_ancestry_update_calculation_test_7() {
     let ancestry_changes = vec![AncestryChange {
         node: Node(3),
         segment: Segment::new(0, 5).unwrap(),
-        change_type: AncestryChangeType::ToUnary,
+        change_type: AncestryChangeType::Unary,
     }];
     let parental_ancestry = vec![Ancestry {
         segment: Segment::new(0, 3).unwrap(),
@@ -1366,7 +1359,7 @@ fn design_ancestry_update_calculation_test_7() {
     assert!(changes.contains(&Some(AncestryChange {
         segment: Segment { left: 0, right: 3 },
         node: Node(0),
-        change_type: AncestryChangeType::ToLoss
+        change_type: AncestryChangeType::Loss
     })));
 }
 
@@ -1407,12 +1400,12 @@ fn design_ancestry_update_calculation_test_8() {
         AncestryChange {
             node: Node(1),
             segment: Segment::new(3, 8).unwrap(),
-            change_type: AncestryChangeType::ToLoss,
+            change_type: AncestryChangeType::Loss,
         },
         AncestryChange {
             node: Node(2),
             segment: Segment::new(3, 8).unwrap(),
-            change_type: AncestryChangeType::ToLoss,
+            change_type: AncestryChangeType::Loss,
         },
     ];
     let overlapper = AncestryOverlapper::new(Node(0), &parental_ancestry, &ancestry_changes);
@@ -1437,7 +1430,7 @@ fn design_ancestry_update_calculation_test_8() {
     assert!(changes.contains(&Some(AncestryChange {
         segment: Segment { left: 3, right: 8 },
         node: Node(0),
-        change_type: AncestryChangeType::ToLoss
+        change_type: AncestryChangeType::Loss
     })));
 }
 
@@ -1448,12 +1441,12 @@ fn test_ancestry_change_ordering() {
             AncestryChange {
                 node: Node(1),
                 segment: Segment::new(0, 10).unwrap(),
-                change_type: AncestryChangeType::ToUnary,
+                change_type: AncestryChangeType::Unary,
             },
             AncestryChange {
                 node: Node(0),
                 segment: Segment::new(0, 10).unwrap(),
-                change_type: AncestryChangeType::ToUnary,
+                change_type: AncestryChangeType::Unary,
             },
         ];
         changes.sort_unstable();
@@ -1463,12 +1456,12 @@ fn test_ancestry_change_ordering() {
                 AncestryChange {
                     node: Node(0),
                     segment: Segment::new(0, 10).unwrap(),
-                    change_type: AncestryChangeType::ToUnary
+                    change_type: AncestryChangeType::Unary
                 },
                 AncestryChange {
                     node: Node(1),
                     segment: Segment::new(0, 10).unwrap(),
-                    change_type: AncestryChangeType::ToUnary
+                    change_type: AncestryChangeType::Unary
                 },
             ]
         );
@@ -1479,12 +1472,12 @@ fn test_ancestry_change_ordering() {
             AncestryChange {
                 node: Node(1),
                 segment: Segment::new(0, 10).unwrap(),
-                change_type: AncestryChangeType::ToUnary,
+                change_type: AncestryChangeType::Unary,
             },
             AncestryChange {
                 node: Node(0),
                 segment: Segment::new(6, 10).unwrap(),
-                change_type: AncestryChangeType::ToUnary,
+                change_type: AncestryChangeType::Unary,
             },
         ];
         changes.sort_unstable();
@@ -1494,12 +1487,12 @@ fn test_ancestry_change_ordering() {
                 AncestryChange {
                     node: Node(1),
                     segment: Segment::new(0, 10).unwrap(),
-                    change_type: AncestryChangeType::ToUnary,
+                    change_type: AncestryChangeType::Unary,
                 },
                 AncestryChange {
                     node: Node(0),
                     segment: Segment::new(6, 10).unwrap(),
-                    change_type: AncestryChangeType::ToUnary,
+                    change_type: AncestryChangeType::Unary,
                 },
             ]
         );
@@ -1510,12 +1503,12 @@ fn test_ancestry_change_ordering() {
             AncestryChange {
                 node: Node(0),
                 segment: Segment::new(6, 7).unwrap(),
-                change_type: AncestryChangeType::ToUnary,
+                change_type: AncestryChangeType::Unary,
             },
             AncestryChange {
                 node: Node(0),
                 segment: Segment::new(6, 10).unwrap(),
-                change_type: AncestryChangeType::ToUnary,
+                change_type: AncestryChangeType::Unary,
             },
         ];
         changes.sort_unstable();
@@ -1525,12 +1518,12 @@ fn test_ancestry_change_ordering() {
                 AncestryChange {
                     node: Node(0),
                     segment: Segment::new(6, 7).unwrap(),
-                    change_type: AncestryChangeType::ToUnary,
+                    change_type: AncestryChangeType::Unary,
                 },
                 AncestryChange {
                     node: Node(0),
                     segment: Segment::new(6, 10).unwrap(),
-                    change_type: AncestryChangeType::ToUnary,
+                    change_type: AncestryChangeType::Unary,
                 },
             ]
         );
