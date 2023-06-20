@@ -395,6 +395,7 @@ fn generate_overlap_queue(
     // TODO: should have a way to detect this and return an Error
     assert!(parental_node_ancestry.windows(2).all(|w| w[0] <= w[1]));
     assert!(ancestry_changes.windows(2).all(|w| w[0] <= w[1]));
+    assert!(!ancestry_changes.is_empty());
     let mut queue = vec![];
     let mut d = 0_usize;
 
@@ -422,11 +423,15 @@ fn generate_overlap_queue(
         d += update;
     }
 
-    if !queue.is_empty() {
-        parental_node_ancestry
-            .iter()
-            .for_each(|&p| queue.push(AncestryOverlap::Parental(p)));
-    }
+    // TODO: should be an error?.
+    // But, an error/assert means that,
+    // internally, we MUST not send
+    // "no changes" up to parents.
+    assert!(!queue.is_empty());
+
+    parental_node_ancestry
+        .iter()
+        .for_each(|&p| queue.push(AncestryOverlap::Parental(p)));
 
     queue.sort_unstable_by_key(|x| x.left());
     queue
