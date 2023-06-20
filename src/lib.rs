@@ -6,6 +6,10 @@ use std::hash::BuildHasherDefault;
 // NOTE: for design purposes -- delete later.
 mod overlapper_experiments;
 
+mod flags;
+
+use flags::NodeFlags;
+
 #[repr(transparent)]
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
 struct Node(usize);
@@ -132,6 +136,7 @@ enum AncestryChangeType {
 #[derive(Debug)]
 struct Graph {
     status: Vec<NodeStatus>,
+    flags: Vec<NodeFlags>,
     birth_time: Vec<Option<i64>>,
     parents: Vec<NodeHash>,
     // NOTE: for many scenarios, it may be preferable
@@ -161,6 +166,7 @@ impl Graph {
         }
         let parents = Vec::with_capacity(capacity);
         let status = Vec::with_capacity(capacity);
+        let flags = Vec::with_capacity(capacity);
         let birth_time = Vec::with_capacity(capacity);
         let children = Vec::with_capacity(capacity);
         let ancestry = Vec::with_capacity(capacity);
@@ -168,6 +174,7 @@ impl Graph {
         let free_nodes = Vec::new();
         Some(Self {
             status,
+            flags,
             birth_time,
             parents,
             children,
@@ -180,6 +187,7 @@ impl Graph {
 
     fn with_initial_nodes(num_nodes: usize, genome_length: i64) -> Option<Self> {
         let status = vec![NodeStatus::None; num_nodes];
+        let flags = vec![NodeFlags::default(); num_nodes];
         let birth_time = vec![Some(0); num_nodes];
         let parents = vec![NodeHash::with_hasher(BuildHasherDefault::default()); num_nodes];
         let children = vec![ChildMap::with_hasher(BuildHasherDefault::default()); num_nodes];
@@ -192,6 +200,7 @@ impl Graph {
         let free_nodes = Vec::new();
         Some(Self {
             status,
+            flags,
             birth_time,
             parents,
             children,
