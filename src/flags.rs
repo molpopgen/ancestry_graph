@@ -16,9 +16,9 @@ bitflags! {
 bitflags! {
     #[repr(transparent)]
     #[derive(Default, Debug, Copy, Clone)]
-    struct SimplificationBitOptions: u32 {
+    struct PropagationBitFlags: u32 {
         const EMPTY = 0;
-        const KEEP_UNARY = 1 << 1;
+        const KEEP_UNARY_NODES = 1 << 1;
     }
 }
 
@@ -34,24 +34,24 @@ impl NodeFlags {
 
 #[repr(transparent)]
 #[derive(Default, Debug, Copy, Clone)]
-pub struct SimplificationOptions(SimplificationBitOptions);
+pub struct PropagationOptions(PropagationBitFlags);
 
-impl SimplificationOptions {
-    pub fn with_keep_unary(self) -> Self {
-        Self(self.0 | SimplificationBitOptions::KEEP_UNARY)
+impl PropagationOptions {
+    pub fn with_keep_unary_nodes(self) -> Self {
+        Self(self.0 | PropagationBitFlags::KEEP_UNARY_NODES)
     }
 
-    pub fn keep_unary(&self) -> bool {
-        self.0.contains(SimplificationBitOptions::KEEP_UNARY)
+    pub fn keep_unary_nodes(&self) -> bool {
+        self.0.contains(PropagationBitFlags::KEEP_UNARY_NODES)
     }
 }
 
 #[cfg(test)]
 mod test_simplification_flags {
-    use super::SimplificationOptions;
+    use super::PropagationOptions;
     #[test]
     fn test_keep_unary() {
-        let flags = SimplificationOptions::default().with_keep_unary();
-        assert!(flags.keep_unary())
+        let flags = PropagationOptions::default().with_keep_unary_nodes();
+        assert!(flags.keep_unary_nodes())
     }
 }
