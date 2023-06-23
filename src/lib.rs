@@ -1556,7 +1556,7 @@ mod test_ancestry_change_propagation {
     use super::*;
 
     //BOILER PLATE ALERT
-    #[derive(Debug)]
+    #[derive(Debug, Copy, Clone)]
     struct QueuedNode {
         node: Node,
         birth_time: i64,
@@ -1763,7 +1763,12 @@ mod test_ancestry_change_propagation {
                     graph,
                 ),
             }
+            hashed_nodes.remove(&queued_parent.node);
+            ancestry_changes_to_process.remove(&queued_parent.node);
         }
+        assert!(parent_queue.is_empty());
+        assert!(hashed_nodes.is_empty());
+        assert!(ancestry_changes_to_process.is_empty());
     }
 
     #[test]
