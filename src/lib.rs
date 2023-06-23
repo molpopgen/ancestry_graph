@@ -148,6 +148,7 @@ struct Graph {
     flags: Vec<NodeFlags>,
     birth_time: Vec<Option<i64>>,
     parents: Vec<NodeHash>,
+    children: Vec<NodeHash>,
     // NOTE: for many scenarios, it may be preferable
     // to manage a Vec<(Node, Segment)> as the inner
     // value. We would sort the inner Vec during simplification.
@@ -175,10 +176,11 @@ impl Graph {
             return None;
         }
         let parents = Vec::with_capacity(capacity);
+        let children = Vec::with_capacity(capacity);
         let status = Vec::with_capacity(capacity);
         let flags = Vec::with_capacity(capacity);
         let birth_time = Vec::with_capacity(capacity);
-        let children = Vec::with_capacity(capacity);
+        let transmissions = Vec::with_capacity(capacity);
         let ancestry = Vec::with_capacity(capacity);
         let births = vec![];
         let deaths = vec![];
@@ -188,7 +190,8 @@ impl Graph {
             flags,
             birth_time,
             parents,
-            transmissions: children,
+            children,
+            transmissions,
             ancestry,
             births,
             deaths,
@@ -203,6 +206,7 @@ impl Graph {
         let flags = vec![NodeFlags::default(); num_nodes];
         let birth_time = vec![Some(0); num_nodes];
         let parents = vec![NodeHash::with_hasher(BuildHasherDefault::default()); num_nodes];
+        let children = vec![NodeHash::with_hasher(BuildHasherDefault::default()); num_nodes];
         let transmissions = vec![];
         let initial_ancestry = Ancestry {
             segment: Segment::new(0, genome_length)?,
@@ -217,6 +221,7 @@ impl Graph {
             flags,
             birth_time,
             parents,
+            children,
             transmissions,
             ancestry,
             births,
@@ -307,6 +312,8 @@ impl Graph {
                 self.status.push(status);
                 self.parents
                     .push(NodeHash::with_hasher(BuildHasherDefault::default()));
+                self.children
+                    .push(NodeHash::with_hasher(BuildHasherDefault::default()));
                 match status {
                     NodeStatus::Birth => self
                         .ancestry
@@ -372,6 +379,7 @@ impl Graph {
             right,
         });
         let _ = self.parents[child.as_index()].insert(parent);
+        let _ = self.children[parent.as_index()].insert(child);
 
         Ok(())
     }
@@ -1648,9 +1656,15 @@ mod test_ancestry_change_propagation {
             );
         }
 
+        // remove this node as a parent from all children
+        for child in graph.children[queued_parent.node.as_index()].iter() {
+            graph.parents[child.as_index()].remove(&queued_parent.node);
+        }
+
         // TODO: separate function to "remove node" from Graph
         graph.ancestry[queued_parent.node.as_index()].clear();
         graph.parents[queued_parent.node.as_index()].clear();
+        graph.children[queued_parent.node.as_index()].clear();
         assert!(graph.birth_time[queued_parent.node.as_index()].is_some());
         graph.birth_time[queued_parent.node.as_index()].take();
         graph.free_nodes.push(queued_parent.node.as_index());
@@ -1692,6 +1706,13 @@ mod test_ancestry_change_propagation {
                         for &a in iter {
                             println!("adding new ancestry {a:?} to {queued_parent:?}");
                             graph.ancestry[queued_parent.node.as_index()].push(a);
+                            match a.ancestry {
+                                AncestryType::ToSelf => panic!(),
+                                AncestryType::Unary(node) | AncestryType::Overlap(node) => {
+                                    graph.parents[node.as_index()].insert(queued_parent.node);
+                                    graph.children[queued_parent.node.as_index()].insert(node);
+                                }
+                            }
                         }
                     }
                 }
@@ -2230,12 +2251,15 @@ mod test_ancestry_change_propagation {
         for extinct_node in [node1, node2, node3] {
             assert!(graph.ancestry[extinct_node.as_index()].is_empty());
             assert!(graph.parents[extinct_node.as_index()].is_empty());
+            assert!(graph.children[extinct_node.as_index()].is_empty());
             assert!(graph.birth_time[extinct_node.as_index()].is_none());
             assert!(graph.free_nodes.contains(&extinct_node.as_index()));
         }
 
         assert_eq!(graph.ancestry[node0.as_index()].len(), 2);
+        assert_eq!(graph.children[node0.as_index()].len(), 2);
         for child in [node4, node5] {
+            assert!(graph.children[node0.as_index()].contains(&child));
             assert!(
                 graph.ancestry[node0.as_index()].contains(&Ancestry {
                     segment: Segment {
@@ -2256,6 +2280,11 @@ mod test_ancestry_change_propagation {
                     ancestry: AncestryType::ToSelf
                 }),
                 "failing child node = {child:?}"
+            );
+            assert!(
+                graph.parents[child.as_index()].contains(&node0),
+                "{:?}",
+                graph.parents[child.as_index()]
             );
         }
     }
