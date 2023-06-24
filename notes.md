@@ -14,3 +14,7 @@ enum Ancestry {
     Overlap(EntryPoint) // Coalescence
 }
 ```
+
+With a design like this, we can use a vector-backed
+data structure to manage the overlaps in a way
+that allows us to recycle memory locations.
