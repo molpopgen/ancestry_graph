@@ -1523,6 +1523,8 @@ fn test_ancestry_change_ordering() {
 
 #[cfg(test)]
 mod test_ancestry_change_propagation {
+    use std::collections::BinaryHeap;
+
     use super::*;
 
     //BOILER PLATE ALERT
@@ -1554,7 +1556,7 @@ mod test_ancestry_change_propagation {
 
     fn update_internal_stuff(
         node: Node,
-        hashed_nodes: &mut HashSet<Node>,
+        hashed_nodes: &mut NodeHash,
         parent_queue: &mut std::collections::BinaryHeap<QueuedNode>,
         graph: &Graph,
     ) {
@@ -1580,9 +1582,74 @@ mod test_ancestry_change_propagation {
         }
     }
 
+    fn node_is_extinct(node: Node, graph: &Graph) -> bool {
+        let index = node.as_index();
+        graph.birth_time[index].is_none()
+            && graph.ancestry[index].is_empty()
+            && graph.children[index].is_empty()
+            && graph.parents[index].is_empty()
+    }
+
+    struct ReachableNodes<'graph> {
+        graph: &'graph Graph,
+        queued_nodes: NodeHash,
+        node_queue: std::collections::BinaryHeap<QueuedNode>,
+    }
+
+    impl<'graph> ReachableNodes<'graph> {
+        fn new(graph: &'graph Graph) -> Self {
+            let mut node_queue: BinaryHeap<QueuedNode> = BinaryHeap::new();
+            let mut queued_nodes: NodeHash = HashSet::with_hasher(BuildHasherDefault::default());
+            for node in &graph.births {
+                if !queued_nodes.contains(node) {
+                    node_queue.push(QueuedNode {
+                        node: *node,
+                        birth_time: graph.birth_time[node.as_index()].unwrap(),
+                    });
+                    queued_nodes.insert(*node);
+                } else {
+                    panic!()
+                }
+            }
+            Self {
+                graph,
+                queued_nodes,
+                node_queue,
+            }
+        }
+    }
+
+    impl<'graph> Iterator for ReachableNodes<'graph> {
+        type Item = Node;
+        fn next(&mut self) -> Option<Self::Item> {
+            match self.node_queue.pop() {
+                Some(node) => {
+                    println!("popped {node:?}");
+                    assert!(self.queued_nodes.remove(&node.node));
+                    for parent in &self.graph.parents[node.node.as_index()] {
+                        if !self.queued_nodes.contains(parent) {
+                            self.queued_nodes.insert(*parent);
+                            self.node_queue.push(QueuedNode {
+                                node: *parent,
+                                birth_time: self.graph.birth_time[parent.as_index()].unwrap(),
+                            });
+                            println!("pushing {parent:?}");
+                        }
+                    }
+                    Some(node.node)
+                }
+                None => None,
+            }
+        }
+    }
+
+    fn reachable_nodes(graph: &Graph) -> impl Iterator<Item = Node> + '_ {
+        ReachableNodes::new(graph)
+    }
+
     fn process_node_death(
         queued_parent: QueuedNode,
-        hashed_nodes: &mut HashSet<Node>,
+        hashed_nodes: &mut NodeHash,
         parent_queue: &mut std::collections::BinaryHeap<QueuedNode>,
         ancestry_changes_to_process: &mut HashMap<Node, Vec<AncestryChange>>,
         graph: &mut Graph,
@@ -1634,7 +1701,7 @@ mod test_ancestry_change_propagation {
 
     fn process_queued_node(
         queued_parent: QueuedNode,
-        hashed_nodes: &mut HashSet<Node>,
+        hashed_nodes: &mut NodeHash,
         parent_queue: &mut std::collections::BinaryHeap<QueuedNode>,
         ancestry_changes_to_process: &mut HashMap<Node, Vec<AncestryChange>>,
         graph: &mut Graph,
@@ -1709,8 +1776,15 @@ mod test_ancestry_change_propagation {
             }
             None => panic!(),
         }
-        // TODO: DUPLICATION
+        // TODO: DUPLICATION (not really, but it is too related to code happening in
+        // the processing of death nodes)
         if graph.ancestry[queued_parent.node.as_index()].is_empty() {
+            for child in &graph.children[queued_parent.node.as_index()] {
+                graph.parents[child.as_index()].remove(&queued_parent.node);
+            }
+            for parent in &graph.parents[queued_parent.node.as_index()] {
+                graph.children[parent.as_index()].remove(&queued_parent.node);
+            }
             graph.parents[queued_parent.node.as_index()].clear();
             graph.children[queued_parent.node.as_index()].clear();
             assert!(graph.birth_time[queued_parent.node.as_index()].is_some());
@@ -1720,9 +1794,7 @@ mod test_ancestry_change_propagation {
     }
 
     fn propagate_ancestry_changes(graph: &mut Graph) {
-        use std::collections::BinaryHeap;
-
-        let mut hashed_nodes: HashSet<Node> = HashSet::new();
+        let mut hashed_nodes: NodeHash = NodeHash::with_hasher(BuildHasherDefault::default());
         let mut parent_queue: BinaryHeap<QueuedNode> = BinaryHeap::new();
         let mut ancestry_changes_to_process: HashMap<Node, Vec<AncestryChange>> = HashMap::new();
 
@@ -2442,6 +2514,121 @@ mod test_ancestry_change_propagation {
                     right: graph.genome_length()
                 }
             }))
+        }
+        for node in [node1, node2] {
+            assert!(node_is_extinct(node, &graph))
+        }
+    }
+
+    //                     0
+    //                   -----
+    //                   |   |
+    //                   1   2
+    //                 ----  ---
+    //                 |  |  | |
+    //                 3  4  5 6
+    //
+    //          If we kill node 4 and 6,
+    //          nodes 1 and 2 become unary
+    //          and node 0 becomes overlap to 3 and 5
+    //
+    // NOTE:
+    //
+    // The bug is that node1 is getting "ancestry loss on 1" when
+    // it should ALSO get "to unary on 3"
+    #[test]
+    fn test_subtree_propagation_2() {
+        let mut graph = Graph::new(100).unwrap();
+        let node0 = graph.add_node(NodeStatus::Ancestor, 0);
+        let node1 = graph.add_node(NodeStatus::Ancestor, 1);
+        let node2 = graph.add_node(NodeStatus::Ancestor, 1);
+        let node3 = graph.add_node(NodeStatus::Ancestor, 2);
+        let node4 = graph.add_node(NodeStatus::Death, 2);
+        let node5 = graph.add_node(NodeStatus::Ancestor, 2);
+        let node6 = graph.add_node(NodeStatus::Death, 2);
+
+        for node in [node1, node2] {
+            graph.children[node0.as_index()].insert(node);
+            graph.parents[node.as_index()].insert(node0);
+            graph.ancestry[node0.as_index()].push(Ancestry {
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length,
+                },
+                ancestry: AncestryType::Overlap(node),
+            });
+        }
+        for node in [node3, node4] {
+            graph.children[node1.as_index()].insert(node);
+            graph.parents[node.as_index()].insert(node1);
+            graph.ancestry[node1.as_index()].push(Ancestry {
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length,
+                },
+                ancestry: AncestryType::Overlap(node),
+            });
+        }
+        for node in [node5, node6] {
+            graph.children[node2.as_index()].insert(node);
+            graph.parents[node.as_index()].insert(node2);
+            graph.ancestry[node2.as_index()].push(Ancestry {
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length,
+                },
+                ancestry: AncestryType::Overlap(node),
+            });
+        }
+
+        for node in [node3, node4, node5, node6] {
+            graph.ancestry[node.as_index()].push(Ancestry {
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length,
+                },
+                ancestry: AncestryType::ToSelf,
+            });
+        }
+
+        graph.deaths.push(node4);
+        graph.deaths.push(node6);
+        propagate_ancestry_changes(&mut graph);
+
+        assert_eq!(graph.ancestry[node0.as_index()].len(), 2);
+        assert!(graph.ancestry[node1.as_index()].is_empty());
+        for node in [node3, node5] {
+            assert!(graph.ancestry[node0.as_index()].contains(&Ancestry {
+                ancestry: AncestryType::Overlap(node),
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length()
+                }
+            }));
+            assert_eq!(
+                graph.parents[node.as_index()].len(),
+                1,
+                "{:?}",
+                graph.parents[node.as_index()]
+            );
+            assert!(graph.parents[node.as_index()].contains(&node0));
+        }
+        assert_eq!(graph.children[node0.as_index()].len(), 2);
+
+        for node in [node1, node2, node4, node6] {
+            assert!(node_is_extinct(node, &graph))
+        }
+        // FIXME: super hack alert.
+        // This is not a proper test involving births
+        for node in [node0, node3, node5] {
+            graph.births.push(node);
+        }
+        let reachable = reachable_nodes(&graph).collect::<Vec<_>>();
+        for node in [node1, node2, node4, node6] {
+            assert!(!reachable.contains(&node));
+        }
+        for node in [node0, node3, node5] {
+            assert!(reachable.contains(&node), "node {node:?} is not reachable ");
         }
     }
 }
