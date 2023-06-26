@@ -2430,10 +2430,18 @@ mod test_ancestry_change_propagation {
         }
 
         graph.deaths.push(node2);
-        println!("{graph:?}");
         propagate_ancestry_changes(&mut graph);
-        println!("{graph:?}");
 
         assert_eq!(graph.ancestry[node0.as_index()].len(), 2);
+        assert!(graph.ancestry[node1.as_index()].is_empty());
+        for node in [node3, node4] {
+            assert!(graph.ancestry[node0.as_index()].contains(&Ancestry {
+                ancestry: AncestryType::Overlap(node),
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length()
+                }
+            }))
+        }
     }
 }
