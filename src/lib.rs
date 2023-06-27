@@ -1668,6 +1668,8 @@ mod test_ancestry_change_propagation {
         ReachableNodes::new(graph)
     }
 
+    // NOTE: current tests are only able to trigger this fn
+    // in the case of "dangling deaths" isolated to a given tree.
     fn process_node_death(
         queued_parent: QueuedNode,
         hashed_nodes: &mut NodeHash,
@@ -1705,19 +1707,7 @@ mod test_ancestry_change_propagation {
                 ancestry_changes_to_process.get(parent)
             );
         }
-
-        // remove this node as a parent from all children
-        for child in graph.children[queued_parent.node.as_index()].iter() {
-            graph.parents[child.as_index()].remove(&queued_parent.node);
-        }
-
-        // TODO: separate function to "remove node" from Graph
         graph.ancestry[queued_parent.node.as_index()].clear();
-        graph.parents[queued_parent.node.as_index()].clear();
-        graph.children[queued_parent.node.as_index()].clear();
-        assert!(graph.birth_time[queued_parent.node.as_index()].is_some());
-        graph.birth_time[queued_parent.node.as_index()].take();
-        graph.free_nodes.push(queued_parent.node.as_index());
     }
 
     fn process_queued_node(
@@ -1796,10 +1786,25 @@ mod test_ancestry_change_propagation {
                     }
                 }
             }
-            None => panic!(),
+            None => match graph.status[queued_parent.node.as_index()] {
+                NodeStatus::Death => {
+                    process_node_death(
+                        queued_parent,
+                        hashed_nodes,
+                        parent_queue,
+                        ancestry_changes_to_process,
+                        graph,
+                    );
+                }
+                _ => panic!(),
+            },
         }
         // TODO: DUPLICATION (not really, but it is too related to code happening in
         // the processing of death nodes)
+        println!(
+            "final ancestry len = {}",
+            graph.ancestry[queued_parent.node.as_index()].len()
+        );
         if graph.ancestry[queued_parent.node.as_index()].is_empty() {
             for child in &graph.children[queued_parent.node.as_index()] {
                 graph.parents[child.as_index()].remove(&queued_parent.node);
@@ -1865,13 +1870,13 @@ mod test_ancestry_change_propagation {
             );
             assert!(hashed_nodes.contains(&queued_parent.node));
             match graph.status[queued_parent.node.as_index()] {
-                NodeStatus::Death => process_node_death(
-                    queued_parent,
-                    &mut hashed_nodes,
-                    &mut parent_queue,
-                    &mut ancestry_changes_to_process,
-                    graph,
-                ),
+                //NodeStatus::Death => process_node_death(
+                //    queued_parent,
+                //    &mut hashed_nodes,
+                //    &mut parent_queue,
+                //    &mut ancestry_changes_to_process,
+                //    graph,
+                //),
                 _ => process_queued_node(
                     options,
                     queued_parent,
@@ -2007,6 +2012,17 @@ mod test_ancestry_change_propagation {
     //   |   |   |
     //   3   4   5   <- Birth
     // first test involving "death" of a node!!!
+    //
+    // After propagation, the topology is:
+    //        0
+    //        |
+    //     -------
+    //     |     |
+    //     |     |
+    //     2     |
+    //   -----   |
+    //   |   |   |
+    //   3   4   5
     #[test]
     fn test_simple_case_of_propagation_over_multiple_generations() {
         let mut graph = Graph::new(100).unwrap();
@@ -2050,18 +2066,28 @@ mod test_ancestry_change_propagation {
 
         propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
-        // Okay, now we can test the output
-        // These two nodes are dropped from the graph
-        for extinct_node in [node1, node2] {
-            assert!(graph.ancestry[extinct_node.as_index()].is_empty());
-            assert!(graph.parents[extinct_node.as_index()].is_empty());
-            assert!(graph.birth_time[extinct_node.as_index()].is_none());
-            assert!(graph.free_nodes.contains(&extinct_node.as_index()));
+        assert!(graph.ancestry[node1.as_index()].is_empty());
+        assert!(graph.parents[node1.as_index()].is_empty());
+        assert!(graph.birth_time[node1.as_index()].is_none());
+        assert!(graph.free_nodes.contains(&node1.as_index()));
+
+        assert_eq!(graph.ancestry[node2.as_index()].len(), 2);
+        for child in [node3, node4] {
+            assert!(
+                graph.ancestry[node2.as_index()].contains(&Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length
+                    },
+                    ancestry: AncestryType::Overlap(child)
+                }),
+                "failing child node = {child:?}"
+            );
         }
 
         // Node 0
-        assert_eq!(graph.ancestry[node0.as_index()].len(), 3);
-        for child in [node3, node4, node5] {
+        assert_eq!(graph.ancestry[node0.as_index()].len(), 2);
+        for child in [node2, node5] {
             assert!(
                 graph.ancestry[node0.as_index()].contains(&Ancestry {
                     segment: Segment {
@@ -2084,7 +2110,13 @@ mod test_ancestry_change_propagation {
     //   -----
     //   |   |
     //   3   4       <- Birth
-    // first test involving "death" of a node!!!
+    //
+    //   After propagation:
+    //
+    //     2         <- Death
+    //   -----
+    //   |   |
+    //   3   4       <- Birth
     #[test]
     fn test_simple_case_of_propagation_over_multiple_generations_with_dangling_death() {
         let mut graph = Graph::new(100).unwrap();
@@ -2127,18 +2159,18 @@ mod test_ancestry_change_propagation {
 
         // Okay, now we can test the output
         // These two nodes are dropped from the graph
-        for extinct_node in [node1, node2] {
-            assert!(graph.ancestry[extinct_node.as_index()].is_empty());
-            assert!(graph.parents[extinct_node.as_index()].is_empty());
-            assert!(graph.birth_time[extinct_node.as_index()].is_none());
-            assert!(graph.free_nodes.contains(&extinct_node.as_index()));
+        for extinct_node in [node0, node1] {
+            assert!(
+                node_is_extinct(extinct_node, &graph),
+                "failing node = {extinct_node:?}"
+            )
         }
 
         // Node 0
-        assert_eq!(graph.ancestry[node0.as_index()].len(), 2);
+        assert_eq!(graph.ancestry[node0.as_index()].len(), 0);
         for child in [node3, node4] {
             assert!(
-                graph.ancestry[node0.as_index()].contains(&Ancestry {
+                graph.ancestry[node2.as_index()].contains(&Ancestry {
                     segment: Segment {
                         left: 0,
                         right: graph.genome_length
@@ -2168,6 +2200,23 @@ mod test_ancestry_change_propagation {
     //     -------
     //     |     |
     //     |     1   <- Death
+    //     2         <- Death
+    //     |
+    //   -----
+    //   |   |
+    //   3   4       <- Birth
+    //
+    //  After propagation the topologies are:
+    //
+    //           1   <- Death
+    //           |   <- Death
+    //           |
+    //         -----
+    //         |   |
+    //         3   4  <- Birth
+    //
+    // Tree 2:
+    //
     //     2         <- Death
     //     |
     //   -----
@@ -2225,20 +2274,14 @@ mod test_ancestry_change_propagation {
 
         propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
-        // Okay, now we can test the output
-        // These two nodes are dropped from the graph
-        for extinct_node in [node1, node2] {
-            assert!(graph.ancestry[extinct_node.as_index()].is_empty());
-            assert!(graph.parents[extinct_node.as_index()].is_empty());
-            assert!(graph.birth_time[extinct_node.as_index()].is_none());
-            assert!(graph.free_nodes.contains(&extinct_node.as_index()));
-        }
+        assert!(node_is_extinct(node0, &graph));
 
         // Node 0
-        assert_eq!(graph.ancestry[node0.as_index()].len(), 4);
+        assert_eq!(graph.ancestry[node0.as_index()].len(), 0);
         for child in [node3, node4] {
+            assert_eq!(graph.parents[child.as_index()].len(), 2);
             assert!(
-                graph.ancestry[node0.as_index()].contains(&Ancestry {
+                graph.ancestry[node1.as_index()].contains(&Ancestry {
                     segment: Segment {
                         left: 0,
                         right: crossover_pos,
@@ -2247,16 +2290,25 @@ mod test_ancestry_change_propagation {
                 }),
                 "failing child node = {child:?}"
             );
+        }
+        for child in [node3, node4] {
+            assert_eq!(graph.parents[child.as_index()].len(), 2);
             assert!(
-                graph.ancestry[node0.as_index()].contains(&Ancestry {
+                graph.ancestry[node2.as_index()].contains(&Ancestry {
                     segment: Segment {
                         left: crossover_pos,
-                        right: graph.genome_length
+                        right: graph.genome_length,
                     },
                     ancestry: AncestryType::Overlap(child)
                 }),
                 "failing child node = {child:?}"
             );
+        }
+        for node in [node1, node2] {
+            assert_eq!(graph.children[node.as_index()].len(), 2);
+            for child in [node3, node4] {
+                assert!(graph.children[node.as_index()].contains(&child));
+            }
         }
     }
 
@@ -2278,6 +2330,23 @@ mod test_ancestry_change_propagation {
     //     |     1   2          <- Death, Death
     //     3         |          <- Death
     //     |         |
+    //     5         4          <- Birth
+    //
+    // After propagation:
+    //
+    //        0                 <- "Rando ancestor from before"
+    //        |
+    //     -------
+    //     |     |
+    //     |     |
+    //     |     |
+    //     |     |
+    //     4     5              <- Birth
+    //
+    // Tree 2:
+    //
+    // (Unary all the way down)
+    //
     //     5         4          <- Birth
     #[test]
     fn test_second_case_of_propagation_over_multiple_generations_two_trees() {
@@ -2334,7 +2403,7 @@ mod test_ancestry_change_propagation {
             .record_transmission(crossover_pos, graph.genome_length(), node3, node5)
             .unwrap();
         graph
-            .record_transmission(crossover_pos, graph.genome_length(), node2, node3)
+            .record_transmission(crossover_pos, graph.genome_length(), node2, node4)
             .unwrap();
 
         assert_eq!(graph.deaths.len(), 3);
@@ -2344,17 +2413,16 @@ mod test_ancestry_change_propagation {
             assert!(!graph.ancestry[extinct_node.as_index()].is_empty());
             assert!(graph.birth_time[extinct_node.as_index()].is_some());
         }
+        println!("{:?}", graph.parents);
         propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
         for extinct_node in [node1, node2, node3] {
-            assert!(graph.ancestry[extinct_node.as_index()].is_empty());
-            assert!(graph.parents[extinct_node.as_index()].is_empty());
-            assert!(graph.children[extinct_node.as_index()].is_empty());
-            assert!(graph.birth_time[extinct_node.as_index()].is_none());
-            assert!(graph.free_nodes.contains(&extinct_node.as_index()));
+            assert!(
+                node_is_extinct(extinct_node, &graph),
+                "failing node is {extinct_node:?}"
+            );
         }
 
         assert_eq!(graph.ancestry[node0.as_index()].len(), 2);
-        assert_eq!(graph.children[node0.as_index()].len(), 2);
         for child in [node4, node5] {
             assert!(graph.children[node0.as_index()].contains(&child));
             assert!(
@@ -2378,11 +2446,18 @@ mod test_ancestry_change_propagation {
                 }),
                 "failing child node = {child:?}"
             );
+            assert_eq!(graph.parents[child.as_index()].len(), 1);
             assert!(
                 graph.parents[child.as_index()].contains(&node0),
                 "{:?}",
                 graph.parents[child.as_index()]
             );
+        }
+        for node in [node0, node4, node5] {
+            assert!(reachable_nodes(&graph).any(|n| n == node));
+        }
+        for node in [node1, node2, node3] {
+            assert!(!reachable_nodes(&graph).any(|n| n == node));
         }
     }
 
