@@ -9,6 +9,7 @@ mod overlapper_experiments;
 mod flags;
 
 use flags::NodeFlags;
+use flags::PropagationOptions;
 
 #[repr(transparent)]
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
@@ -500,8 +501,9 @@ impl AncestryOverlapper {
         self.change_overlaps.retain(|x| x.right() > self.left);
     }
 
-    fn make_overlaps(&mut self) -> Overlaps {
+    fn make_overlaps(&mut self, options: PropagationOptions) -> Overlaps {
         let ancestry_change = output_overlaps(
+            options,
             self.left,
             self.right,
             self.parent,
@@ -520,7 +522,7 @@ impl AncestryOverlapper {
         )
     }
 
-    fn calculate_next_overlap_set(&mut self) -> Option<Overlaps> {
+    fn calculate_next_overlap_set(&mut self, options: PropagationOptions) -> Option<Overlaps> {
         if self.current_overlap < self.num_overlaps {
             self.left = self.right;
             self.filter_overlaps();
@@ -544,7 +546,7 @@ impl AncestryOverlapper {
                 .count();
             self.update_right_from_overlaps();
             self.right = std::cmp::min(self.right, self.queue[self.current_overlap].left());
-            Some(self.make_overlaps())
+            Some(self.make_overlaps(options))
         } else {
             if self.parental_overlaps.len() + self.change_overlaps.len() != 0 {
                 self.left = self.right;
@@ -552,19 +554,20 @@ impl AncestryOverlapper {
             }
             if self.parental_overlaps.len() + self.change_overlaps.len() != 0 {
                 self.update_right_from_overlaps();
-                Some(self.make_overlaps())
+                Some(self.make_overlaps(options))
             } else {
                 None
             }
         }
     }
 
-    fn output_ancestry(&mut self) -> Option<Overlaps<'_>> {
-        self.calculate_next_overlap_set()
+    fn output_ancestry(&mut self, options: PropagationOptions) -> Option<Overlaps<'_>> {
+        self.calculate_next_overlap_set(options)
     }
 }
 
 fn calculate_ancestry_change(
+    options: PropagationOptions,
     left: i64,
     right: i64,
     parent: Node,
@@ -576,29 +579,39 @@ fn calculate_ancestry_change(
         None => panic!(),
     };
 
+    println!("the overlaps are {overlaps:?}");
+    println!(
+        "the options are {options:?}, {}",
+        options.keep_unary_nodes()
+    );
     let change_type = match parental_ancestry {
         AncestryType::Overlap(_) => {
             assert!(parental_overlaps.len() > 1);
-            if overlaps.len() > 1 {
-                None
-            }
-            // else if overlaps.len() == 1 {
-            //     Some(AncestryChangeType::ToLoss)
-            // }
-            else {
-                Some(AncestryChangeType::Loss)
+            match overlaps.len() {
+                0 => Some(AncestryChangeType::Loss),
+                1 => {
+                    if options.keep_unary_nodes() {
+                        Some(AncestryChangeType::Unary)
+                    } else {
+                        Some(AncestryChangeType::Loss)
+                    }
+                }
+                _ => None,
             }
         }
         AncestryType::Unary(_) | AncestryType::ToSelf => {
             assert!(parental_overlaps.len() == 1);
-            if overlaps.len() > 1 {
-                Some(AncestryChangeType::Overlap)
-            }
-            //else if overlaps.len() == 1 {
-            //    Some(AncestryChangeType::ToLoss)
-            //}
-            else {
-                Some(AncestryChangeType::Loss)
+            match overlaps.len() {
+                0 => Some(AncestryChangeType::Loss),
+                1 => {
+                    if options.keep_unary_nodes() {
+                        // NOTE: we may need to revisit this case
+                        Some(AncestryChangeType::Unary)
+                    } else {
+                        Some(AncestryChangeType::Loss)
+                    }
+                }
+                _ => Some(AncestryChangeType::Overlap),
             }
         }
     };
@@ -611,6 +624,7 @@ fn calculate_ancestry_change(
 }
 
 fn output_overlaps(
+    options: PropagationOptions,
     left: i64,
     right: i64,
     parent: Node,
@@ -643,7 +657,14 @@ fn output_overlaps(
             }
         }
     }
-    calculate_ancestry_change(left, right, parent, parental_overlaps, output_ancestry)
+    calculate_ancestry_change(
+        options,
+        left,
+        right,
+        parent,
+        parental_overlaps,
+        output_ancestry,
+    )
 }
 
 // TODO: we need some data
@@ -750,7 +771,7 @@ fn design_ancestry_update_calculation_test_0() {
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    while let Some(overlaps) = overlapper.output_ancestry() {
+    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
         changes.push(overlaps.parental_ancestry_change);
         for &a in overlaps.overlaps() {
             new_ancestry.push(a);
@@ -820,7 +841,7 @@ fn design_ancestry_update_calculation_test_1() {
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    while let Some(overlaps) = overlapper.output_ancestry() {
+    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
         changes.push(overlaps.parental_ancestry_change);
         for &a in overlaps.overlaps() {
             new_ancestry.push(a);
@@ -880,7 +901,7 @@ fn design_ancestry_update_calculation_test_2() {
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    while let Some(overlaps) = overlapper.output_ancestry() {
+    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
         changes.push(overlaps.parental_ancestry_change);
         if !matches!(
             overlaps.parental_ancestry_change,
@@ -977,7 +998,7 @@ fn design_ancestry_update_calculation_test_3() {
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    while let Some(overlaps) = overlapper.output_ancestry() {
+    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
         changes.push(overlaps.parental_ancestry_change);
         for &a in overlaps.overlaps() {
             new_ancestry.push(a);
@@ -1072,7 +1093,7 @@ fn design_ancestry_update_calculation_test_4() {
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    while let Some(overlaps) = overlapper.output_ancestry() {
+    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
         changes.push(overlaps.parental_ancestry_change);
         if !matches!(
             overlaps.parental_ancestry_change,
@@ -1165,7 +1186,7 @@ fn design_ancestry_update_calculation_test_5() {
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    while let Some(overlaps) = overlapper.output_ancestry() {
+    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
         changes.push(overlaps.parental_ancestry_change);
         for &a in overlaps.overlaps() {
             new_ancestry.push(a);
@@ -1265,7 +1286,7 @@ fn design_ancestry_update_calculation_test_6() {
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    while let Some(overlaps) = overlapper.output_ancestry() {
+    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
         changes.push(overlaps.parental_ancestry_change);
         for &a in overlaps.overlaps() {
             new_ancestry.push(a);
@@ -1331,7 +1352,7 @@ fn design_ancestry_update_calculation_test_7() {
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    while let Some(overlaps) = overlapper.output_ancestry() {
+    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
         changes.push(overlaps.parental_ancestry_change);
         if !matches!(
             overlaps.parental_ancestry_change,
@@ -1403,7 +1424,7 @@ fn design_ancestry_update_calculation_test_8() {
     let mut new_ancestry: Vec<Ancestry> = vec![];
     let mut changes = vec![];
 
-    while let Some(overlaps) = overlapper.output_ancestry() {
+    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
         changes.push(overlaps.parental_ancestry_change);
         for &a in overlaps.overlaps.iter() {
             new_ancestry.push(a);
@@ -1700,6 +1721,7 @@ mod test_ancestry_change_propagation {
     }
 
     fn process_queued_node(
+        options: PropagationOptions,
         queued_parent: QueuedNode,
         hashed_nodes: &mut NodeHash,
         parent_queue: &mut std::collections::BinaryHeap<QueuedNode>,
@@ -1716,7 +1738,7 @@ mod test_ancestry_change_propagation {
                 );
                 // Clear parental ancestry
                 graph.ancestry[queued_parent.node.as_index()].clear();
-                while let Some(overlaps) = overlapper.output_ancestry() {
+                while let Some(overlaps) = overlapper.output_ancestry(options) {
                     if let Some(ancestry_change) = overlaps.parental_ancestry_change {
                         println!("change for {queued_parent:?} is {ancestry_change:?}");
                         for parent in graph.parents(queued_parent.node) {
@@ -1793,7 +1815,11 @@ mod test_ancestry_change_propagation {
         }
     }
 
-    fn propagate_ancestry_changes(graph: &mut Graph) {
+    fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
+        println!(
+            "the input options are {options:?}, {}",
+            options.keep_unary_nodes()
+        );
         let mut hashed_nodes: NodeHash = NodeHash::with_hasher(BuildHasherDefault::default());
         let mut parent_queue: BinaryHeap<QueuedNode> = BinaryHeap::new();
         let mut ancestry_changes_to_process: HashMap<Node, Vec<AncestryChange>> = HashMap::new();
@@ -1847,6 +1873,7 @@ mod test_ancestry_change_propagation {
                     graph,
                 ),
                 _ => process_queued_node(
+                    options,
                     queued_parent,
                     &mut hashed_nodes,
                     &mut parent_queue,
@@ -1891,7 +1918,7 @@ mod test_ancestry_change_propagation {
             assert!(graph.parents(c).any(|&p| p == parent));
         }
 
-        propagate_ancestry_changes(&mut graph);
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         assert_eq!(graph.ancestry[parent.as_index()].len(), 2);
         for c in [child0, child1] {
@@ -1952,7 +1979,7 @@ mod test_ancestry_change_propagation {
         assert_eq!(graph.status[child2.as_index()], NodeStatus::Birth);
         assert!(graph.parents(child2).any(|&p| p == parent1));
 
-        propagate_ancestry_changes(&mut graph);
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         // Parent 1 should have no ancestry
         assert!(graph.ancestry[parent1.as_index()].is_empty());
@@ -2021,7 +2048,7 @@ mod test_ancestry_change_propagation {
             });
         }
 
-        propagate_ancestry_changes(&mut graph);
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         // Okay, now we can test the output
         // These two nodes are dropped from the graph
@@ -2096,7 +2123,7 @@ mod test_ancestry_change_propagation {
             });
         }
 
-        propagate_ancestry_changes(&mut graph);
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         // Okay, now we can test the output
         // These two nodes are dropped from the graph
@@ -2196,7 +2223,7 @@ mod test_ancestry_change_propagation {
             });
         }
 
-        propagate_ancestry_changes(&mut graph);
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         // Okay, now we can test the output
         // These two nodes are dropped from the graph
@@ -2317,7 +2344,7 @@ mod test_ancestry_change_propagation {
             assert!(!graph.ancestry[extinct_node.as_index()].is_empty());
             assert!(graph.birth_time[extinct_node.as_index()].is_some());
         }
-        propagate_ancestry_changes(&mut graph);
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
         for extinct_node in [node1, node2, node3] {
             assert!(graph.ancestry[extinct_node.as_index()].is_empty());
             assert!(graph.parents[extinct_node.as_index()].is_empty());
@@ -2434,7 +2461,7 @@ mod test_ancestry_change_propagation {
 
         graph.deaths.push(node4);
         println!("{graph:?}");
-        propagate_ancestry_changes(&mut graph);
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
         println!("{graph:?}");
 
         assert_eq!(graph.ancestry[node1.as_index()].len(), 2);
@@ -2502,7 +2529,7 @@ mod test_ancestry_change_propagation {
         }
 
         graph.deaths.push(node2);
-        propagate_ancestry_changes(&mut graph);
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         assert_eq!(graph.ancestry[node0.as_index()].len(), 2);
         assert!(graph.ancestry[node1.as_index()].is_empty());
@@ -2593,7 +2620,7 @@ mod test_ancestry_change_propagation {
 
         graph.deaths.push(node4);
         graph.deaths.push(node6);
-        propagate_ancestry_changes(&mut graph);
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         assert_eq!(graph.ancestry[node0.as_index()].len(), 2);
         assert!(graph.ancestry[node1.as_index()].is_empty());
@@ -2620,7 +2647,7 @@ mod test_ancestry_change_propagation {
         }
         // FIXME: super hack alert.
         // This is not a proper test involving births
-        for node in [node0, node3, node5] {
+        for node in [node3, node5] {
             graph.births.push(node);
         }
         let reachable = reachable_nodes(&graph).collect::<Vec<_>>();
@@ -2628,6 +2655,281 @@ mod test_ancestry_change_propagation {
             assert!(!reachable.contains(&node));
         }
         for node in [node0, node3, node5] {
+            assert!(reachable.contains(&node), "node {node:?} is not reachable ");
+        }
+    }
+
+    //                     0
+    //                   -----
+    //                   |   |
+    //                   1   2
+    //                 ----  ---
+    //                 |  |  | |
+    //                 3  4  5 6
+    //
+    //          If we kill node 4 and 6,
+    //          nodes 1 and 2 become unary.
+    //
+    // With unary retention, the final topology is:
+    //
+    //                     0
+    //                   -----
+    //                   |   |
+    //                   1   2
+    //                   |   |
+    //                   |   |
+    //                   3   5
+    #[test]
+    fn test_subtree_propagation_2_with_unary_retention() {
+        let mut graph = Graph::new(100).unwrap();
+        let node0 = graph.add_node(NodeStatus::Ancestor, 0);
+        let node1 = graph.add_node(NodeStatus::Ancestor, 1);
+        let node2 = graph.add_node(NodeStatus::Ancestor, 1);
+        let node3 = graph.add_node(NodeStatus::Ancestor, 2);
+        let node4 = graph.add_node(NodeStatus::Death, 2);
+        let node5 = graph.add_node(NodeStatus::Ancestor, 2);
+        let node6 = graph.add_node(NodeStatus::Death, 2);
+
+        for node in [node1, node2] {
+            graph.children[node0.as_index()].insert(node);
+            graph.parents[node.as_index()].insert(node0);
+            graph.ancestry[node0.as_index()].push(Ancestry {
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length,
+                },
+                ancestry: AncestryType::Overlap(node),
+            });
+        }
+        for node in [node3, node4] {
+            graph.children[node1.as_index()].insert(node);
+            graph.parents[node.as_index()].insert(node1);
+            graph.ancestry[node1.as_index()].push(Ancestry {
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length,
+                },
+                ancestry: AncestryType::Overlap(node),
+            });
+        }
+        for node in [node5, node6] {
+            graph.children[node2.as_index()].insert(node);
+            graph.parents[node.as_index()].insert(node2);
+            graph.ancestry[node2.as_index()].push(Ancestry {
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length,
+                },
+                ancestry: AncestryType::Overlap(node),
+            });
+        }
+
+        for node in [node3, node4, node5, node6] {
+            graph.ancestry[node.as_index()].push(Ancestry {
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length,
+                },
+                ancestry: AncestryType::ToSelf,
+            });
+        }
+
+        graph.deaths.push(node4);
+        graph.deaths.push(node6);
+        propagate_ancestry_changes(
+            PropagationOptions::default().with_keep_unary_nodes(),
+            &mut graph,
+        );
+
+        assert_eq!(graph.ancestry[node0.as_index()].len(), 2);
+        assert_eq!(graph.ancestry[node1.as_index()].len(), 1_usize);
+        assert_eq!(graph.ancestry[node2.as_index()].len(), 1);
+        assert_eq!(graph.children[node0.as_index()].len(), 2);
+        for node in [node1, node2] {
+            assert!(graph.children[node0.as_index()].contains(&node));
+            assert!(graph.ancestry[node0.as_index()].contains(&Ancestry {
+                ancestry: AncestryType::Overlap(node),
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length()
+                }
+            }));
+            assert_eq!(
+                graph.parents[node.as_index()].len(),
+                1,
+                "{:?}",
+                graph.parents[node.as_index()]
+            );
+            assert!(graph.parents[node.as_index()].contains(&node0));
+        }
+        assert!(graph.ancestry[node1.as_index()].contains(&Ancestry {
+            segment: Segment {
+                left: 0,
+                right: graph.genome_length()
+            },
+            ancestry: AncestryType::Overlap(node3),
+        }));
+        assert!(graph.ancestry[node2.as_index()].contains(&Ancestry {
+            segment: Segment {
+                left: 0,
+                right: graph.genome_length()
+            },
+            ancestry: AncestryType::Overlap(node5),
+        }));
+
+        for node in [node4, node6] {
+            assert!(node_is_extinct(node, &graph))
+        }
+        // FIXME: super hack alert.
+        // This is not a proper test involving births
+        for node in [node3, node5] {
+            graph.births.push(node);
+        }
+        let reachable = reachable_nodes(&graph).collect::<Vec<_>>();
+        for node in [node4, node6] {
+            assert!(!reachable.contains(&node));
+        }
+        for node in [node0, node1, node2, node3, node5] {
+            assert!(reachable.contains(&node), "node {node:?} is not reachable ");
+        }
+    }
+
+    //                     0
+    //                   -----
+    //                   |   |
+    //                   1   2
+    //                 ----  ---
+    //                 |  |  | |
+    //                 3  4  5 6
+    //
+    //          If we kill node 5,
+    //          node 2 becomes unary.
+    //
+    // With unary retention, the final topology is:
+    //
+    //                     0
+    //                   -----
+    //                   |   |
+    //                   1   2
+    //                 ---   |
+    //                 | |   |
+    //                 4 3   6
+    #[test]
+    fn test_subtree_propagation_with_assymetric_unary_retention() {
+        let mut graph = Graph::new(100).unwrap();
+        let node0 = graph.add_node(NodeStatus::Ancestor, 0);
+        let node1 = graph.add_node(NodeStatus::Ancestor, 1);
+        let node2 = graph.add_node(NodeStatus::Ancestor, 1);
+        let node3 = graph.add_node(NodeStatus::Ancestor, 2);
+        let node4 = graph.add_node(NodeStatus::Ancestor, 2);
+        let node5 = graph.add_node(NodeStatus::Death, 2);
+        let node6 = graph.add_node(NodeStatus::Ancestor, 2);
+
+        for node in [node1, node2] {
+            graph.children[node0.as_index()].insert(node);
+            graph.parents[node.as_index()].insert(node0);
+            graph.ancestry[node0.as_index()].push(Ancestry {
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length,
+                },
+                ancestry: AncestryType::Overlap(node),
+            });
+        }
+        for node in [node3, node4] {
+            graph.children[node1.as_index()].insert(node);
+            graph.parents[node.as_index()].insert(node1);
+            graph.ancestry[node1.as_index()].push(Ancestry {
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length,
+                },
+                ancestry: AncestryType::Overlap(node),
+            });
+        }
+        for node in [node5, node6] {
+            graph.children[node2.as_index()].insert(node);
+            graph.parents[node.as_index()].insert(node2);
+            graph.ancestry[node2.as_index()].push(Ancestry {
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length,
+                },
+                ancestry: AncestryType::Overlap(node),
+            });
+        }
+
+        for node in [node3, node4, node5, node6] {
+            graph.ancestry[node.as_index()].push(Ancestry {
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length,
+                },
+                ancestry: AncestryType::ToSelf,
+            });
+        }
+
+        graph.deaths.push(node5);
+        propagate_ancestry_changes(
+            PropagationOptions::default().with_keep_unary_nodes(),
+            &mut graph,
+        );
+
+        assert_eq!(graph.ancestry[node0.as_index()].len(), 2);
+        assert_eq!(graph.ancestry[node1.as_index()].len(), 2_usize);
+        assert_eq!(graph.ancestry[node2.as_index()].len(), 1);
+        assert_eq!(graph.children[node0.as_index()].len(), 2);
+        for node in [node1, node2] {
+            assert!(graph.children[node0.as_index()].contains(&node));
+            assert!(graph.ancestry[node0.as_index()].contains(&Ancestry {
+                ancestry: AncestryType::Overlap(node),
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length()
+                }
+            }));
+            assert_eq!(
+                graph.parents[node.as_index()].len(),
+                1,
+                "{:?}",
+                graph.parents[node.as_index()]
+            );
+            assert!(graph.parents[node.as_index()].contains(&node0));
+        }
+        for node in [node3, node4] {
+            assert!(graph.children[node1.as_index()].contains(&node));
+            assert!(graph.ancestry[node1.as_index()].contains(&Ancestry {
+                ancestry: AncestryType::Overlap(node),
+                segment: Segment {
+                    left: 0,
+                    right: graph.genome_length()
+                }
+            }));
+            assert_eq!(
+                graph.parents[node.as_index()].len(),
+                1,
+                "{:?}",
+                graph.parents[node.as_index()]
+            );
+            assert!(graph.parents[node.as_index()].contains(&node1));
+        }
+        assert!(graph.ancestry[node2.as_index()].contains(&Ancestry {
+            segment: Segment {
+                left: 0,
+                right: graph.genome_length()
+            },
+            ancestry: AncestryType::Overlap(node6),
+        }));
+
+        assert!(node_is_extinct(node5, &graph));
+        // FIXME: super hack alert.
+        // This is not a proper test involving births
+        for node in [node4, node3, node6] {
+            graph.births.push(node);
+        }
+        let reachable = reachable_nodes(&graph).collect::<Vec<_>>();
+        assert!(!reachable.contains(&node5));
+        for node in [node0, node1, node2, node3, node4] {
             assert!(reachable.contains(&node), "node {node:?} is not reachable ");
         }
     }
