@@ -12,6 +12,8 @@
    etc..
 [] enforce that all births are visited during
    ancestry change propagation
+[] Need API to mark a node as sample
+   (low priority for this prototype)
 
 ## Ancestry table
 

@@ -27,8 +27,12 @@ bitflags! {
 pub struct NodeFlags(NodeBitFlags);
 
 impl NodeFlags {
-    pub fn sample() -> Self {
+    pub fn new_sample() -> Self {
         Self(NodeBitFlags::IS_SAMPLE)
+    }
+
+    pub fn sample(&self) -> bool {
+        self.0.contains(NodeBitFlags::IS_SAMPLE)
     }
 }
 
