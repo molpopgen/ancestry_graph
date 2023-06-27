@@ -1,5 +1,18 @@
 # Development notes
 
+## TODO
+
+[] internal sample nodes and unary overlap retention.
+[] extinct node recycling
+[] add "deme" column to graph.  Or a NodeData column.
+   (low priority for this prototype)
+[] Node state changes during update.
+   Birth -> Alive
+   Death -> "Loss" or Ancestor
+   etc..
+[] enforce that all births are visited during
+   ancestry change propagation
+
 ## Ancestry table
 
 It may be useful to design the ancestry table as:
