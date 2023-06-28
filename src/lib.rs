@@ -1304,6 +1304,96 @@ mod graph_fixtures {
             }
         }
     }
+
+    //                     0
+    //                   -----
+    //                   |   |
+    //                   1   2
+    //                 ----  ---
+    //                 |  |  | |
+    //                 3  4  5 6
+    //
+    // # NOTES
+    //
+    // * deaths vector is not filled
+    // * All nodes intially marked as Ancestor
+    pub struct Topology2 {
+        pub node0: Node,
+        pub node1: Node,
+        pub node2: Node,
+        pub node3: Node,
+        pub node4: Node,
+        pub node5: Node,
+        pub node6: Node,
+        pub graph: Graph,
+    }
+
+    impl Topology2 {
+        pub fn new() -> Self {
+            let mut graph = Graph::new(100).unwrap();
+            let node0 = graph.add_node(NodeStatus::Ancestor, 0);
+            let node1 = graph.add_node(NodeStatus::Ancestor, 1);
+            let node2 = graph.add_node(NodeStatus::Ancestor, 1);
+            let node3 = graph.add_node(NodeStatus::Ancestor, 2);
+            let node4 = graph.add_node(NodeStatus::Ancestor, 2);
+            let node5 = graph.add_node(NodeStatus::Ancestor, 2);
+            let node6 = graph.add_node(NodeStatus::Ancestor, 2);
+
+            for node in [node1, node2] {
+                graph.children[node0.as_index()].insert(node);
+                graph.parents[node.as_index()].insert(node0);
+                graph.ancestry[node0.as_index()].push(Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length,
+                    },
+                    ancestry: AncestryType::Overlap(node),
+                });
+            }
+            for node in [node3, node4] {
+                graph.children[node1.as_index()].insert(node);
+                graph.parents[node.as_index()].insert(node1);
+                graph.ancestry[node1.as_index()].push(Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length,
+                    },
+                    ancestry: AncestryType::Overlap(node),
+                });
+            }
+            for node in [node5, node6] {
+                graph.children[node2.as_index()].insert(node);
+                graph.parents[node.as_index()].insert(node2);
+                graph.ancestry[node2.as_index()].push(Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length,
+                    },
+                    ancestry: AncestryType::Overlap(node),
+                });
+            }
+
+            for node in [node3, node4, node5, node6] {
+                graph.ancestry[node.as_index()].push(Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length,
+                    },
+                    ancestry: AncestryType::ToSelf,
+                });
+            }
+            Self {
+                node0,
+                node1,
+                node2,
+                node3,
+                node4,
+                node5,
+                node6,
+                graph,
+            }
+        }
+    }
 }
 
 #[test]
@@ -2308,58 +2398,18 @@ mod test_unary_nodes {
     //                   3   5
     #[test]
     fn test_subtree_propagation_2_with_unary_retention() {
-        let mut graph = Graph::new(100).unwrap();
-        let node0 = graph.add_node(NodeStatus::Ancestor, 0);
-        let node1 = graph.add_node(NodeStatus::Ancestor, 1);
-        let node2 = graph.add_node(NodeStatus::Ancestor, 1);
-        let node3 = graph.add_node(NodeStatus::Ancestor, 2);
-        let node4 = graph.add_node(NodeStatus::Death, 2);
-        let node5 = graph.add_node(NodeStatus::Ancestor, 2);
-        let node6 = graph.add_node(NodeStatus::Death, 2);
-
-        for node in [node1, node2] {
-            graph.children[node0.as_index()].insert(node);
-            graph.parents[node.as_index()].insert(node0);
-            graph.ancestry[node0.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::Overlap(node),
-            });
-        }
-        for node in [node3, node4] {
-            graph.children[node1.as_index()].insert(node);
-            graph.parents[node.as_index()].insert(node1);
-            graph.ancestry[node1.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::Overlap(node),
-            });
-        }
-        for node in [node5, node6] {
-            graph.children[node2.as_index()].insert(node);
-            graph.parents[node.as_index()].insert(node2);
-            graph.ancestry[node2.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::Overlap(node),
-            });
-        }
-
-        for node in [node3, node4, node5, node6] {
-            graph.ancestry[node.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::ToSelf,
-            });
-        }
+        let graph_fixtures::Topology2 {
+            node0,
+            node1,
+            node2,
+            node3,
+            node4,
+            node5,
+            node6,
+            mut graph,
+        } = graph_fixtures::Topology2::new();
+        graph.status[node4.as_index()] = NodeStatus::Death;
+        graph.status[node6.as_index()] = NodeStatus::Death;
 
         graph.deaths.push(node4);
         graph.deaths.push(node6);
@@ -2443,58 +2493,17 @@ mod test_unary_nodes {
     //                 4 3   6
     #[test]
     fn test_subtree_propagation_with_assymetric_unary_retention() {
-        let mut graph = Graph::new(100).unwrap();
-        let node0 = graph.add_node(NodeStatus::Ancestor, 0);
-        let node1 = graph.add_node(NodeStatus::Ancestor, 1);
-        let node2 = graph.add_node(NodeStatus::Ancestor, 1);
-        let node3 = graph.add_node(NodeStatus::Ancestor, 2);
-        let node4 = graph.add_node(NodeStatus::Ancestor, 2);
-        let node5 = graph.add_node(NodeStatus::Death, 2);
-        let node6 = graph.add_node(NodeStatus::Ancestor, 2);
-
-        for node in [node1, node2] {
-            graph.children[node0.as_index()].insert(node);
-            graph.parents[node.as_index()].insert(node0);
-            graph.ancestry[node0.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::Overlap(node),
-            });
-        }
-        for node in [node3, node4] {
-            graph.children[node1.as_index()].insert(node);
-            graph.parents[node.as_index()].insert(node1);
-            graph.ancestry[node1.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::Overlap(node),
-            });
-        }
-        for node in [node5, node6] {
-            graph.children[node2.as_index()].insert(node);
-            graph.parents[node.as_index()].insert(node2);
-            graph.ancestry[node2.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::Overlap(node),
-            });
-        }
-
-        for node in [node3, node4, node5, node6] {
-            graph.ancestry[node.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::ToSelf,
-            });
-        }
+        let graph_fixtures::Topology2 {
+            node0,
+            node1,
+            node2,
+            node3,
+            node4,
+            node5,
+            node6,
+            mut graph,
+        } = graph_fixtures::Topology2::new();
+        graph.status[node5.as_index()] = NodeStatus::Death;
 
         graph.deaths.push(node5);
         propagate_ancestry_changes(
@@ -2588,60 +2597,18 @@ mod test_internal_samples {
     //                 4 3   6
     #[test]
     fn test_subtree_propagation_with_internal_sample() {
-        let mut graph = Graph::new(100).unwrap();
-        let node0 = graph.add_node(NodeStatus::Ancestor, 0);
-        let node1 = graph.add_node(NodeStatus::Ancestor, 1);
-        let node2 = graph.add_node(NodeStatus::Ancestor, 1);
-        let node3 = graph.add_node(NodeStatus::Ancestor, 2);
-        let node4 = graph.add_node(NodeStatus::Ancestor, 2);
-        let node5 = graph.add_node(NodeStatus::Death, 2);
-        let node6 = graph.add_node(NodeStatus::Ancestor, 2);
-
+        let graph_fixtures::Topology2 {
+            node0,
+            node1,
+            node2,
+            node3,
+            node4,
+            node5,
+            node6,
+            mut graph,
+        } = graph_fixtures::Topology2::new();
         graph.flags[node2.as_index()] = NodeFlags::new_sample();
-
-        for node in [node1, node2] {
-            graph.children[node0.as_index()].insert(node);
-            graph.parents[node.as_index()].insert(node0);
-            graph.ancestry[node0.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::Overlap(node),
-            });
-        }
-        for node in [node3, node4] {
-            graph.children[node1.as_index()].insert(node);
-            graph.parents[node.as_index()].insert(node1);
-            graph.ancestry[node1.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::Overlap(node),
-            });
-        }
-        for node in [node5, node6] {
-            graph.children[node2.as_index()].insert(node);
-            graph.parents[node.as_index()].insert(node2);
-            graph.ancestry[node2.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::Overlap(node),
-            });
-        }
-
-        for node in [node3, node4, node5, node6] {
-            graph.ancestry[node.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::ToSelf,
-            });
-        }
+        graph.status[node5.as_index()]=NodeStatus::Death;
 
         graph.deaths.push(node5);
         // With node2 marked as an internal sample, we
