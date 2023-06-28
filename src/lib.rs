@@ -728,1057 +728,6 @@ impl<'overlapper> Overlaps<'overlapper> {
     }
 }
 
-// We could do all this with rstest,
-// but we still need to pattern match,
-// etc., to use the fixtures.
-// IMO, this doesn't seem like rstest
-// saves much boiler plate here...
-#[cfg(test)]
-mod graph_fixtures {
-    use super::*;
-
-    //        0      <- "Rando ancestor from before"
-    //        |
-    //     -------
-    //     |     |
-    //     |     1   <- Death
-    //     2     |   <- Death
-    //   -----   |
-    //   |   |   |
-    //   3   4   5   <- Birth
-    //
-    // After propagation with default options, the topology is:
-    //        0
-    //        |
-    //     -------
-    //     |     |
-    //     |     |
-    //     2     |
-    //   -----   |
-    //   |   |   |
-    //   3   4   5
-    pub struct Topology0 {
-        pub node0: Node,
-        pub node1: Node,
-        pub node2: Node,
-        pub node3: Node,
-        pub node4: Node,
-        pub node5: Node,
-        pub graph: Graph,
-    }
-
-    impl Topology0 {
-        pub fn new() -> Self {
-            let mut graph = Graph::new(100).unwrap();
-            let node0 = graph.add_node(NodeStatus::Ancestor, 0);
-            let node1 = graph.add_node(NodeStatus::Death, 1);
-            let node2 = graph.add_node(NodeStatus::Death, 2);
-            let node3 = graph.add_birth(3).unwrap();
-            let node4 = graph.add_birth(3).unwrap();
-            let node5 = graph.add_birth(3).unwrap();
-
-            for node in [node1, node2] {
-                graph.parents[node.as_index()].insert(node0);
-            }
-            for child in [node3, node4] {
-                graph
-                    .record_transmission(0, graph.genome_length(), node2, child)
-                    .unwrap();
-            }
-            graph
-                .record_transmission(0, graph.genome_length(), node1, node5)
-                .unwrap();
-
-            // NOTE: we need to add "dummy" ancestry to the parents
-            // to have a valid data structure for testing.
-            for node in [node1, node2] {
-                graph.ancestry[node0.as_index()].push(Ancestry {
-                    segment: Segment {
-                        left: 0,
-                        right: graph.genome_length,
-                    },
-                    ancestry: AncestryType::Overlap(node),
-                });
-                graph.ancestry[node.as_index()].push(Ancestry {
-                    segment: Segment {
-                        left: 0,
-                        right: graph.genome_length,
-                    },
-                    ancestry: AncestryType::ToSelf,
-                });
-            }
-            Self {
-                node0,
-                node1,
-                node2,
-                node3,
-                node4,
-                node5,
-                graph,
-            }
-        }
-    }
-
-    //        0      <- "Rando ancestor from before"
-    //        |
-    //     -------
-    //     |     |
-    //     |     1   <- Death
-    //     2         <- Death
-    //   -----
-    //   |   |
-    //   3   4       <- Birth
-    //
-    //   After propagation with default options:
-    //
-    //     2         <- Death
-    //   -----
-    //   |   |
-    //   3   4       <- Birth
-    pub struct Topology1 {
-        pub node0: Node,
-        pub node1: Node,
-        pub node2: Node,
-        pub node3: Node,
-        pub node4: Node,
-        pub graph: Graph,
-    }
-
-    impl Topology1 {
-        pub fn new() -> Self {
-            let mut graph = Graph::new(100).unwrap();
-            let node0 = graph.add_node(NodeStatus::Ancestor, 0);
-            let node1 = graph.add_node(NodeStatus::Death, 1);
-            let node2 = graph.add_node(NodeStatus::Death, 2);
-            let node3 = graph.add_birth(3).unwrap();
-            let node4 = graph.add_birth(3).unwrap();
-
-            for node in [node1, node2] {
-                graph.parents[node.as_index()].insert(node0);
-                graph.deaths.push(node);
-            }
-            for child in [node3, node4] {
-                graph
-                    .record_transmission(0, graph.genome_length(), node2, child)
-                    .unwrap();
-            }
-
-            // NOTE: we need to add "dummy" ancestry to the parents
-            // to have a valid data structure for testing.
-            for node in [node1, node2] {
-                graph.ancestry[node0.as_index()].push(Ancestry {
-                    segment: Segment {
-                        left: 0,
-                        right: graph.genome_length,
-                    },
-                    ancestry: AncestryType::Overlap(node),
-                });
-                graph.ancestry[node.as_index()].push(Ancestry {
-                    segment: Segment {
-                        left: 0,
-                        right: graph.genome_length,
-                    },
-                    ancestry: AncestryType::ToSelf,
-                });
-            }
-            Self {
-                node0,
-                node1,
-                node2,
-                node3,
-                node4,
-                graph,
-            }
-        }
-    }
-}
-
-#[test]
-fn design_test_0() {
-    let mut graph = Graph::with_initial_nodes(10, 1000000).unwrap();
-    assert_eq!(graph.genome_length(), 1000000);
-}
-
-#[test]
-fn design_test_1() {
-    let graph = Graph::with_initial_nodes(10, 1000000).unwrap();
-    assert_eq!(graph.iter_nodes_with_ancestry().count(), 10);
-}
-
-#[test]
-fn design_test_2() {
-    let mut graph = Graph::new(100).unwrap();
-    let parent = graph.add_node(NodeStatus::Ancestor, 0);
-    let child0 = graph.add_birth(1).unwrap();
-    let child1 = graph.add_birth(1).unwrap();
-
-    graph
-        .record_transmission(0, graph.genome_length(), parent, child0)
-        .unwrap();
-    graph
-        .record_transmission(0, graph.genome_length(), parent, child1)
-        .unwrap();
-    assert_eq!(graph.parents(child0).count(), 1);
-    assert_eq!(graph.parents(child1).count(), 1);
-    // WARNING: tests internal details
-    assert_eq!(graph.transmissions.len(), 2);
-}
-
-#[test]
-fn test_births_out_of_order() {
-    let mut graph = Graph::new(100).unwrap();
-    let _ = graph.add_node(NodeStatus::Ancestor, 0);
-    let _ = graph.add_birth(2).unwrap();
-    assert!(graph.add_birth(1).is_err());
-}
-
-//        3    <- A "recent death"
-//        |
-//     -------
-//     |     |
-//     0     1 <- Births
-//
-// The final ancestry of 3 is Overlap(0), Overlap(1) for "whole genome".
-#[test]
-fn design_ancestry_update_calculation_test_0() {
-    let genome_length = 100_i64;
-    let ancestry_changes = vec![
-        AncestryChange {
-            node: Node(0),
-            segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::Unary,
-        },
-        AncestryChange {
-            node: Node(1),
-            segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::Unary,
-        },
-    ];
-    let parental_ancestry = vec![Ancestry {
-        segment: Segment::new(0, genome_length).unwrap(),
-        ancestry: AncestryType::ToSelf,
-    }];
-
-    let mut overlapper = AncestryOverlapper::new(
-        Node(3),
-        NodeFlags::default(),
-        &parental_ancestry,
-        &ancestry_changes,
-    );
-    let mut new_ancestry: Vec<Ancestry> = vec![];
-    let mut changes = vec![];
-
-    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
-        changes.push(overlaps.parental_ancestry_change);
-        for &a in overlaps.overlaps() {
-            new_ancestry.push(a);
-        }
-    }
-
-    assert_eq!(new_ancestry.len(), 2);
-    for node in [0, 1] {
-        assert!(new_ancestry.contains(&Ancestry {
-            segment: Segment {
-                left: 0,
-                right: 100
-            },
-            ancestry: AncestryType::Overlap(Node(node))
-        }));
-    }
-    assert!(changes.contains(&Some(AncestryChange {
-        segment: Segment {
-            left: 0,
-            right: 100
-        },
-        node: Node(3),
-        change_type: AncestryChangeType::Overlap
-    })),);
-}
-
-//        0    <- Death
-//        |
-//     -------
-//     |     |
-//     |     2 <- Death (loss of ancestry)
-//     |     |
-//     1     3 <- Births
-//
-// The final ancestry of 0 is Overlap(3), Overlap(1) for "whole genome".
-#[test]
-fn design_ancestry_update_calculation_test_1() {
-    let genome_length = 100_i64;
-    let ancestry_changes = vec![
-        AncestryChange {
-            node: Node(1),
-            segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::Unary,
-        },
-        AncestryChange {
-            node: Node(2),
-            segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::Loss,
-        },
-        AncestryChange {
-            node: Node(3),
-            segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::Unary,
-        },
-    ];
-    let parental_ancestry = vec![
-        Ancestry {
-            segment: Segment::new(0, genome_length).unwrap(),
-            ancestry: AncestryType::Overlap(Node(1)),
-        },
-        Ancestry {
-            segment: Segment::new(0, genome_length).unwrap(),
-            ancestry: AncestryType::Overlap(Node(2)),
-        },
-    ];
-    let mut overlapper = AncestryOverlapper::new(
-        Node(0),
-        NodeFlags::default(),
-        &parental_ancestry,
-        &ancestry_changes,
-    );
-    let mut new_ancestry: Vec<Ancestry> = vec![];
-    let mut changes = vec![];
-
-    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
-        changes.push(overlaps.parental_ancestry_change);
-        for &a in overlaps.overlaps() {
-            new_ancestry.push(a);
-        }
-    }
-    assert_eq!(new_ancestry.len(), 2);
-    for node in [3, 1] {
-        assert!(new_ancestry.contains(&Ancestry {
-            segment: Segment {
-                left: 0,
-                right: 100
-            },
-            ancestry: AncestryType::Overlap(Node(node))
-        }));
-    }
-    assert_eq!(changes, &[None]);
-}
-
-//        0    <- A "recent death"
-//        |
-//     -------
-//     |     |
-//     1     2 <- 1 is a birth, 2 is a death/ancestry loss
-//
-// The final ancestry of 0 is Empty:
-// * It starts as Overlap on 1, 2
-// * But the loss of ancestry in 2 and the death of 0
-//   means that 0 ends up Unary(1A)
-// * Since 0 is "not a sample", we do not retain
-//   a single overlap.
-#[test]
-fn design_ancestry_update_calculation_test_2() {
-    let genome_length = 100_i64;
-    let ancestry_changes = vec![
-        AncestryChange {
-            node: Node(1),
-            segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::Unary,
-        },
-        AncestryChange {
-            node: Node(2),
-            segment: Segment::new(0, genome_length).unwrap(),
-            change_type: AncestryChangeType::Loss,
-        },
-    ];
-    let parental_ancestry = vec![
-        Ancestry {
-            segment: Segment::new(0, genome_length).unwrap(),
-            ancestry: AncestryType::Overlap(Node(1)),
-        },
-        Ancestry {
-            segment: Segment::new(0, genome_length).unwrap(),
-            ancestry: AncestryType::Overlap(Node(2)),
-        },
-    ];
-    let mut overlapper = AncestryOverlapper::new(
-        Node(0),
-        NodeFlags::default(),
-        &parental_ancestry,
-        &ancestry_changes,
-    );
-    let mut new_ancestry: Vec<Ancestry> = vec![];
-    let mut changes = vec![];
-
-    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
-        changes.push(overlaps.parental_ancestry_change);
-        if !matches!(
-            overlaps.parental_ancestry_change,
-            Some(AncestryChange {
-                change_type: AncestryChangeType::Loss,
-                ..
-            }),
-        ) {
-            for &a in overlaps.overlaps() {
-                new_ancestry.push(a);
-            }
-        }
-    }
-    assert!(new_ancestry.is_empty());
-    assert_eq!(
-        changes,
-        &[Some(AncestryChange {
-            segment: Segment {
-                left: 0,
-                right: 100
-            },
-            node: Node(0),
-            change_type: AncestryChangeType::Loss
-        })],
-        "CHANGES = {changes:?}"
-    )
-}
-
-// Tree 0 is on [0, 3)
-//
-//        0
-//        |
-//     -------
-//     |     |
-//     1     2
-//
-// Tree 1 is on [7, 8)
-//
-//        0
-//        |
-//     -------
-//     |     |
-//     1     2
-//
-// * 0 starts out as Overlap(1, 2) for both trees.
-// * Nodes 1, 2 lose ancestry on [0, 3)
-// * Nodes 1, 2 convert to Unary on [7, 8)
-//
-// The result is that 0 loses all ancestry on [0, 3)
-// and has no ancestry change on [7, 8)
-#[test]
-fn design_ancestry_update_calculation_test_3() {
-    let ancestry_changes = vec![
-        AncestryChange {
-            node: Node(1),
-            segment: Segment::new(0, 3).unwrap(),
-            change_type: AncestryChangeType::Loss,
-        },
-        AncestryChange {
-            node: Node(2),
-            segment: Segment::new(0, 3).unwrap(),
-            change_type: AncestryChangeType::Loss,
-        },
-        AncestryChange {
-            node: Node(1),
-            segment: Segment::new(7, 8).unwrap(),
-            change_type: AncestryChangeType::Unary,
-        },
-        AncestryChange {
-            node: Node(2),
-            segment: Segment::new(7, 8).unwrap(),
-            change_type: AncestryChangeType::Unary,
-        },
-    ];
-    let parental_ancestry = vec![
-        Ancestry {
-            segment: Segment::new(0, 3).unwrap(),
-            ancestry: AncestryType::Overlap(Node(1)),
-        },
-        Ancestry {
-            segment: Segment::new(0, 3).unwrap(),
-            ancestry: AncestryType::Overlap(Node(2)),
-        },
-        Ancestry {
-            segment: Segment::new(7, 8).unwrap(),
-            ancestry: AncestryType::Overlap(Node(1)),
-        },
-        Ancestry {
-            segment: Segment::new(7, 8).unwrap(),
-            ancestry: AncestryType::Overlap(Node(2)),
-        },
-    ];
-    let mut overlapper = AncestryOverlapper::new(
-        Node(0),
-        NodeFlags::default(),
-        &parental_ancestry,
-        &ancestry_changes,
-    );
-    let mut new_ancestry: Vec<Ancestry> = vec![];
-    let mut changes = vec![];
-
-    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
-        changes.push(overlaps.parental_ancestry_change);
-        for &a in overlaps.overlaps() {
-            new_ancestry.push(a);
-        }
-    }
-
-    assert_eq!(new_ancestry.len(), 2);
-    for node in [1_usize, 2] {
-        assert!(new_ancestry.contains(&Ancestry {
-            segment: Segment { left: 7, right: 8 },
-            ancestry: AncestryType::Overlap(Node(node))
-        }));
-    }
-    assert_eq!(changes.len(), 2);
-    assert!(changes.contains(&None));
-    assert!(
-        changes.contains(&Some(AncestryChange {
-            segment: Segment { left: 0, right: 3 },
-            node: Node(0),
-            change_type: AncestryChangeType::Loss
-        })),
-        "CHANGES = {changes:?}"
-    );
-}
-
-// Tree 0 is on [0, 3)
-//
-//        0
-//        |
-//     -------
-//     |     |
-//     1     2
-//
-// Tree 1 is on [7, 8)
-//
-//        0
-//        |
-//     -------
-//     |     |
-//     1     2
-//
-// * 0 starts out as Overlap(1, 2) for both trees.
-// * Node 1 loses ancestry on both segments
-// * Node 2 converts to Unary on both segments
-//
-// The result is that 0 loses all ancestry
-// because all ancestry becomes unary and 0
-// is "not a sample"
-#[test]
-fn design_ancestry_update_calculation_test_4() {
-    let ancestry_changes = vec![
-        AncestryChange {
-            node: Node(1),
-            segment: Segment::new(0, 3).unwrap(),
-            change_type: AncestryChangeType::Loss,
-        },
-        AncestryChange {
-            node: Node(2),
-            segment: Segment::new(0, 3).unwrap(),
-            change_type: AncestryChangeType::Unary,
-        },
-        AncestryChange {
-            node: Node(1),
-            segment: Segment::new(7, 8).unwrap(),
-            change_type: AncestryChangeType::Loss,
-        },
-        AncestryChange {
-            node: Node(2),
-            segment: Segment::new(7, 8).unwrap(),
-            change_type: AncestryChangeType::Unary,
-        },
-    ];
-    let parental_ancestry = vec![
-        Ancestry {
-            segment: Segment::new(0, 3).unwrap(),
-            ancestry: AncestryType::Overlap(Node(1)),
-        },
-        Ancestry {
-            segment: Segment::new(0, 3).unwrap(),
-            ancestry: AncestryType::Overlap(Node(2)),
-        },
-        Ancestry {
-            segment: Segment::new(7, 8).unwrap(),
-            ancestry: AncestryType::Overlap(Node(1)),
-        },
-        Ancestry {
-            segment: Segment::new(7, 8).unwrap(),
-            ancestry: AncestryType::Overlap(Node(2)),
-        },
-    ];
-    let mut overlapper = AncestryOverlapper::new(
-        Node(0),
-        NodeFlags::default(),
-        &parental_ancestry,
-        &ancestry_changes,
-    );
-    let mut new_ancestry: Vec<Ancestry> = vec![];
-    let mut changes = vec![];
-
-    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
-        changes.push(overlaps.parental_ancestry_change);
-        if !matches!(
-            overlaps.parental_ancestry_change,
-            Some(AncestryChange {
-                change_type: AncestryChangeType::Loss,
-                ..
-            }),
-        ) {
-            for &a in overlaps.overlaps() {
-                new_ancestry.push(a);
-            }
-        }
-    }
-    assert!(new_ancestry.is_empty());
-    assert_eq!(changes.len(), 2);
-    for losses in [(0, 3), (7, 8)] {
-        assert!(
-            changes.contains(&Some(AncestryChange {
-                segment: Segment {
-                    left: losses.0,
-                    right: losses.1
-                },
-                node: Node(0),
-                change_type: AncestryChangeType::Loss
-            })),
-            "CHANGES = {changes:?}"
-        );
-    }
-}
-
-// Tree 0 is on [0, 3)
-//
-//        0    <- Born "ancestral to time 1"
-//        |
-//        ------------
-//        |    |     |
-//        |    3     4 <- Nodes that were born at time 1
-//        |
-//     -------
-//     |     |
-//     1     2 <- births as time 2
-//
-// Tree 1 is on [7, 8)
-//
-//        0
-//        |
-//     -------
-//     |     |
-//     3     4 <- Nodes that were born at time 1
-//
-// * 0 starts out as Overlap(3, 4) on [7, 8)
-// * Nodes 1 and 2 send ancestry gains up the tree
-// * Nodes 3 and 4 send no changes up the tree.
-//
-// The result is that 0 gains Overlap(1, 2) on [0, 3)
-// and remains Overlap(3, 4) on [0, 3) and [7, 8).
-#[test]
-fn design_ancestry_update_calculation_test_5() {
-    let ancestry_changes = vec![
-        AncestryChange {
-            node: Node(1),
-            segment: Segment::new(0, 3).unwrap(),
-            change_type: AncestryChangeType::Unary,
-        },
-        AncestryChange {
-            node: Node(2),
-            segment: Segment::new(0, 3).unwrap(),
-            change_type: AncestryChangeType::Unary,
-        },
-    ];
-    let parental_ancestry = vec![
-        Ancestry {
-            segment: Segment::new(0, 3).unwrap(),
-            ancestry: AncestryType::Overlap(Node(3)),
-        },
-        Ancestry {
-            segment: Segment::new(0, 3).unwrap(),
-            ancestry: AncestryType::Overlap(Node(4)),
-        },
-        Ancestry {
-            segment: Segment::new(7, 8).unwrap(),
-            ancestry: AncestryType::Overlap(Node(3)),
-        },
-        Ancestry {
-            segment: Segment::new(7, 8).unwrap(),
-            ancestry: AncestryType::Overlap(Node(4)),
-        },
-    ];
-    let mut overlapper = AncestryOverlapper::new(
-        Node(0),
-        NodeFlags::default(),
-        &parental_ancestry,
-        &ancestry_changes,
-    );
-    let mut new_ancestry: Vec<Ancestry> = vec![];
-    let mut changes = vec![];
-
-    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
-        changes.push(overlaps.parental_ancestry_change);
-        for &a in overlaps.overlaps() {
-            new_ancestry.push(a);
-        }
-    }
-    assert_eq!(new_ancestry.len(), 6);
-    for node in [1_usize, 2, 3, 4] {
-        let needle = Segment::new(0, 3).unwrap();
-        assert_eq!(
-            new_ancestry
-                .iter()
-                .filter(|i| match i.ancestry {
-                    AncestryType::Overlap(x) => x == Node(node),
-                    _ => false,
-                } && i.segment == needle)
-                .count(),
-            1
-        );
-    }
-    for node in [3, 4] {
-        let needle = Segment::new(7, 8).unwrap();
-        assert_eq!(
-            new_ancestry
-                .iter()
-                .filter(|i| match i.ancestry {
-                    AncestryType::Overlap(x) => x == Node(node),
-                    _ => false,
-                } && i.segment == needle)
-                .count(),
-            1
-        );
-    }
-    for node in [1, 2] {
-        let needle = Segment::new(7, 8).unwrap();
-        assert_eq!(
-            new_ancestry
-                .iter()
-                .filter(|i| match i.ancestry {
-                    AncestryType::Overlap(x) => x == Node(node),
-                    _ => false,
-                } && i.segment == needle)
-                .count(),
-            0
-        );
-    }
-}
-
-// Tree 0 is on [0, 3)
-//
-//        0    <- Born "ancestral to time 1"
-//        |
-//        -----------
-//        |   |     |
-//        |   1     2 <- births as time 1
-//        |
-//        3           <- birth at time 2 on [0, 5)
-// Tree 1 is on [7, 8)
-//
-//        0    <- Born "ancestral to time 1"
-//        |
-//        -----------
-//            |     |
-//            1     2 <- births as time 1
-//
-// * 0 starts out as Overlap(1, 2) on [0, 3) and [7, 8)
-// * Nodes 3 send ancestry gains up the tree
-// * Nodes 1 and 2 send no changes up the tree.
-//
-// The result is that 0 gains Overlap(3) on [0, 3)
-// and remains Overlap(3, 4) on [0, 3) and [7, 8).
-#[test]
-fn design_ancestry_update_calculation_test_6() {
-    let ancestry_changes = vec![AncestryChange {
-        node: Node(3),
-        segment: Segment::new(0, 5).unwrap(),
-        change_type: AncestryChangeType::Unary,
-    }];
-    let parental_ancestry = vec![
-        Ancestry {
-            segment: Segment::new(0, 3).unwrap(),
-            ancestry: AncestryType::Overlap(Node(1)),
-        },
-        Ancestry {
-            segment: Segment::new(0, 3).unwrap(),
-            ancestry: AncestryType::Overlap(Node(2)),
-        },
-        Ancestry {
-            segment: Segment::new(7, 8).unwrap(),
-            ancestry: AncestryType::Overlap(Node(1)),
-        },
-        Ancestry {
-            segment: Segment::new(7, 8).unwrap(),
-            ancestry: AncestryType::Overlap(Node(2)),
-        },
-    ];
-    let mut overlapper = AncestryOverlapper::new(
-        Node(0),
-        NodeFlags::default(),
-        &parental_ancestry,
-        &ancestry_changes,
-    );
-    let mut new_ancestry: Vec<Ancestry> = vec![];
-    let mut changes = vec![];
-
-    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
-        changes.push(overlaps.parental_ancestry_change);
-        for &a in overlaps.overlaps() {
-            new_ancestry.push(a);
-        }
-    }
-    assert_eq!(new_ancestry.len(), 5);
-    for node in [1_usize, 2, 3] {
-        let needle = Segment::new(0, 3).unwrap();
-        assert_eq!(
-            new_ancestry
-                .iter()
-                .filter(|i| match i.ancestry {
-                    AncestryType::Overlap(x) => x == Node(node),
-                    _ => false,
-                } && i.segment == needle)
-                .count(),
-            1
-        );
-    }
-    for node in [1, 2] {
-        let needle = Segment::new(7, 8).unwrap();
-        assert_eq!(
-            new_ancestry
-                .iter()
-                .filter(|i| match i.ancestry {
-                    AncestryType::Overlap(x) => x == Node(node),
-                    _ => false,
-                } && i.segment == needle)
-                .count(),
-            1
-        );
-    }
-    for node in [3] {
-        let needle = Segment::new(7, 8).unwrap();
-        assert_eq!(
-            new_ancestry
-                .iter()
-                .filter(|i| match i.ancestry {
-                    AncestryType::Overlap(x) => x == Node(node),
-                    _ => false,
-                } && i.segment == needle)
-                .count(),
-            0
-        );
-    }
-    assert_eq!(changes, [None, None]);
-}
-
-// Note: the result of this kind of action
-// is a loss of ancestry.
-#[test]
-fn design_ancestry_update_calculation_test_7() {
-    let ancestry_changes = vec![AncestryChange {
-        node: Node(3),
-        segment: Segment::new(0, 5).unwrap(),
-        change_type: AncestryChangeType::Unary,
-    }];
-    let parental_ancestry = vec![Ancestry {
-        segment: Segment::new(0, 3).unwrap(),
-        ancestry: AncestryType::ToSelf,
-    }];
-    let mut overlapper = AncestryOverlapper::new(
-        Node(0),
-        NodeFlags::default(),
-        &parental_ancestry,
-        &ancestry_changes,
-    );
-    let mut new_ancestry: Vec<Ancestry> = vec![];
-    let mut changes = vec![];
-
-    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
-        changes.push(overlaps.parental_ancestry_change);
-        if !matches!(
-            overlaps.parental_ancestry_change,
-            Some(AncestryChange {
-                change_type: AncestryChangeType::Loss,
-                ..
-            }),
-        ) {
-            for &a in overlaps.overlaps() {
-                new_ancestry.push(a);
-            }
-        }
-    }
-    assert!(new_ancestry.is_empty());
-    assert_eq!(changes.len(), 1);
-    assert!(changes.contains(&Some(AncestryChange {
-        segment: Segment { left: 0, right: 3 },
-        node: Node(0),
-        change_type: AncestryChangeType::Loss
-    })));
-}
-
-// Tree 0 is on [0, 3)
-//
-//        0
-//        |
-//     -------
-//     |     |
-//     1     2
-//
-// Tree 1 is on [3, 8)
-//
-//        0
-//        |
-//     -------
-//     |     |
-//     1     2
-//
-// * 0 starts out as Overlap(1, 2) for both trees.
-// * Node 1, 2 loses ancestry on [0, 3)
-//
-// The result is that 0 loses all ancestry on [3, 8)
-// and remains overlap on [0, 3)
-#[test]
-fn design_ancestry_update_calculation_test_8() {
-    let parental_ancestry = vec![
-        Ancestry {
-            segment: Segment::new(0, 8).unwrap(),
-            ancestry: AncestryType::Overlap(Node(1)),
-        },
-        Ancestry {
-            segment: Segment::new(0, 8).unwrap(),
-            ancestry: AncestryType::Overlap(Node(2)),
-        },
-    ];
-    let ancestry_changes = vec![
-        AncestryChange {
-            node: Node(1),
-            segment: Segment::new(3, 8).unwrap(),
-            change_type: AncestryChangeType::Loss,
-        },
-        AncestryChange {
-            node: Node(2),
-            segment: Segment::new(3, 8).unwrap(),
-            change_type: AncestryChangeType::Loss,
-        },
-    ];
-    let mut overlapper = AncestryOverlapper::new(
-        Node(0),
-        NodeFlags::default(),
-        &parental_ancestry,
-        &ancestry_changes,
-    );
-    let mut new_ancestry: Vec<Ancestry> = vec![];
-    let mut changes = vec![];
-
-    while let Some(overlaps) = overlapper.output_ancestry(PropagationOptions::default()) {
-        changes.push(overlaps.parental_ancestry_change);
-        for &a in overlaps.overlaps.iter() {
-            new_ancestry.push(a);
-        }
-    }
-    assert_eq!(new_ancestry.len(), 2);
-    for node in [1, 2] {
-        assert!(new_ancestry.contains(&Ancestry {
-            segment: Segment { left: 0, right: 3 },
-            ancestry: AncestryType::Overlap(Node(node))
-        }))
-    }
-    assert_eq!(changes.len(), 2);
-    assert!(changes.contains(&None));
-    assert!(changes.contains(&Some(AncestryChange {
-        segment: Segment { left: 3, right: 8 },
-        node: Node(0),
-        change_type: AncestryChangeType::Loss
-    })));
-}
-
-#[test]
-fn test_ancestry_change_ordering() {
-    {
-        let mut changes = vec![
-            AncestryChange {
-                node: Node(1),
-                segment: Segment::new(0, 10).unwrap(),
-                change_type: AncestryChangeType::Unary,
-            },
-            AncestryChange {
-                node: Node(0),
-                segment: Segment::new(0, 10).unwrap(),
-                change_type: AncestryChangeType::Unary,
-            },
-        ];
-        changes.sort_unstable();
-        assert_eq!(
-            changes,
-            [
-                AncestryChange {
-                    node: Node(0),
-                    segment: Segment::new(0, 10).unwrap(),
-                    change_type: AncestryChangeType::Unary
-                },
-                AncestryChange {
-                    node: Node(1),
-                    segment: Segment::new(0, 10).unwrap(),
-                    change_type: AncestryChangeType::Unary
-                },
-            ]
-        );
-    }
-
-    {
-        let mut changes = vec![
-            AncestryChange {
-                node: Node(1),
-                segment: Segment::new(0, 10).unwrap(),
-                change_type: AncestryChangeType::Unary,
-            },
-            AncestryChange {
-                node: Node(0),
-                segment: Segment::new(6, 10).unwrap(),
-                change_type: AncestryChangeType::Unary,
-            },
-        ];
-        changes.sort_unstable();
-        assert_eq!(
-            changes,
-            [
-                AncestryChange {
-                    node: Node(1),
-                    segment: Segment::new(0, 10).unwrap(),
-                    change_type: AncestryChangeType::Unary,
-                },
-                AncestryChange {
-                    node: Node(0),
-                    segment: Segment::new(6, 10).unwrap(),
-                    change_type: AncestryChangeType::Unary,
-                },
-            ]
-        );
-    }
-
-    {
-        let mut changes = vec![
-            AncestryChange {
-                node: Node(0),
-                segment: Segment::new(6, 7).unwrap(),
-                change_type: AncestryChangeType::Unary,
-            },
-            AncestryChange {
-                node: Node(0),
-                segment: Segment::new(6, 10).unwrap(),
-                change_type: AncestryChangeType::Unary,
-            },
-        ];
-        changes.sort_unstable();
-        assert_eq!(
-            changes,
-            [
-                AncestryChange {
-                    node: Node(0),
-                    segment: Segment::new(6, 7).unwrap(),
-                    change_type: AncestryChangeType::Unary,
-                },
-                AncestryChange {
-                    node: Node(0),
-                    segment: Segment::new(6, 10).unwrap(),
-                    change_type: AncestryChangeType::Unary,
-                },
-            ]
-        );
-    }
-}
-
 //BOILER PLATE ALERT
 #[derive(Debug, Copy, Clone)]
 struct QueuedNode {
@@ -2190,6 +1139,287 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
     assert!(parent_queue.is_empty());
     assert!(hashed_nodes.is_empty());
     assert!(ancestry_changes_to_process.is_empty());
+}
+
+// We could do all this with rstest,
+// but we still need to pattern match,
+// etc., to use the fixtures.
+// IMO, this doesn't seem like rstest
+// saves much boiler plate here...
+#[cfg(test)]
+mod graph_fixtures {
+    use super::*;
+
+    //        0      <- "Rando ancestor from before"
+    //        |
+    //     -------
+    //     |     |
+    //     |     1   <- Death
+    //     2     |   <- Death
+    //   -----   |
+    //   |   |   |
+    //   3   4   5   <- Birth
+    //
+    // After propagation with default options, the topology is:
+    //        0
+    //        |
+    //     -------
+    //     |     |
+    //     |     |
+    //     2     |
+    //   -----   |
+    //   |   |   |
+    //   3   4   5
+    pub struct Topology0 {
+        pub node0: Node,
+        pub node1: Node,
+        pub node2: Node,
+        pub node3: Node,
+        pub node4: Node,
+        pub node5: Node,
+        pub graph: Graph,
+    }
+
+    impl Topology0 {
+        pub fn new() -> Self {
+            let mut graph = Graph::new(100).unwrap();
+            let node0 = graph.add_node(NodeStatus::Ancestor, 0);
+            let node1 = graph.add_node(NodeStatus::Death, 1);
+            let node2 = graph.add_node(NodeStatus::Death, 2);
+            let node3 = graph.add_birth(3).unwrap();
+            let node4 = graph.add_birth(3).unwrap();
+            let node5 = graph.add_birth(3).unwrap();
+
+            for node in [node1, node2] {
+                graph.parents[node.as_index()].insert(node0);
+            }
+            for child in [node3, node4] {
+                graph
+                    .record_transmission(0, graph.genome_length(), node2, child)
+                    .unwrap();
+            }
+            graph
+                .record_transmission(0, graph.genome_length(), node1, node5)
+                .unwrap();
+
+            // NOTE: we need to add "dummy" ancestry to the parents
+            // to have a valid data structure for testing.
+            for node in [node1, node2] {
+                graph.ancestry[node0.as_index()].push(Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length,
+                    },
+                    ancestry: AncestryType::Overlap(node),
+                });
+                graph.ancestry[node.as_index()].push(Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length,
+                    },
+                    ancestry: AncestryType::ToSelf,
+                });
+            }
+            Self {
+                node0,
+                node1,
+                node2,
+                node3,
+                node4,
+                node5,
+                graph,
+            }
+        }
+    }
+
+    //        0      <- "Rando ancestor from before"
+    //        |
+    //     -------
+    //     |     |
+    //     |     1   <- Death
+    //     2         <- Death
+    //   -----
+    //   |   |
+    //   3   4       <- Birth
+    //
+    //   After propagation with default options:
+    //
+    //     2         <- Death
+    //   -----
+    //   |   |
+    //   3   4       <- Birth
+    pub struct Topology1 {
+        pub node0: Node,
+        pub node1: Node,
+        pub node2: Node,
+        pub node3: Node,
+        pub node4: Node,
+        pub graph: Graph,
+    }
+
+    impl Topology1 {
+        pub fn new() -> Self {
+            let mut graph = Graph::new(100).unwrap();
+            let node0 = graph.add_node(NodeStatus::Ancestor, 0);
+            let node1 = graph.add_node(NodeStatus::Death, 1);
+            let node2 = graph.add_node(NodeStatus::Death, 2);
+            let node3 = graph.add_birth(3).unwrap();
+            let node4 = graph.add_birth(3).unwrap();
+
+            for node in [node1, node2] {
+                graph.parents[node.as_index()].insert(node0);
+                graph.deaths.push(node);
+            }
+            for child in [node3, node4] {
+                graph
+                    .record_transmission(0, graph.genome_length(), node2, child)
+                    .unwrap();
+            }
+
+            // NOTE: we need to add "dummy" ancestry to the parents
+            // to have a valid data structure for testing.
+            for node in [node1, node2] {
+                graph.ancestry[node0.as_index()].push(Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length,
+                    },
+                    ancestry: AncestryType::Overlap(node),
+                });
+                graph.ancestry[node.as_index()].push(Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length,
+                    },
+                    ancestry: AncestryType::ToSelf,
+                });
+            }
+            Self {
+                node0,
+                node1,
+                node2,
+                node3,
+                node4,
+                graph,
+            }
+        }
+    }
+}
+
+#[test]
+fn design_test_0() {
+    let mut graph = Graph::with_initial_nodes(10, 1000000).unwrap();
+    assert_eq!(graph.genome_length(), 1000000);
+}
+
+#[test]
+fn design_test_1() {
+    let graph = Graph::with_initial_nodes(10, 1000000).unwrap();
+    assert_eq!(graph.iter_nodes_with_ancestry().count(), 10);
+}
+
+#[test]
+fn test_births_out_of_order() {
+    let mut graph = Graph::new(100).unwrap();
+    let _ = graph.add_node(NodeStatus::Ancestor, 0);
+    let _ = graph.add_birth(2).unwrap();
+    assert!(graph.add_birth(1).is_err());
+}
+
+#[test]
+fn test_ancestry_change_ordering() {
+    {
+        let mut changes = vec![
+            AncestryChange {
+                node: Node(1),
+                segment: Segment::new(0, 10).unwrap(),
+                change_type: AncestryChangeType::Unary,
+            },
+            AncestryChange {
+                node: Node(0),
+                segment: Segment::new(0, 10).unwrap(),
+                change_type: AncestryChangeType::Unary,
+            },
+        ];
+        changes.sort_unstable();
+        assert_eq!(
+            changes,
+            [
+                AncestryChange {
+                    node: Node(0),
+                    segment: Segment::new(0, 10).unwrap(),
+                    change_type: AncestryChangeType::Unary
+                },
+                AncestryChange {
+                    node: Node(1),
+                    segment: Segment::new(0, 10).unwrap(),
+                    change_type: AncestryChangeType::Unary
+                },
+            ]
+        );
+    }
+
+    {
+        let mut changes = vec![
+            AncestryChange {
+                node: Node(1),
+                segment: Segment::new(0, 10).unwrap(),
+                change_type: AncestryChangeType::Unary,
+            },
+            AncestryChange {
+                node: Node(0),
+                segment: Segment::new(6, 10).unwrap(),
+                change_type: AncestryChangeType::Unary,
+            },
+        ];
+        changes.sort_unstable();
+        assert_eq!(
+            changes,
+            [
+                AncestryChange {
+                    node: Node(1),
+                    segment: Segment::new(0, 10).unwrap(),
+                    change_type: AncestryChangeType::Unary,
+                },
+                AncestryChange {
+                    node: Node(0),
+                    segment: Segment::new(6, 10).unwrap(),
+                    change_type: AncestryChangeType::Unary,
+                },
+            ]
+        );
+    }
+
+    {
+        let mut changes = vec![
+            AncestryChange {
+                node: Node(0),
+                segment: Segment::new(6, 7).unwrap(),
+                change_type: AncestryChangeType::Unary,
+            },
+            AncestryChange {
+                node: Node(0),
+                segment: Segment::new(6, 10).unwrap(),
+                change_type: AncestryChangeType::Unary,
+            },
+        ];
+        changes.sort_unstable();
+        assert_eq!(
+            changes,
+            [
+                AncestryChange {
+                    node: Node(0),
+                    segment: Segment::new(6, 7).unwrap(),
+                    change_type: AncestryChangeType::Unary,
+                },
+                AncestryChange {
+                    node: Node(0),
+                    segment: Segment::new(6, 10).unwrap(),
+                    change_type: AncestryChangeType::Unary,
+                },
+            ]
+        );
+    }
 }
 
 #[cfg(test)]
