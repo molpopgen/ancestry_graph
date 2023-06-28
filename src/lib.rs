@@ -527,6 +527,8 @@ impl AncestryOverlapper {
         )
     }
 
+    // TODO: perhaps we could reurn an enum from here that
+    // handles things like internal sample ancestry gaps?
     fn calculate_next_overlap_set(&mut self, options: PropagationOptions) -> Option<Overlaps> {
         if self.current_overlap < self.num_overlaps {
             self.left = self.right;

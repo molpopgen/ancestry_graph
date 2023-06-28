@@ -2,7 +2,9 @@
 
 ## TODO
 
-[] internal sample nodes and unary overlap retention.
+[X] internal sample nodes and unary overlap retention.
+   * Internal sample handling is rather subtle
+     and may need revisiting later.
 [] extinct node recycling
 [] add "deme" column to graph.  Or a NodeData column.
    (low priority for this prototype)
