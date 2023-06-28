@@ -263,7 +263,18 @@ impl Graph {
     // with a set of initial nodes" from "add a new node that is a birth"
     pub fn add_node(&mut self, status: NodeStatus, birth_time: i64) -> Node {
         match self.free_nodes.pop() {
-            Some(_index) => todo!("Some"),
+            Some(index) => {
+                assert!(self.children[index].is_empty());
+                assert!(self.parents[index].is_empty());
+                assert!(self.ancestry[index].is_empty());
+                self.birth_time[index] = Some(birth_time);
+                self.status[index] = status;
+                self.flags[index] = NodeFlags::default();
+                if matches!(status, NodeStatus::Birth) {
+                    self.ancestry[index].push(Ancestry::birth(self.genome_length).unwrap());
+                }
+                Node(index)
+            }
             None => {
                 self.birth_time.push(Some(birth_time));
                 self.status.push(status);
@@ -3472,6 +3483,7 @@ mod test_internal_samples {
                 !reachable_nodes(&graph).any(|n| n == node),
                 "failing node = {node:?}"
             );
+            assert!(graph.free_nodes.contains(&node.0));
         }
         for node in [node0, node3] {
             assert!(
@@ -3485,5 +3497,6 @@ mod test_internal_samples {
                 graph.ancestry[node.as_index()]
             );
         }
+        let x = graph.add_birth(4).unwrap();
     }
 }
