@@ -31,6 +31,11 @@
 
    In fact, can we get rid of a status enum altogether?
 
+   The ONLY place that status seems to affect logic
+   is when dispatching work out to process_node_death in lib.rs. 
+   It would seem that HASHING the dead nodes could be (part of)
+   the solution for eliminating this enum entirely.
+
 * We probably want all births to be at the EXACT SAME TIME
   so that we are simplifying at each "tick" of the simulation clock?
 
