@@ -8,14 +8,28 @@
 [X] extinct node recycling
 [] add "deme" column to graph.  Or a NodeData column.
    (low priority for this prototype)
-[] Node state changes during update.
+[X] Node state changes during update.
    Birth -> Alive
    Death -> "Loss" or Ancestor
    etc..
+
+   NOTE: support is probably incomplete.
+   I think that this enum may go away later.
+   (see below).
 [] enforce that all births are visited during
    ancestry change propagation
 [] Need API to mark a node as sample
    (low priority for this prototype)
+
+## General issues.
+
+* `NodeStatus::Birth` may be useless?
+   We need a way to track new births and
+   all alive nodes.  Separate containers
+   seems useful, but separate enum flags doesn't
+   seem to be solving anything...
+
+   In fact, can we get rid of a status enum altogether?
 
 ## Ancestry table
 

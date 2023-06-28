@@ -26,6 +26,7 @@ pub enum NodeStatus {
     Ancestor,
     Birth,
     Death,
+    Alive,
 }
 
 /// TODO: could be a newtype?
@@ -729,7 +730,7 @@ impl<'overlapper> Overlaps<'overlapper> {
 
 // We could do all this with rstest,
 // but we still need to pattern match,
-// etc., to use the fixtures. 
+// etc., to use the fixtures.
 // IMO, this doesn't seem like rstest
 // saves much boiler plate here...
 #[cfg(test)]
@@ -745,6 +746,17 @@ mod graph_fixtures {
     //   -----   |
     //   |   |   |
     //   3   4   5   <- Birth
+    //
+    // After propagation with default options, the topology is:
+    //        0
+    //        |
+    //     -------
+    //     |     |
+    //     |     |
+    //     2     |
+    //   -----   |
+    //   |   |   |
+    //   3   4   5
     pub struct Topology0 {
         pub node0: Node,
         pub node1: Node,
@@ -802,6 +814,79 @@ mod graph_fixtures {
                 node3,
                 node4,
                 node5,
+                graph,
+            }
+        }
+    }
+
+    //        0      <- "Rando ancestor from before"
+    //        |
+    //     -------
+    //     |     |
+    //     |     1   <- Death
+    //     2         <- Death
+    //   -----
+    //   |   |
+    //   3   4       <- Birth
+    //
+    //   After propagation with default options:
+    //
+    //     2         <- Death
+    //   -----
+    //   |   |
+    //   3   4       <- Birth
+    pub struct Topology1 {
+        pub node0: Node,
+        pub node1: Node,
+        pub node2: Node,
+        pub node3: Node,
+        pub node4: Node,
+        pub graph: Graph,
+    }
+
+    impl Topology1 {
+        pub fn new() -> Self {
+            let mut graph = Graph::new(100).unwrap();
+            let node0 = graph.add_node(NodeStatus::Ancestor, 0);
+            let node1 = graph.add_node(NodeStatus::Death, 1);
+            let node2 = graph.add_node(NodeStatus::Death, 2);
+            let node3 = graph.add_birth(3).unwrap();
+            let node4 = graph.add_birth(3).unwrap();
+
+            for node in [node1, node2] {
+                graph.parents[node.as_index()].insert(node0);
+                graph.deaths.push(node);
+            }
+            for child in [node3, node4] {
+                graph
+                    .record_transmission(0, graph.genome_length(), node2, child)
+                    .unwrap();
+            }
+
+            // NOTE: we need to add "dummy" ancestry to the parents
+            // to have a valid data structure for testing.
+            for node in [node1, node2] {
+                graph.ancestry[node0.as_index()].push(Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length,
+                    },
+                    ancestry: AncestryType::Overlap(node),
+                });
+                graph.ancestry[node.as_index()].push(Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length,
+                    },
+                    ancestry: AncestryType::ToSelf,
+                });
+            }
+            Self {
+                node0,
+                node1,
+                node2,
+                node3,
+                node4,
                 graph,
             }
         }
@@ -1870,6 +1955,10 @@ fn process_queued_node(
     ancestry_changes_to_process: &mut HashMap<Node, Vec<AncestryChange>>,
     graph: &mut Graph,
 ) {
+    assert!(!matches!(
+        graph.status[queued_parent.node.as_index()],
+        NodeStatus::Birth
+    ));
     match ancestry_changes_to_process.get_mut(&queued_parent.node) {
         Some(ancestry_changes) => {
             ancestry_changes.sort_unstable_by_key(|ac| ac.left());
@@ -1967,6 +2056,20 @@ fn process_queued_node(
                     segment: Segment::new(previous_right, graph.genome_length).unwrap(),
                     ancestry: AncestryType::ToSelf,
                 });
+            }
+            match graph.status[queued_parent.node.as_index()] {
+                NodeStatus::Birth => {
+                    graph.status[queued_parent.node.as_index()] = NodeStatus::Alive
+                }
+                NodeStatus::Death => {
+                    if !graph.ancestry[queued_parent.node.as_index()].is_empty() {
+                        graph.status[queued_parent.node.as_index()] = NodeStatus::Ancestor;
+                    }
+                }
+                NodeStatus::Ancestor => (),
+                NodeStatus::Alive => {
+                    graph.status[queued_parent.node.as_index()] = NodeStatus::Alive
+                }
             }
         }
         None => match graph.status[queued_parent.node.as_index()] {
@@ -2075,6 +2178,12 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
         hashed_nodes.remove(&queued_parent.node);
         ancestry_changes_to_process.remove(&queued_parent.node);
     }
+
+    // TODO: Seems silly to have a whole separate status for this?
+    graph
+        .births
+        .iter()
+        .for_each(|b| graph.status[b.as_index()] = NodeStatus::Alive);
     assert!(parent_queue.is_empty());
     assert!(hashed_nodes.is_empty());
     assert!(ancestry_changes_to_process.is_empty());
@@ -2280,41 +2389,14 @@ mod test_standard_case {
     //   3   4       <- Birth
     #[test]
     fn test_simple_case_of_propagation_over_multiple_generations_with_dangling_death() {
-        let mut graph = Graph::new(100).unwrap();
-        let node0 = graph.add_node(NodeStatus::Ancestor, 0);
-        let node1 = graph.add_node(NodeStatus::Death, 1);
-        let node2 = graph.add_node(NodeStatus::Death, 2);
-        let node3 = graph.add_birth(3).unwrap();
-        let node4 = graph.add_birth(3).unwrap();
-
-        for node in [node1, node2] {
-            graph.parents[node.as_index()].insert(node0);
-            graph.deaths.push(node);
-        }
-        for child in [node3, node4] {
-            graph
-                .record_transmission(0, graph.genome_length(), node2, child)
-                .unwrap();
-        }
-
-        // NOTE: we need to add "dummy" ancestry to the parents
-        // to have a valid data structure for testing.
-        for node in [node1, node2] {
-            graph.ancestry[node0.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::Overlap(node),
-            });
-            graph.ancestry[node.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::ToSelf,
-            });
-        }
+        let graph_fixtures::Topology1 {
+            node0,
+            node1,
+            node2,
+            node3,
+            node4,
+            mut graph,
+        } = graph_fixtures::Topology1::new();
 
         propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
@@ -2893,6 +2975,56 @@ mod test_standard_case {
         for node in [node0, node3, node5] {
             assert!(reachable.contains(&node), "node {node:?} is not reachable ");
         }
+    }
+
+    #[test]
+    fn test_output_node_state_topology0() {
+        let graph_fixtures::Topology0 {
+            node0,
+            node1: _,
+            node2,
+            node3,
+            node4,
+            node5,
+            mut graph,
+        } = graph_fixtures::Topology0::new();
+
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        for node in [node3, node4, node5] {
+            assert!(matches!(graph.status[node.as_index()], NodeStatus::Alive));
+        }
+        for node in [node0, node2] {
+            assert!(!graph.ancestry[node.as_index()].is_empty());
+            assert!(
+                matches!(graph.status[node.as_index()], NodeStatus::Ancestor),
+                "{:?} -> {:?}",
+                node,
+                graph.status[node.as_index()]
+            );
+        }
+    }
+    #[test]
+    fn test_output_node_state_topology1() {
+        let graph_fixtures::Topology1 {
+            node0: _,
+            node1: _,
+            node2,
+            node3,
+            node4,
+            mut graph,
+        } = graph_fixtures::Topology1::new();
+
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        for node in [node3, node4] {
+            assert!(matches!(graph.status[node.as_index()], NodeStatus::Alive));
+        }
+        assert!(!graph.ancestry[node2.as_index()].is_empty());
+        assert!(
+            matches!(graph.status[node2.as_index()], NodeStatus::Ancestor),
+            "{:?} -> {:?}",
+            node2,
+            graph.status[node2.as_index()]
+        );
     }
 }
 
