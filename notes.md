@@ -16,7 +16,7 @@
    NOTE: support is probably incomplete.
    I think that this enum may go away later.
    (see below).
-[] enforce that all births are visited during
+[X] enforce that all births are visited during
    ancestry change propagation
 [] Need API to mark a node as sample
    (low priority for this prototype)
@@ -30,6 +30,9 @@
    seem to be solving anything...
 
    In fact, can we get rid of a status enum altogether?
+
+* We probably want all births to be at the EXACT SAME TIME
+  so that we are simplifying at each "tick" of the simulation clock?
 
 ## Ancestry table
 

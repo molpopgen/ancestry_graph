@@ -303,7 +303,7 @@ impl Graph {
         match self.births.len() {
             i if i > 0 => {
                 if self.birth_time[self.births[self.births.len() - 1].as_index()].unwrap()
-                    > birth_time
+                    != birth_time
                 {
                     return Err(());
                 } else {
@@ -2117,6 +2117,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
         std::collections::BinaryHeap::new();
     let mut ancestry_changes_to_process: HashMap<Node, Vec<AncestryChange>> = HashMap::new();
 
+    let mut unique_child_visits: NodeHash = HashSet::with_hasher(BuildHasherDefault::default());
     for tranmission in graph.transmissions.iter() {
         let change = AncestryChange {
             segment: Segment {
@@ -2127,6 +2128,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
             change_type: AncestryChangeType::Unary,
         };
         for parent in graph.parents(tranmission.child) {
+            unique_child_visits.insert(tranmission.child);
             if parent == &tranmission.parent {
                 println!(
                     "updating transmission from {:?} to {:?} on [{}, {}) to parent {parent:?}, and the actual parent is {:?}",
@@ -2141,6 +2143,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
             }
         }
     }
+    assert_eq!(unique_child_visits.len(), graph.births.len());
 
     for death in graph.deaths.iter() {
         update_internal_stuff(*death, &mut hashed_nodes, &mut parent_queue, graph)
@@ -3003,6 +3006,7 @@ mod test_standard_case {
             );
         }
     }
+
     #[test]
     fn test_output_node_state_topology1() {
         let graph_fixtures::Topology1 {
@@ -3025,6 +3029,26 @@ mod test_standard_case {
             node2,
             graph.status[node2.as_index()]
         );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_unconnected_birth_topology0() {
+        let graph_fixtures::Topology0 {
+            node0: _,
+            node1: _,
+            node2: _,
+            node3: _,
+            node4: _,
+            node5: _,
+            mut graph,
+        } = graph_fixtures::Topology0::new();
+
+        // This birth with not have a transmission
+        // connecting it to a parent
+        let _ = graph.add_birth(3).unwrap();
+
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
     }
 }
 
@@ -3681,6 +3705,7 @@ mod test_internal_samples {
                 graph.ancestry[node.as_index()]
             );
         }
-        let x = graph.add_birth(4).unwrap();
+        graph.births.clear();
+        let _ = graph.add_birth(4).unwrap();
     }
 }
