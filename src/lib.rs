@@ -13,7 +13,7 @@ use flags::PropagationOptions;
 
 #[repr(transparent)]
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
-struct Node(usize);
+pub struct Node(usize);
 
 impl Node {
     fn as_index(&self) -> usize {
@@ -22,7 +22,7 @@ impl Node {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum NodeStatus {
+pub enum NodeStatus {
     Ancestor,
     Birth,
     Death,
@@ -144,7 +144,7 @@ struct Transmission {
 }
 
 #[derive(Debug)]
-struct Graph {
+pub struct Graph {
     status: Vec<NodeStatus>,
     flags: Vec<NodeFlags>,
     birth_time: Vec<Option<i64>>,
@@ -724,6 +724,87 @@ impl<'overlapper> Overlaps<'overlapper> {
 
     fn overlaps(&self) -> &[Ancestry] {
         self.overlaps
+    }
+}
+
+// We could do all this with rstest,
+// but we still need to pattern match,
+// etc., to use the fixtures. 
+// IMO, this doesn't seem like rstest
+// saves much boiler plate here...
+#[cfg(test)]
+mod graph_fixtures {
+    use super::*;
+
+    //        0      <- "Rando ancestor from before"
+    //        |
+    //     -------
+    //     |     |
+    //     |     1   <- Death
+    //     2     |   <- Death
+    //   -----   |
+    //   |   |   |
+    //   3   4   5   <- Birth
+    pub struct Topology0 {
+        pub node0: Node,
+        pub node1: Node,
+        pub node2: Node,
+        pub node3: Node,
+        pub node4: Node,
+        pub node5: Node,
+        pub graph: Graph,
+    }
+
+    impl Topology0 {
+        pub fn new() -> Self {
+            let mut graph = Graph::new(100).unwrap();
+            let node0 = graph.add_node(NodeStatus::Ancestor, 0);
+            let node1 = graph.add_node(NodeStatus::Death, 1);
+            let node2 = graph.add_node(NodeStatus::Death, 2);
+            let node3 = graph.add_birth(3).unwrap();
+            let node4 = graph.add_birth(3).unwrap();
+            let node5 = graph.add_birth(3).unwrap();
+
+            for node in [node1, node2] {
+                graph.parents[node.as_index()].insert(node0);
+            }
+            for child in [node3, node4] {
+                graph
+                    .record_transmission(0, graph.genome_length(), node2, child)
+                    .unwrap();
+            }
+            graph
+                .record_transmission(0, graph.genome_length(), node1, node5)
+                .unwrap();
+
+            // NOTE: we need to add "dummy" ancestry to the parents
+            // to have a valid data structure for testing.
+            for node in [node1, node2] {
+                graph.ancestry[node0.as_index()].push(Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length,
+                    },
+                    ancestry: AncestryType::Overlap(node),
+                });
+                graph.ancestry[node.as_index()].push(Ancestry {
+                    segment: Segment {
+                        left: 0,
+                        right: graph.genome_length,
+                    },
+                    ancestry: AncestryType::ToSelf,
+                });
+            }
+            Self {
+                node0,
+                node1,
+                node2,
+                node3,
+                node4,
+                node5,
+                graph,
+            }
+        }
     }
 }
 
@@ -2134,44 +2215,15 @@ mod test_standard_case {
     //   3   4   5
     #[test]
     fn test_simple_case_of_propagation_over_multiple_generations() {
-        let mut graph = Graph::new(100).unwrap();
-        let node0 = graph.add_node(NodeStatus::Ancestor, 0);
-        let node1 = graph.add_node(NodeStatus::Death, 1);
-        let node2 = graph.add_node(NodeStatus::Death, 2);
-        let node3 = graph.add_birth(3).unwrap();
-        let node4 = graph.add_birth(3).unwrap();
-        let node5 = graph.add_birth(3).unwrap();
-
-        for node in [node1, node2] {
-            graph.parents[node.as_index()].insert(node0);
-        }
-        for child in [node3, node4] {
-            graph
-                .record_transmission(0, graph.genome_length(), node2, child)
-                .unwrap();
-        }
-        graph
-            .record_transmission(0, graph.genome_length(), node1, node5)
-            .unwrap();
-
-        // NOTE: we need to add "dummy" ancestry to the parents
-        // to have a valid data structure for testing.
-        for node in [node1, node2] {
-            graph.ancestry[node0.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::Overlap(node),
-            });
-            graph.ancestry[node.as_index()].push(Ancestry {
-                segment: Segment {
-                    left: 0,
-                    right: graph.genome_length,
-                },
-                ancestry: AncestryType::ToSelf,
-            });
-        }
+        let graph_fixtures::Topology0 {
+            node0,
+            node1,
+            node2,
+            node3,
+            node4,
+            node5,
+            mut graph,
+        } = graph_fixtures::Topology0::new();
 
         propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
