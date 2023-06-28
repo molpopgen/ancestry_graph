@@ -36,6 +36,12 @@
    It would seem that HASHING the dead nodes could be (part of)
    the solution for eliminating this enum entirely.
 
+   An alternative to hashing (which is slower access than the Vec)
+   would be to take the enum and refactor it to be Death/NonDeath,
+   and pass it along to the simplification function.
+   This method avoids the hash AND removes the column from the
+   Graph.
+
 * We probably want all births to be at the EXACT SAME TIME
   so that we are simplifying at each "tick" of the simulation clock?
 
