@@ -20,6 +20,8 @@
    ancestry change propagation
 [] Need API to mark a node as sample
    (low priority for this prototype)
+[] Ancestry change for a sample node
+   should always be None (I think...?)
 
 ## General issues.
 
