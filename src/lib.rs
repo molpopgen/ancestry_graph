@@ -618,7 +618,8 @@ fn calculate_ancestry_change(
             match overlaps.len() {
                 0 => {
                     if matches!(parent_status, NodeStatus::Sample) {
-                        Some(AncestryChangeType::Unary)
+                        //Some(AncestryChangeType::Unary)
+                        None
                     } else {
                         Some(AncestryChangeType::Loss)
                     }
@@ -626,12 +627,13 @@ fn calculate_ancestry_change(
                 1 => {
                     if options.keep_unary_nodes() || matches!(parent_status, NodeStatus::Sample) {
                         // NOTE: we may need to revisit this case
-                        Some(AncestryChangeType::Unary)
+                        //Some(AncestryChangeType::Unary)
+                        None
                     } else {
                         Some(AncestryChangeType::Loss)
                     }
                 }
-                _ => Some(AncestryChangeType::Overlap),
+                _ => None//Some(AncestryChangeType::Overlap),
             }
         }
     };
