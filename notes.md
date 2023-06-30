@@ -25,6 +25,8 @@
 
 ## General issues.
 
+### Flags vs status enumeration
+
 * `NodeStatus::Birth` may be useless?
    We need a way to track new births and
    all alive nodes.  Separate containers
@@ -44,8 +46,31 @@
    This method avoids the hash AND removes the column from the
    Graph.
 
+#### Type redundancy
+
+* Currently, the flags and the status are redundant.
+* We only define ONE flag ("is sample").
+* We define a few "status" variants that are mutually-exclusive.
+* We are thus using too much storage for questionable value.
+
+At this point, it seems sensible to:
+
+* Only use the enum.
+* Convert the enum to `u32` to save space.
+* Drop the `NodeFlags` type entirely.
+
+### Birth times
+
 * We probably want all births to be at the EXACT SAME TIME
-  so that we are simplifying at each "tick" of the simulation clock?
+so that we are simplifying at each "tick" of the simulation clock?
+
+  - This is now enforced.  We may be able to relax this later.
+
+### Management of alive nodes
+
+* It seems that this should be handled "externally" by client code.
+* We need a "mark as dead" function to update the node status and copy
+  the node to a vector of dead nodes.
 
 ## Ancestry table
 
