@@ -21,7 +21,6 @@ impl Node {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u32)]
 pub enum NodeStatus {
     Ancestor,
     Birth,
