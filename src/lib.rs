@@ -27,6 +27,7 @@ pub enum NodeStatus {
     Death,
     Alive,
     Sample,
+    Extinct,
 }
 
 /// TODO: could be a newtype?
@@ -263,6 +264,7 @@ impl Graph {
                 assert!(self.children[index].is_empty());
                 assert!(self.parents[index].is_empty());
                 assert!(self.ancestry[index].is_empty());
+                assert!(matches!(self.status[index], NodeStatus::Extinct));
                 self.birth_time[index] = Some(birth_time);
                 self.status[index] = status;
                 if matches!(status, NodeStatus::Birth) {
@@ -1003,19 +1005,13 @@ fn process_queued_node(
                 });
             }
             match graph.status[queued_parent.node.as_index()] {
-                NodeStatus::Birth => {
-                    graph.status[queued_parent.node.as_index()] = NodeStatus::Alive
-                }
                 NodeStatus::Death => {
                     if !graph.ancestry[queued_parent.node.as_index()].is_empty() {
                         graph.status[queued_parent.node.as_index()] = NodeStatus::Ancestor;
                     }
                 }
-                NodeStatus::Ancestor => (),
-                NodeStatus::Alive => {
-                    graph.status[queued_parent.node.as_index()] = NodeStatus::Alive
-                }
-                NodeStatus::Sample => (),
+                NodeStatus::Extinct => panic!(),
+                _ => (),
             }
         }
         None => match graph.status[queued_parent.node.as_index()] {
@@ -1050,6 +1046,7 @@ fn process_queued_node(
         assert!(graph.birth_time[queued_parent.node.as_index()].is_some());
         graph.birth_time[queued_parent.node.as_index()].take();
         graph.free_nodes.push(queued_parent.node.as_index());
+        graph.status[queued_parent.node.as_index()] = NodeStatus::Extinct;
     }
 }
 
@@ -1065,6 +1062,10 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
 
     let mut unique_child_visits: NodeHash = HashSet::with_hasher(BuildHasherDefault::default());
     for tranmission in graph.transmissions.iter() {
+        assert!(matches!(
+            graph.status[tranmission.child.as_index()],
+            NodeStatus::Birth
+        ));
         let change = AncestryChange {
             segment: Segment {
                 left: tranmission.left,
@@ -1090,6 +1091,9 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
         }
     }
     assert_eq!(unique_child_visits.len(), graph.births.len());
+    for birth in unique_child_visits.into_iter() {
+        graph.status[birth.as_index()] = NodeStatus::Alive;
+    }
 
     for death in graph.deaths.iter() {
         update_internal_stuff(*death, &mut hashed_nodes, &mut parent_queue, graph)
@@ -1654,6 +1658,10 @@ mod test_standard_case {
             mut graph,
         } = graph_fixtures::Topology0::new();
 
+        for node in [node3, node4, node5] {
+            assert!(matches!(graph.status[node.as_index()], NodeStatus::Birth));
+        }
+
         propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         assert!(graph.ancestry[node1.as_index()].is_empty());
@@ -1689,6 +1697,18 @@ mod test_standard_case {
                 "failing child node = {child:?}"
             );
         }
+
+        // Verify status changes
+        for node in [node3, node4, node5] {
+            assert!(matches!(graph.status[node.as_index()], NodeStatus::Alive));
+        }
+        for node in [node0,node2] {
+            assert!(matches!(graph.status[node.as_index()], NodeStatus::Ancestor));
+        }
+        assert!(matches!(
+            graph.status[node1.as_index()],
+            NodeStatus::Extinct
+        ));
     }
 
     //        0      <- "Rando ancestor from before"
