@@ -8,7 +8,6 @@ mod overlapper_experiments;
 
 mod flags;
 
-use flags::NodeFlags;
 use flags::PropagationOptions;
 
 #[repr(transparent)]
@@ -22,11 +21,13 @@ impl Node {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
 pub enum NodeStatus {
     Ancestor,
     Birth,
     Death,
     Alive,
+    Sample,
 }
 
 /// TODO: could be a newtype?
@@ -147,7 +148,6 @@ struct Transmission {
 #[derive(Debug)]
 pub struct Graph {
     status: Vec<NodeStatus>,
-    flags: Vec<NodeFlags>,
     birth_time: Vec<Option<i64>>,
     parents: Vec<NodeHash>,
     children: Vec<NodeHash>,
@@ -180,7 +180,6 @@ impl Graph {
         let parents = Vec::with_capacity(capacity);
         let children = Vec::with_capacity(capacity);
         let status = Vec::with_capacity(capacity);
-        let flags = Vec::with_capacity(capacity);
         let birth_time = Vec::with_capacity(capacity);
         let transmissions = Vec::with_capacity(capacity);
         let ancestry = Vec::with_capacity(capacity);
@@ -189,7 +188,6 @@ impl Graph {
         let free_nodes = Vec::new();
         Some(Self {
             status,
-            flags,
             birth_time,
             parents,
             children,
@@ -205,7 +203,6 @@ impl Graph {
     // TODO: remove code duplication to with_capacity if we keep this fn
     fn with_initial_nodes(num_nodes: usize, genome_length: i64) -> Option<Self> {
         let status = vec![NodeStatus::Ancestor; num_nodes];
-        let flags = vec![NodeFlags::default(); num_nodes];
         let birth_time = vec![Some(0); num_nodes];
         let parents = vec![NodeHash::with_hasher(BuildHasherDefault::default()); num_nodes];
         let children = vec![NodeHash::with_hasher(BuildHasherDefault::default()); num_nodes];
@@ -220,7 +217,6 @@ impl Graph {
         let free_nodes = Vec::new();
         Some(Self {
             status,
-            flags,
             birth_time,
             parents,
             children,
@@ -270,7 +266,6 @@ impl Graph {
                 assert!(self.ancestry[index].is_empty());
                 self.birth_time[index] = Some(birth_time);
                 self.status[index] = status;
-                self.flags[index] = NodeFlags::default();
                 if matches!(status, NodeStatus::Birth) {
                     self.ancestry[index].push(Ancestry::birth(self.genome_length).unwrap());
                 }
@@ -283,8 +278,6 @@ impl Graph {
                     .push(NodeHash::with_hasher(BuildHasherDefault::default()));
                 self.children
                     .push(NodeHash::with_hasher(BuildHasherDefault::default()));
-                // NOTE: this may not be the correct place?
-                self.flags.push(NodeFlags::default());
                 match status {
                     NodeStatus::Birth => self
                         .ancestry
@@ -456,7 +449,7 @@ struct AncestryOverlapper {
     num_overlaps: usize,
     current_overlap: usize,
     parent: Node,
-    parent_flags: NodeFlags,
+    parent_status: NodeStatus,
     left: i64,
     right: i64,
     overlaps: Vec<Ancestry>,
@@ -468,7 +461,7 @@ struct AncestryOverlapper {
 impl AncestryOverlapper {
     fn new(
         parent: Node,
-        parent_flags: NodeFlags,
+        parent_status: NodeStatus,
         parental_node_ancestry: &[Ancestry],
         ancestry_changes: &[AncestryChange],
     ) -> Self {
@@ -490,7 +483,7 @@ impl AncestryOverlapper {
             num_overlaps,
             current_overlap: 0,
             parent,
-            parent_flags,
+            parent_status,
             left,
             right,
             overlaps: vec![],
@@ -523,7 +516,7 @@ impl AncestryOverlapper {
             options,
             Segment::new(self.left, self.right).unwrap(),
             self.parent,
-            self.parent_flags,
+            self.parent_status,
             &self.parental_overlaps,
             &self.change_overlaps,
             &mut self.overlaps,
@@ -589,7 +582,7 @@ fn calculate_ancestry_change(
     options: PropagationOptions,
     segment: Segment,
     parent: Node,
-    parent_flags: NodeFlags,
+    parent_status: NodeStatus,
     parental_overlaps: &[Ancestry],
     overlaps: &[Ancestry],
 ) -> Option<AncestryChange> {
@@ -610,7 +603,7 @@ fn calculate_ancestry_change(
             match overlaps.len() {
                 0 => Some(AncestryChangeType::Loss),
                 1 => {
-                    if options.keep_unary_nodes() || parent_flags.sample() {
+                    if options.keep_unary_nodes() || matches!(parent_status, NodeStatus::Sample) {
                         Some(AncestryChangeType::Unary)
                     } else {
                         Some(AncestryChangeType::Loss)
@@ -623,14 +616,14 @@ fn calculate_ancestry_change(
             assert!(parental_overlaps.len() == 1);
             match overlaps.len() {
                 0 => {
-                    if parent_flags.sample() {
+                    if matches!(parent_status, NodeStatus::Sample) {
                         Some(AncestryChangeType::Unary)
                     } else {
                         Some(AncestryChangeType::Loss)
                     }
                 }
                 1 => {
-                    if options.keep_unary_nodes() || parent_flags.sample() {
+                    if options.keep_unary_nodes() || matches!(parent_status, NodeStatus::Sample) {
                         // NOTE: we may need to revisit this case
                         Some(AncestryChangeType::Unary)
                     } else {
@@ -654,7 +647,7 @@ fn output_overlaps(
     options: PropagationOptions,
     segment: Segment,
     parent: Node,
-    parent_flags: NodeFlags,
+    parent_status: NodeStatus,
     parental_overlaps: &[Ancestry],
     change_overlaps: &[AncestryChange],
     output_ancestry: &mut Vec<Ancestry>,
@@ -688,7 +681,7 @@ fn output_overlaps(
         options,
         segment,
         parent,
-        parent_flags,
+        parent_status,
         parental_overlaps,
         output_ancestry,
     )
@@ -898,7 +891,7 @@ fn process_node_death(
 fn process_queued_node(
     options: PropagationOptions,
     queued_parent: QueuedNode,
-    parent_flags: NodeFlags,
+    parent_status: NodeStatus,
     hashed_nodes: &mut NodeHash,
     parent_queue: &mut std::collections::BinaryHeap<QueuedNode>,
     ancestry_changes_to_process: &mut HashMap<Node, Vec<AncestryChange>>,
@@ -913,7 +906,7 @@ fn process_queued_node(
             ancestry_changes.sort_unstable_by_key(|ac| ac.left());
             let mut overlapper = AncestryOverlapper::new(
                 queued_parent.node,
-                graph.flags[queued_parent.node.as_index()],
+                graph.status[queued_parent.node.as_index()],
                 &graph.ancestry[queued_parent.node.as_index()],
                 ancestry_changes,
             );
@@ -925,7 +918,7 @@ fn process_queued_node(
                     "COORDS: {previous_right} -> ({}, {}), {}",
                     overlaps.left,
                     overlaps.right,
-                    parent_flags.sample()
+                    matches!(parent_status, NodeStatus::Sample)
                 );
 
                 // There is some ugliness here: sample nodes are getting
@@ -973,7 +966,9 @@ fn process_queued_node(
                         }
                     }
                     _ => {
-                        if parent_flags.sample() && overlaps.overlaps.is_empty() {
+                        if matches!(parent_status, NodeStatus::Sample)
+                            && overlaps.overlaps.is_empty()
+                        {
                             println!("EMPTY on {} {}", overlaps.left, overlaps.right);
                             graph.ancestry[queued_parent.node.as_index()].push(Ancestry {
                                 segment: Segment {
@@ -1000,7 +995,9 @@ fn process_queued_node(
                 previous_right = overlaps.right;
                 println!("last right = {previous_right}");
             }
-            if parent_flags.sample() && previous_right != graph.genome_length() {
+            if matches!(parent_status, NodeStatus::Sample)
+                && previous_right != graph.genome_length()
+            {
                 graph.ancestry[queued_parent.node.as_index()].push(Ancestry {
                     segment: Segment::new(previous_right, graph.genome_length).unwrap(),
                     ancestry: AncestryType::ToSelf,
@@ -1019,6 +1016,7 @@ fn process_queued_node(
                 NodeStatus::Alive => {
                     graph.status[queued_parent.node.as_index()] = NodeStatus::Alive
                 }
+                NodeStatus::Sample => (),
             }
         }
         None => match graph.status[queued_parent.node.as_index()] {
@@ -1120,7 +1118,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
             _ => process_queued_node(
                 options,
                 queued_parent,
-                graph.flags[queued_parent.node.as_index()],
+                graph.status[queued_parent.node.as_index()],
                 &mut hashed_nodes,
                 &mut parent_queue,
                 &mut ancestry_changes_to_process,
@@ -2607,8 +2605,8 @@ mod test_internal_samples {
             node6,
             mut graph,
         } = graph_fixtures::Topology2::new();
-        graph.flags[node2.as_index()] = NodeFlags::new_sample();
-        graph.status[node5.as_index()]=NodeStatus::Death;
+        graph.status[node2.as_index()] = NodeStatus::Sample;
+        graph.status[node5.as_index()] = NodeStatus::Death;
 
         graph.deaths.push(node5);
         // With node2 marked as an internal sample, we
@@ -2742,7 +2740,7 @@ mod test_internal_samples {
         let node3 = graph.add_birth(3).unwrap();
         let node4 = graph.add_birth(3).unwrap();
 
-        graph.flags[node1.as_index()] = NodeFlags::new_sample();
+        graph.status[node1.as_index()] = NodeStatus::Sample;
 
         for node in [node1, node2] {
             graph.parents[node.as_index()].insert(node0);
@@ -2856,7 +2854,7 @@ mod test_internal_samples {
         let node2 = graph.add_node(NodeStatus::Death, 1);
         let node3 = graph.add_node(NodeStatus::Birth, 2);
 
-        graph.flags[node0.as_index()] = NodeFlags::new_sample();
+        graph.status[node0.as_index()] = NodeStatus::Sample;
 
         for node in [node1, node2] {
             graph.deaths.push(node);

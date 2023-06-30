@@ -7,32 +7,9 @@ use bitflags::bitflags;
 bitflags! {
     #[repr(transparent)]
     #[derive(Default, Debug, Copy, Clone)]
-    struct NodeBitFlags: u32 {
-        const EMPTY = 0;
-        const IS_SAMPLE = 1 << 1;
-    }
-}
-
-bitflags! {
-    #[repr(transparent)]
-    #[derive(Default, Debug, Copy, Clone)]
     struct PropagationBitFlags: u32 {
         const EMPTY = 0;
         const KEEP_UNARY_NODES = 1 << 1;
-    }
-}
-
-#[repr(transparent)]
-#[derive(Default, Debug, Copy, Clone)]
-pub struct NodeFlags(NodeBitFlags);
-
-impl NodeFlags {
-    pub fn new_sample() -> Self {
-        Self(NodeBitFlags::IS_SAMPLE)
-    }
-
-    pub fn sample(&self) -> bool {
-        self.0.contains(NodeBitFlags::IS_SAMPLE)
     }
 }
 
