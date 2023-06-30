@@ -22,6 +22,7 @@
    (low priority for this prototype)
 [] Ancestry change for a sample node
    should always be None (I think...?)
+[] Consider the NOTEs section of test `test_ancestry_completeness_of_internal_samples`.
 
 ## General issues.
 
@@ -59,6 +60,15 @@ At this point, it seems sensible to:
 * Convert the enum to `u32` to save space.
 * Drop the `NodeFlags` type entirely.
 
+#### Enum variant redundancy
+
+It probably makes the most sense to:
+
+* Collapse `NodeStatus::Alive` into `NodeStatus::Sample`.
+  The reason is that an alive node is just a sample
+  that will eventually be marked as "Death" and then,
+  perhaps, as `Ancestor`
+
 ### Birth times
 
 * We probably want all births to be at the EXACT SAME TIME
@@ -71,6 +81,11 @@ so that we are simplifying at each "tick" of the simulation clock?
 * It seems that this should be handled "externally" by client code.
 * We need a "mark as dead" function to update the node status and copy
   the node to a vector of dead nodes.
+
+### Sample nodes
+
+* See comments for Topology5. It is currently hard to make a node
+  a sample after its initial birth time.
 
 ## Ancestry table
 
