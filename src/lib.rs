@@ -633,7 +633,7 @@ fn calculate_ancestry_change(
                         Some(AncestryChangeType::Loss)
                     }
                 }
-                _ => None//Some(AncestryChangeType::Overlap),
+                _ => None, //Some(AncestryChangeType::Overlap),
             }
         }
     };
@@ -822,7 +822,6 @@ impl<'graph> Iterator for ReachableNodes<'graph> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.node_queue.pop() {
             Some(node) => {
-                println!("popped {node:?}");
                 assert!(self.queued_nodes.remove(&node.node));
                 for parent in &self.graph.parents[node.node.as_index()] {
                     if !self.queued_nodes.contains(parent) {
@@ -831,7 +830,6 @@ impl<'graph> Iterator for ReachableNodes<'graph> {
                             node: *parent,
                             birth_time: self.graph.birth_time[parent.as_index()].unwrap(),
                         });
-                        println!("pushing {parent:?}");
                     }
                 }
                 Some(node.node)
@@ -1704,8 +1702,11 @@ mod test_standard_case {
         for node in [node3, node4, node5] {
             assert!(matches!(graph.status[node.as_index()], NodeStatus::Alive));
         }
-        for node in [node0,node2] {
-            assert!(matches!(graph.status[node.as_index()], NodeStatus::Ancestor));
+        for node in [node0, node2] {
+            assert!(matches!(
+                graph.status[node.as_index()],
+                NodeStatus::Ancestor
+            ));
         }
         assert!(matches!(
             graph.status[node1.as_index()],
