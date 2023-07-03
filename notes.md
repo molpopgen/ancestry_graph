@@ -87,6 +87,95 @@ so that we are simplifying at each "tick" of the simulation clock?
 * See comments for Topology5. It is currently hard to make a node
   a sample after its initial birth time.
 
+### Ancestry change enumeration
+
+Really, we are more interested in "changed" or "not changed"
+for a segment rather than changes to Unary, to Overlap, etc..
+
+Is it even useful to distinguish a Gain from a Loss, or is
+Change sufficient?  If Change will work, then Option<Change>, where
+Change is a ZST, is all we need.
+
+I think we do need to distinguish:
+
+* Overlap((Segment, Node))
+* Loss((Segment, Node))
+
+Then, the queue/overlapper duo will figure out
+if the parental genome ends up changed.
+
+### AncestryType
+
+This enumeration would be clearer as:
+
+```rust
+enum SegmentMapping {
+    Self(Node),
+    Child(Node)
+}
+```
+
+## Use of a typestate idiom
+
+Something like this, which was quickly hacked together
+on playground, would seem to reduce our over-typing:
+
+```rust
+enum OverlapState {
+    ToSelf,
+    Child,
+}
+
+enum ChangeState {
+    Loss,
+    Overlap,
+}
+
+trait State {}
+
+impl State for OverlapState {}
+impl State for ChangeState {}
+
+struct Segment<T: State> {
+    left: i64,
+    right: i64,
+    node: usize,
+    state: T,
+}
+
+impl<T: State> Segment<T> {
+    fn new(left: i64, right: i64, node: usize, state: T) -> Self {
+        Self {
+            left,
+            right,
+            node,
+            state,
+        }
+    }
+    fn overlaps(&self, other: &Self) -> bool {
+        self.right > other.left && other.right > self.left
+    }
+}
+
+impl Segment<ChangeState> {
+    fn new_loss(left: i64, right: i64, node: usize) -> Self {
+        Self::new(left, right, node, ChangeState::Loss)
+    }
+}
+
+fn main() {
+    let a = Segment {
+        left: 0,
+        right: 10,
+        node: 1,
+        state: OverlapState::ToSelf,
+    };
+    let b = Segment::new_loss(0, 10, 1);
+    // compile fail: the "T" are different
+    //let o = a.overlaps(&b);
+}
+```
+
 ## Ancestry table
 
 It may be useful to design the ancestry table as:
