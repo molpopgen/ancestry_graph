@@ -710,8 +710,6 @@ fn process_queued_node(
         None => panic!(),
     }
 
-    // TODO: DUPLICATION (not really, but it is too related to code happening in
-    // the processing of death nodes)
     println!(
         "final ancestry len = {}",
         graph.ancestry[queued_parent.node.as_index()].len()
