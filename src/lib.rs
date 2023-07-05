@@ -806,78 +806,26 @@ fn output_overlaps(
         }
     }
 
-    // This should be cleaner, to represent an "input parental status"
-    // We don't need/want the internal node mappings here.
-    // NOTE: we could define an enum private to this function?
-    let parental_node_status = match parental_overlaps.len() {
-        0 => panic!(),
-        1 => match parental_overlaps[0].ancestry {
-            AncestryType::ToSelf => AncestryType::ToSelf,
-            AncestryType::Unary(node) => AncestryType::Unary(node),
-            AncestryType::Overlap(_) => panic!(),
-        },
-        _ => AncestryType::Overlap(parent),
-    };
+    let node_is_sample =
+        matches!(parent_status, NodeStatus::Sample) || matches!(parent_status, NodeStatus::Alive);
 
     println!("the overlaps are {output_ancestry:?}");
-    // TODO: it must(?) be possible to streamline the
-    // next bit
-    let change_type = match parental_node_status {
-        AncestryType::Overlap(_) => {
-            assert!(parental_overlaps.len() > 1);
-            match output_ancestry.len() {
-                0 => {
-                    if matches!(parent_status, NodeStatus::Sample)
-                        || matches!(parent_status, NodeStatus::Alive)
-                    {
-                        //Some(AncestryChangeType::Unary)
-                        None
-                    } else {
-                        Some(AncestryChangeType::Loss)
-                    }
-                }
-                1 => {
-                    if options.keep_unary_nodes()
-                        || matches!(parent_status, NodeStatus::Sample)
-                        || matches!(parent_status, NodeStatus::Alive)
-                    {
-                        //Some(AncestryChangeType::Unary)
-                        None
-                    } else {
-                        Some(AncestryChangeType::Loss)
-                    }
-                }
-                _ => None,
+    let change_type = match output_ancestry.len() {
+        0 => {
+            if node_is_sample {
+                None
+            } else {
+                Some(AncestryChangeType::Loss)
             }
         }
-        AncestryType::Unary(_) | AncestryType::ToSelf => {
-            assert!(parental_overlaps.len() == 1);
-            match output_ancestry.len() {
-                0 => {
-                    if matches!(parent_status, NodeStatus::Sample)
-                        || matches!(parent_status, NodeStatus::Alive)
-                    {
-                        //Some(AncestryChangeType::Unary)
-                        None
-                    } else {
-                        Some(AncestryChangeType::Loss)
-                    }
-                }
-                1 => {
-                    if options.keep_unary_nodes()
-                        || matches!(parent_status, NodeStatus::Sample)
-                        || matches!(parent_status, NodeStatus::Alive)
-                    {
-                        // NOTE: we may need to revisit this case
-                        //Some(AncestryChangeType::Unary)
-                        None
-                    } else {
-                        Some(AncestryChangeType::Loss)
-                    }
-                }
-                _ => None, //Some(AncestryChangeType::Overlap),
+        1 => {
+            if options.keep_unary_nodes() || node_is_sample {
+                None
+            } else {
+                Some(AncestryChangeType::Loss)
             }
         }
+        _ => None,
     };
 
     change_type.map(|change_type| AncestryChange {
