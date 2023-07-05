@@ -230,17 +230,6 @@ impl Graph {
         })
     }
 
-    fn birth_ancestry_change_type(&self, child: Node) -> AncestryChange {
-        AncestryChange {
-            segment: Segment {
-                left: 0,
-                right: self.genome_length,
-            },
-            node: child,
-            change_type: AncestryChangeType::Unary,
-        }
-    }
-
     pub fn genome_length(&self) -> i64 {
         self.genome_length
     }
@@ -566,48 +555,6 @@ fn reachable_nodes(graph: &Graph) -> impl Iterator<Item = Node> + '_ {
     ReachableNodes::new(graph)
 }
 
-// NOTE: current tests are only able to trigger this fn
-// in the case of "dangling deaths" isolated to a given tree.
-fn process_node_death(
-    queued_parent: QueuedNode,
-    hashed_nodes: &mut NodeHash,
-    parent_queue: &mut std::collections::BinaryHeap<QueuedNode>,
-    ancestry_changes_to_process: &mut HashMap<Node, Vec<AncestryChange>>,
-    graph: &mut Graph,
-) {
-    let changes_for_this_node = match ancestry_changes_to_process.get(&queued_parent.node) {
-        Some(changes) => changes.to_vec(),
-        None => vec![],
-    };
-    println!("this dead node should pass on {changes_for_this_node:?}");
-    for parent in graph.parents(queued_parent.node) {
-        println!("parent of death node = {parent:?}");
-        println!(
-            "current changes for parent = {:?}",
-            ancestry_changes_to_process.get(parent)
-        );
-        update_internal_stuff(*parent, hashed_nodes, parent_queue, graph);
-        push_ancestry_changes_to_parent(
-            *parent,
-            //ancestry_changes,
-            graph.ancestry[queued_parent.node.as_index()]
-                .iter()
-                .map(|a| AncestryChange {
-                    segment: a.segment,
-                    node: queued_parent.node,
-                    change_type: AncestryChangeType::Loss,
-                })
-                .chain(changes_for_this_node.iter().cloned()),
-            ancestry_changes_to_process,
-        );
-        println!(
-            "final changes for parent = {:?}",
-            ancestry_changes_to_process.get(parent)
-        );
-    }
-    graph.ancestry[queued_parent.node.as_index()].clear();
-}
-
 // NOTE: if we require that nodes are marked as SAMPLES
 // when born, and prior to propagation, then we should (?)
 // be able to eliminate the logic needed for filling in
@@ -760,18 +707,7 @@ fn process_queued_node(
                 _ => (),
             }
         }
-        None => match graph.status[queued_parent.node.as_index()] {
-            NodeStatus::Death => {
-                process_node_death(
-                    queued_parent,
-                    hashed_nodes,
-                    parent_queue,
-                    ancestry_changes_to_process,
-                    graph,
-                );
-            }
-            _ => panic!(),
-        },
+        None => panic!(),
     }
 
     // TODO: DUPLICATION (not really, but it is too related to code happening in
