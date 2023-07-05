@@ -74,8 +74,7 @@ impl Segment {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum AncestryType {
     ToSelf,
-    Unary(Node),
-    Overlap(Node),
+    ToChild(Node),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -132,9 +131,6 @@ impl AncestryChange {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum AncestryChangeType {
     Overlap,
-    // NOTE: ToUnary is overloaded with "Unary and is sample"
-    // We may want to un-overload the term later
-    Unary,
     Loss,
 }
 
@@ -639,7 +635,7 @@ fn process_queued_node(
                                 overlaps.overlaps().iter().map(|a| AncestryChange {
                                     segment: a.segment,
                                     node: a.node,
-                                    change_type: AncestryChangeType::Unary,
+                                    change_type: AncestryChangeType::Overlap,
                                 }),
                                 ancestry_changes_to_process,
                             )
@@ -668,17 +664,10 @@ fn process_queued_node(
                                     "adding new ancestry {a:?} to {queued_parent:?}|{}",
                                     overlaps.overlaps.len()
                                 );
-                                if overlaps.overlaps.len() > 1 {
-                                    graph.ancestry[queued_parent.node.as_index()].push(Ancestry {
-                                        segment: a.segment,
-                                        ancestry: AncestryType::Overlap(a.node),
-                                    });
-                                } else {
-                                    graph.ancestry[queued_parent.node.as_index()].push(Ancestry {
-                                        segment: a.segment,
-                                        ancestry: AncestryType::Unary(a.node),
-                                    });
-                                }
+                                graph.ancestry[queued_parent.node.as_index()].push(Ancestry {
+                                    segment: a.segment,
+                                    ancestry: AncestryType::ToChild(a.node),
+                                });
                                 graph.parents[a.node.as_index()].insert(queued_parent.node);
                                 graph.children[queued_parent.node.as_index()].insert(a.node);
                             }
@@ -794,7 +783,7 @@ fn output_overlaps(
     for po in parental_overlaps {
         match po.ancestry {
             AncestryType::ToSelf => (),
-            AncestryType::Unary(node) | AncestryType::Overlap(node) => {
+            AncestryType::ToChild(node) => {
                 if !parental_nodes_lost.contains(&node) {
                     println!("ONODE = {node:?}");
                     output_ancestry.push(OutputSegment { segment, node });
@@ -1009,7 +998,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
                 right: tranmission.right,
             },
             node: tranmission.child,
-            change_type: AncestryChangeType::Unary,
+            change_type: AncestryChangeType::Overlap,
         };
         for parent in graph.parents(tranmission.child) {
             unique_child_visits.insert(tranmission.child);
@@ -1174,7 +1163,7 @@ mod graph_fixtures {
                         left: 0,
                         right: graph.genome_length,
                     },
-                    ancestry: AncestryType::Overlap(node),
+                    ancestry: AncestryType::ToChild(node),
                 });
                 graph.ancestry[node.as_index()].push(Ancestry {
                     segment: Segment {
@@ -1248,7 +1237,7 @@ mod graph_fixtures {
                         left: 0,
                         right: graph.genome_length,
                     },
-                    ancestry: AncestryType::Overlap(node),
+                    ancestry: AncestryType::ToChild(node),
                 });
                 graph.ancestry[node.as_index()].push(Ancestry {
                     segment: Segment {
@@ -1311,7 +1300,7 @@ mod graph_fixtures {
                         left: 0,
                         right: graph.genome_length,
                     },
-                    ancestry: AncestryType::Overlap(node),
+                    ancestry: AncestryType::ToChild(node),
                 });
             }
             for node in [node3, node4] {
@@ -1322,7 +1311,7 @@ mod graph_fixtures {
                         left: 0,
                         right: graph.genome_length,
                     },
-                    ancestry: AncestryType::Overlap(node),
+                    ancestry: AncestryType::ToChild(node),
                 });
             }
             for node in [node5, node6] {
@@ -1333,7 +1322,7 @@ mod graph_fixtures {
                         left: 0,
                         right: graph.genome_length,
                     },
-                    ancestry: AncestryType::Overlap(node),
+                    ancestry: AncestryType::ToChild(node),
                 });
             }
 
@@ -1393,7 +1382,7 @@ mod graph_fixtures {
                         left: 0,
                         right: graph.genome_length,
                     },
-                    ancestry: AncestryType::Overlap(node),
+                    ancestry: AncestryType::ToChild(node),
                 });
             }
 
@@ -1402,7 +1391,7 @@ mod graph_fixtures {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Unary(node4),
+                ancestry: AncestryType::ToChild(node4),
             });
             graph.children[node2.as_index()].insert(node4);
             graph.parents[node4.as_index()].insert(node2);
@@ -1411,7 +1400,7 @@ mod graph_fixtures {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Unary(node3),
+                ancestry: AncestryType::ToChild(node3),
             });
             graph.children[node1.as_index()].insert(node3);
             graph.parents[node3.as_index()].insert(node1);
@@ -1472,7 +1461,7 @@ mod graph_fixtures {
                         left: 0,
                         right: graph.genome_length,
                     },
-                    ancestry: AncestryType::Overlap(node),
+                    ancestry: AncestryType::ToChild(node),
                 });
             }
 
@@ -1481,7 +1470,7 @@ mod graph_fixtures {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Unary(node4),
+                ancestry: AncestryType::ToChild(node4),
             });
             graph.children[node2.as_index()].insert(node4);
             graph.parents[node4.as_index()].insert(node2);
@@ -1490,7 +1479,7 @@ mod graph_fixtures {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Unary(node3),
+                ancestry: AncestryType::ToChild(node3),
             });
             graph.children[node1.as_index()].insert(node3);
             graph.parents[node3.as_index()].insert(node1);
@@ -1581,7 +1570,7 @@ mod graph_fixtures {
                 for seg in [inner_seg2, inner_seg1] {
                     graph.ancestry[node0.as_index()].push(Ancestry {
                         segment: seg,
-                        ancestry: AncestryType::Overlap(node),
+                        ancestry: AncestryType::ToChild(node),
                     })
                 }
             }
@@ -1599,7 +1588,7 @@ mod graph_fixtures {
             });
             graph.ancestry[node1.as_index()].push(Ancestry {
                 segment: inner_seg1,
-                ancestry: AncestryType::Unary(node3),
+                ancestry: AncestryType::ToChild(node3),
             });
             graph.ancestry[node1.as_index()].push(Ancestry {
                 segment: Segment {
@@ -1618,7 +1607,7 @@ mod graph_fixtures {
             });
             graph.ancestry[node2.as_index()].push(Ancestry {
                 segment: inner_seg1,
-                ancestry: AncestryType::Unary(node4),
+                ancestry: AncestryType::ToChild(node4),
             });
             graph.ancestry[node2.as_index()].push(Ancestry {
                 segment: Segment {
@@ -1723,7 +1712,7 @@ mod graph_fixtures {
                         left: 0,
                         right: 100,
                     },
-                    ancestry: AncestryType::Overlap(node),
+                    ancestry: AncestryType::ToChild(node),
                 });
                 graph.ancestry[node.as_index()].push(Ancestry {
                     segment: Segment {
@@ -1771,12 +1760,12 @@ fn test_ancestry_change_ordering() {
             AncestryChange {
                 node: Node(1),
                 segment: Segment::new(0, 10).unwrap(),
-                change_type: AncestryChangeType::Unary,
+                change_type: AncestryChangeType::Overlap,
             },
             AncestryChange {
                 node: Node(0),
                 segment: Segment::new(0, 10).unwrap(),
-                change_type: AncestryChangeType::Unary,
+                change_type: AncestryChangeType::Overlap,
             },
         ];
         changes.sort_unstable();
@@ -1786,12 +1775,12 @@ fn test_ancestry_change_ordering() {
                 AncestryChange {
                     node: Node(0),
                     segment: Segment::new(0, 10).unwrap(),
-                    change_type: AncestryChangeType::Unary
+                    change_type: AncestryChangeType::Overlap
                 },
                 AncestryChange {
                     node: Node(1),
                     segment: Segment::new(0, 10).unwrap(),
-                    change_type: AncestryChangeType::Unary
+                    change_type: AncestryChangeType::Overlap
                 },
             ]
         );
@@ -1802,12 +1791,12 @@ fn test_ancestry_change_ordering() {
             AncestryChange {
                 node: Node(1),
                 segment: Segment::new(0, 10).unwrap(),
-                change_type: AncestryChangeType::Unary,
+                change_type: AncestryChangeType::Overlap,
             },
             AncestryChange {
                 node: Node(0),
                 segment: Segment::new(6, 10).unwrap(),
-                change_type: AncestryChangeType::Unary,
+                change_type: AncestryChangeType::Overlap,
             },
         ];
         changes.sort_unstable();
@@ -1817,12 +1806,12 @@ fn test_ancestry_change_ordering() {
                 AncestryChange {
                     node: Node(1),
                     segment: Segment::new(0, 10).unwrap(),
-                    change_type: AncestryChangeType::Unary,
+                    change_type: AncestryChangeType::Overlap,
                 },
                 AncestryChange {
                     node: Node(0),
                     segment: Segment::new(6, 10).unwrap(),
-                    change_type: AncestryChangeType::Unary,
+                    change_type: AncestryChangeType::Overlap,
                 },
             ]
         );
@@ -1833,12 +1822,12 @@ fn test_ancestry_change_ordering() {
             AncestryChange {
                 node: Node(0),
                 segment: Segment::new(6, 7).unwrap(),
-                change_type: AncestryChangeType::Unary,
+                change_type: AncestryChangeType::Overlap,
             },
             AncestryChange {
                 node: Node(0),
                 segment: Segment::new(6, 10).unwrap(),
-                change_type: AncestryChangeType::Unary,
+                change_type: AncestryChangeType::Overlap,
             },
         ];
         changes.sort_unstable();
@@ -1848,12 +1837,12 @@ fn test_ancestry_change_ordering() {
                 AncestryChange {
                     node: Node(0),
                     segment: Segment::new(6, 7).unwrap(),
-                    change_type: AncestryChangeType::Unary,
+                    change_type: AncestryChangeType::Overlap,
                 },
                 AncestryChange {
                     node: Node(0),
                     segment: Segment::new(6, 10).unwrap(),
-                    change_type: AncestryChangeType::Unary,
+                    change_type: AncestryChangeType::Overlap,
                 },
             ]
         );
@@ -1902,7 +1891,7 @@ mod test_standard_case {
                     left: 0,
                     right: graph.genome_length
                 },
-                ancestry: AncestryType::Overlap(c)
+                ancestry: AncestryType::ToChild(c)
             }));
             assert_eq!(graph.ancestry[c.as_index()].len(), 1);
         }
@@ -1966,7 +1955,7 @@ mod test_standard_case {
                     left: 0,
                     right: graph.genome_length
                 },
-                ancestry: AncestryType::Overlap(c)
+                ancestry: AncestryType::ToChild(c)
             }));
             assert_eq!(graph.ancestry[c.as_index()].len(), 1);
         }
@@ -2024,7 +2013,7 @@ mod test_standard_case {
                         left: 0,
                         right: graph.genome_length
                     },
-                    ancestry: AncestryType::Overlap(child)
+                    ancestry: AncestryType::ToChild(child)
                 }),
                 "failing child node = {child:?}"
             );
@@ -2039,7 +2028,7 @@ mod test_standard_case {
                         left: 0,
                         right: graph.genome_length
                     },
-                    ancestry: AncestryType::Overlap(child)
+                    ancestry: AncestryType::ToChild(child)
                 }),
                 "failing child node = {child:?}"
             );
@@ -2108,7 +2097,7 @@ mod test_standard_case {
                         left: 0,
                         right: graph.genome_length
                     },
-                    ancestry: AncestryType::Overlap(child)
+                    ancestry: AncestryType::ToChild(child)
                 }),
                 "failing child node = {child:?}"
             );
@@ -2194,7 +2183,7 @@ mod test_standard_case {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             });
             graph.ancestry[node.as_index()].push(Ancestry {
                 segment: Segment {
@@ -2219,7 +2208,7 @@ mod test_standard_case {
                         left: 0,
                         right: crossover_pos,
                     },
-                    ancestry: AncestryType::Overlap(child)
+                    ancestry: AncestryType::ToChild(child)
                 }),
                 "failing child node = {child:?}"
             );
@@ -2232,7 +2221,7 @@ mod test_standard_case {
                         left: crossover_pos,
                         right: graph.genome_length,
                     },
-                    ancestry: AncestryType::Overlap(child)
+                    ancestry: AncestryType::ToChild(child)
                 }),
                 "failing child node = {child:?}"
             );
@@ -2308,7 +2297,7 @@ mod test_standard_case {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             });
             graph.ancestry[node.as_index()].push(Ancestry {
                 segment: Segment {
@@ -2364,7 +2353,7 @@ mod test_standard_case {
                         left: 0,
                         right: crossover_pos,
                     },
-                    ancestry: AncestryType::Overlap(child)
+                    ancestry: AncestryType::ToChild(child)
                 }),
                 "failing child node = {child:?}"
             );
@@ -2432,7 +2421,7 @@ mod test_standard_case {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             });
         }
         for node in [node2, node6] {
@@ -2443,7 +2432,7 @@ mod test_standard_case {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             });
         }
         for node in [node4, node5] {
@@ -2454,7 +2443,7 @@ mod test_standard_case {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             });
         }
         for node in [node3, node4, node5, node6] {
@@ -2511,7 +2500,7 @@ mod test_standard_case {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             });
         }
         for node in [node2, node3] {
@@ -2522,7 +2511,7 @@ mod test_standard_case {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             });
         }
 
@@ -2543,7 +2532,7 @@ mod test_standard_case {
         assert!(graph.ancestry[node1.as_index()].is_empty());
         for node in [node3, node4] {
             assert!(graph.ancestry[node0.as_index()].contains(&Ancestry {
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
                 segment: Segment {
                     left: 0,
                     right: graph.genome_length()
@@ -2590,7 +2579,7 @@ mod test_standard_case {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             });
         }
         for node in [node3, node4] {
@@ -2601,7 +2590,7 @@ mod test_standard_case {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             });
         }
         for node in [node5, node6] {
@@ -2612,7 +2601,7 @@ mod test_standard_case {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             });
         }
 
@@ -2634,7 +2623,7 @@ mod test_standard_case {
         assert!(graph.ancestry[node1.as_index()].is_empty());
         for node in [node3, node5] {
             assert!(graph.ancestry[node0.as_index()].contains(&Ancestry {
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
                 segment: Segment {
                     left: 0,
                     right: graph.genome_length()
@@ -2848,7 +2837,7 @@ mod test_standard_case {
                     left: inner_seg2.left,
                     right: inner_seg2.right
                 },
-                ancestry: AncestryType::Unary(node5)
+                ancestry: AncestryType::ToChild(node5)
             }),
             "{:?}",
             graph.ancestry[node1.as_index()]
@@ -2859,7 +2848,7 @@ mod test_standard_case {
                     left: inner_seg2.left,
                     right: inner_seg2.right
                 },
-                ancestry: AncestryType::Unary(node6)
+                ancestry: AncestryType::ToChild(node6)
             }),
             "{:?}",
             graph.ancestry[node2.as_index()]
@@ -2905,7 +2894,7 @@ mod test_standard_case {
             assert!(
                 graph.ancestry[node0.as_index()].contains(&Ancestry {
                     segment: Segment { left: 0, right: 50 },
-                    ancestry: AncestryType::Overlap(node)
+                    ancestry: AncestryType::ToChild(node)
                 }),
                 "{:?}",
                 graph.ancestry[node0.as_index()]
@@ -2989,7 +2978,7 @@ mod test_unary_nodes {
         for node in [node1, node2] {
             assert!(graph.children[node0.as_index()].contains(&node));
             assert!(graph.ancestry[node0.as_index()].contains(&Ancestry {
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
                 segment: Segment {
                     left: 0,
                     right: graph.genome_length()
@@ -3008,14 +2997,14 @@ mod test_unary_nodes {
                 left: 0,
                 right: graph.genome_length()
             },
-            ancestry: AncestryType::Unary(node3),
+            ancestry: AncestryType::ToChild(node3),
         }));
         assert!(graph.ancestry[node2.as_index()].contains(&Ancestry {
             segment: Segment {
                 left: 0,
                 right: graph.genome_length()
             },
-            ancestry: AncestryType::Unary(node5),
+            ancestry: AncestryType::ToChild(node5),
         }));
 
         for node in [node4, node6] {
@@ -3082,7 +3071,7 @@ mod test_unary_nodes {
         for node in [node1, node2] {
             assert!(graph.children[node0.as_index()].contains(&node));
             assert!(graph.ancestry[node0.as_index()].contains(&Ancestry {
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
                 segment: Segment {
                     left: 0,
                     right: graph.genome_length()
@@ -3099,7 +3088,7 @@ mod test_unary_nodes {
         for node in [node3, node4] {
             assert!(graph.children[node1.as_index()].contains(&node));
             assert!(graph.ancestry[node1.as_index()].contains(&Ancestry {
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
                 segment: Segment {
                     left: 0,
                     right: graph.genome_length()
@@ -3118,7 +3107,7 @@ mod test_unary_nodes {
                 left: 0,
                 right: graph.genome_length()
             },
-            ancestry: AncestryType::Unary(node6),
+            ancestry: AncestryType::ToChild(node6),
         }));
 
         assert!(node_is_extinct(node5, &graph));
@@ -3178,7 +3167,7 @@ mod test_unary_nodes {
                     left: 0,
                     right: graph.genome_length()
                 },
-                ancestry: AncestryType::Unary(node1)
+                ancestry: AncestryType::ToChild(node1)
             }),
             "{:?}",
             graph.ancestry[node0.as_index()]
@@ -3247,7 +3236,7 @@ mod test_internal_samples {
         for node in [node1, node2] {
             assert!(graph.children[node0.as_index()].contains(&node));
             assert!(graph.ancestry[node0.as_index()].contains(&Ancestry {
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
                 segment: Segment {
                     left: 0,
                     right: graph.genome_length()
@@ -3264,7 +3253,7 @@ mod test_internal_samples {
         for node in [node3, node4] {
             assert!(graph.children[node1.as_index()].contains(&node));
             assert!(graph.ancestry[node1.as_index()].contains(&Ancestry {
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
                 segment: Segment {
                     left: 0,
                     right: graph.genome_length()
@@ -3283,7 +3272,7 @@ mod test_internal_samples {
                 left: 0,
                 right: graph.genome_length()
             },
-            ancestry: AncestryType::Unary(node6),
+            ancestry: AncestryType::ToChild(node6),
         }));
 
         assert!(node_is_extinct(node5, &graph));
@@ -3402,7 +3391,7 @@ mod test_internal_samples {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             });
             graph.ancestry[node.as_index()].push(Ancestry {
                 segment: Segment {
@@ -3421,14 +3410,14 @@ mod test_internal_samples {
                 left: pos2,
                 right: pos3
             },
-            ancestry: AncestryType::Overlap(node2)
+            ancestry: AncestryType::ToChild(node2)
         }));
         assert!(graph.ancestry[node0.as_index()].contains(&Ancestry {
             segment: Segment {
                 left: pos2,
                 right: pos3
             },
-            ancestry: AncestryType::Overlap(node1)
+            ancestry: AncestryType::ToChild(node1)
         }));
 
         assert_eq!(graph.ancestry[node2.as_index()].len(), 2);
@@ -3439,14 +3428,14 @@ mod test_internal_samples {
                     left: pos0,
                     right: pos1
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             }));
             assert!(graph.ancestry[node2.as_index()].contains(&Ancestry {
                 segment: Segment {
                     left: pos2,
                     right: pos3
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             }));
         }
 
@@ -3518,7 +3507,7 @@ mod test_internal_samples {
                     left: 0,
                     right: graph.genome_length,
                 },
-                ancestry: AncestryType::Overlap(node),
+                ancestry: AncestryType::ToChild(node),
             });
             graph.children[node0.as_index()].insert(node);
         }
