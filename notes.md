@@ -176,6 +176,44 @@ fn main() {
 }
 ```
 
+## Making the queue generation work over an iterable.
+
+Ideally we want to iterate over input parental ancestry.
+Doing so is a bit tricky to use the iterator in a piecemeal manner.
+Looks like we need to use itertools.
+From playground:
+
+```rust
+extern crate itertools;
+
+use itertools::Itertools;
+
+fn doit<'i, I>(i: I) -> Vec<i32>
+where
+    I: Iterator<Item = &'i i32> + itertools::PeekingNext,
+{
+    let mut i = i;
+    let mut n = i.next();
+    let mut rv = vec![];
+    while let Some(x) = n {
+        rv.push(*x);
+        for &z in i.peeking_take_while(|&y| {
+            y == x
+        }) {
+            rv.push(z)
+        }
+        n = i.next();
+    }
+    rv
+}
+
+fn main() {
+    let v = vec![0, 1, 1, 2, 3];
+    let vv = doit(v.iter());
+    assert_eq!(v, vv);
+}
+```
+
 ## Ancestry table
 
 It may be useful to design the ancestry table as:
