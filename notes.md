@@ -47,19 +47,6 @@
    This method avoids the hash AND removes the column from the
    Graph.
 
-#### Type redundancy
-
-* Currently, the flags and the status are redundant.
-* We only define ONE flag ("is sample").
-* We define a few "status" variants that are mutually-exclusive.
-* We are thus using too much storage for questionable value.
-
-At this point, it seems sensible to:
-
-* Only use the enum.
-* Convert the enum to `u32` to save space.
-* Drop the `NodeFlags` type entirely.
-
 #### Enum variant redundancy
 
 It probably makes the most sense to:
