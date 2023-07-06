@@ -832,7 +832,6 @@ fn output_overlaps(
     for po in parental_overlaps {
         if po.to_child() && !parental_nodes_lost.contains(&po.node) {
             println!("ONODE = {:?}", po.node);
-            // FIME: need From<> for OutputSegment
             output_ancestry.push(OutputSegment {
                 segment,
                 node: po.node,
