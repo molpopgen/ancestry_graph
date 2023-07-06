@@ -445,6 +445,7 @@ fn generate_overlap_queue(
     parental_node_ancestry: &[AncestrySegment<OverlapState>],
     ancestry_changes: &[AncestrySegment<ChangeState>],
 ) -> Vec<AncestryOverlap> {
+    todo!("we are not accepting overlaps to be sent up if therre is no existing ancestry and the node is sample");
     // TODO: should have a way to detect this and return an Error
     assert!(parental_node_ancestry.windows(2).all(|w| w[0] <= w[1]));
     assert!(

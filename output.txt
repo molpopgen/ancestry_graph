@@ -1,0 +1,103 @@
+
+---- test_standard_case::test_topology5b stdout ----
+Node(0) => [AncestrySegment { segment: Segment { left: 40, right: 43 }, node: Node(1), state: ToChild }, AncestrySegment { segment: Segment { left: 10, right: 20 }, node: Node(1), state: ToChild }, AncestrySegment { segment: Segment { left: 40, right: 43 }, node: Node(2), state: ToChild }, AncestrySegment { segment: Segment { left: 10, right: 20 }, node: Node(2), state: ToChild }]
+         => {}
+         => {Node(1), Node(2)}
+Node(1) => [AncestrySegment { segment: Segment { left: 10, right: 20 }, node: Node(3), state: ToChild }]
+         => {Node(0)}
+         => {Node(5), Node(3)}
+Node(2) => [AncestrySegment { segment: Segment { left: 10, right: 20 }, node: Node(4), state: ToChild }]
+         => {Node(0)}
+         => {Node(4), Node(6)}
+Node(3) => [AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(3), state: ToSelf }]
+         => {Node(1)}
+         => {}
+Node(4) => [AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(4), state: ToSelf }]
+         => {Node(2)}
+         => {}
+Node(5) => [AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(5), state: ToSelf }]
+         => {Node(1)}
+         => {}
+Node(6) => [AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(6), state: ToSelf }]
+         => {Node(2)}
+         => {}
+the input options are PropagationOptions(PropagationBitFlags(0x0)), false
+updating transmission from Node(1) to Node(5) on [40, 43) to parent Node(1), and the actual parent is Node(1)
+updating transmission from Node(2) to Node(6) on [40, 43) to parent Node(2), and the actual parent is Node(2)
+converting segments [AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(3), state: ToSelf }] to losses for Node(3)
+converting segments [AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(4), state: ToSelf }] to losses for Node(4)
+processing QueuedNode { node: Node(3), birth_time: 2 } => Death, Some([AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(3), state: Loss }])
+parental_node_ancestry = [AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(3), state: ToSelf }]
+ancestry_changes = [AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(3), state: Loss }]
+queue = [Parental(AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(3), state: ToSelf }), Change(AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(3), state: Loss })]
+LOST = [Node(3)], 0 100
+LNODE = Node(3)
+the overlaps are []
+self.overlaps = [] | Some(AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(3), state: Loss })
+COORDS: 0 -> (0, 100), false
+change for QueuedNode { node: Node(3), birth_time: 2 } is AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(3), state: Loss }
+parents of lost node = {Node(1)}
+last right = 100
+final ancestry len = 0
+processing QueuedNode { node: Node(4), birth_time: 2 } => Death, Some([AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(4), state: Loss }])
+parental_node_ancestry = [AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(4), state: ToSelf }]
+ancestry_changes = [AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(4), state: Loss }]
+queue = [Parental(AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(4), state: ToSelf }), Change(AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(4), state: Loss })]
+LOST = [Node(4)], 0 100
+LNODE = Node(4)
+the overlaps are []
+self.overlaps = [] | Some(AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(4), state: Loss })
+COORDS: 0 -> (0, 100), false
+change for QueuedNode { node: Node(4), birth_time: 2 } is AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(4), state: Loss }
+parents of lost node = {Node(2)}
+last right = 100
+final ancestry len = 0
+processing QueuedNode { node: Node(2), birth_time: 1 } => Alive, Some([AncestrySegment { segment: Segment { left: 40, right: 43 }, node: Node(6), state: Overlap }, AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(4), state: Loss }])
+parental_node_ancestry = [AncestrySegment { segment: Segment { left: 10, right: 20 },
+                          node: Node(4), state: ToChild }]
+ancestry_changes = [AncestrySegment { segment: Segment { left: 0, right: 100 },
+                                      node: Node(4), state: Loss },
+                    AncestrySegment { segment: Segment { left: 40, right: 43 },s
+                                      node: Node(6), state: Overlap }]
+queue = [Parental(AncestrySegment { segment: Segment { left: 10, right: 20 },
+                                    node: Node(4), state: ToChild }),
+         Change(AncestrySegment { segment: Segment { left: 10, right: 20 },
+                                  node: Node(4), state: Loss })]
+LOST = [Node(4)], 10 20
+LNODE = Node(4)
+the overlaps are []
+self.overlaps = [] | None
+COORDS: 0 -> (10, 20), false
+FILLING IN GAP on 10 20
+no ancestry change detected for QueuedNode { node: Node(2), birth_time: 1 }
+EMPTY on 10 20
+last right = 20
+final ancestry len = 3
+processing QueuedNode { node: Node(1), birth_time: 1 } => Alive, Some([AncestrySegment { segment: Segment { left: 40, right: 43 }, node: Node(5), state: Overlap }, AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(3), state
+: Loss }])
+parental_node_ancestry = [AncestrySegment { segment: Segment { left: 10, right: 20 }, node: Node(3), state: ToChild }]
+ancestry_changes = [AncestrySegment { segment: Segment { left: 0, right: 100 }, node: Node(3), state: Loss }, AncestrySegment { segment: Segment { left: 40, right: 43 }, node: Node(5), state: Overlap }]
+queue = [Parental(AncestrySegment { segment: Segment { left: 10, right: 20 }, node: Node(3), state: ToChild }), Change(AncestrySegment { segment: Segment { left: 10, right: 20 }, node: Node(3), state: Loss })]
+LOST = [Node(3)], 10 20
+LNODE = Node(3)
+the overlaps are []
+self.overlaps = [] | None
+COORDS: 0 -> (10, 20), false
+FILLING IN GAP on 10 20
+no ancestry change detected for QueuedNode { node: Node(1), birth_time: 1 }
+EMPTY on 10 20
+last right = 20
+final ancestry len = 3
+thread 'test_standard_case::test_topology5b' panicked at '[AncestrySegment { segment: Segment { left: 0, right: 10 }, node: Node(1), state: ToSelf }, AncestrySegment { segment: Segment { left: 10, right: 20 }, node: Node(1), state: ToSelf }, AncestrySegment { segment: Segment { left: 20, right: 100 }, node: Node(1), state: ToSelf }]', src/lib.rs:2577:9
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    test_standard_case::test_topology5b
+
+test result: FAILED. 37 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`
+                                                                                                                          
+ancestry_graph on  revisit_internal_samples [$?] is 📦 v0.1.0 via 🐍 v3.11.4 via 🦀 v1.70.0
+❯
