@@ -445,7 +445,6 @@ fn generate_overlap_queue(
     parental_node_ancestry: &[AncestrySegment<OverlapState>],
     ancestry_changes: &[AncestrySegment<ChangeState>],
 ) -> Vec<AncestryOverlap> {
-    //todo!("we are not accepting overlaps to be sent up if therre is no existing ancestry and the node is sample");
     // TODO: should have a way to detect this and return an Error
     assert!(parental_node_ancestry.windows(2).all(|w| w[0] <= w[1]));
     assert!(
@@ -1579,7 +1578,7 @@ mod graph_fixtures {
     //       0
     //    --------
     //    |      |
-    //    1      2  <- ALIVE
+    //    1      2  <- SAMPLE
     //    |      |
     //    3      4  <- Deaths
     //
@@ -1588,12 +1587,10 @@ mod graph_fixtures {
     //       0
     //    --------
     //    |      |
-    //    1      2  <- ALIVE
+    //    1      2  <- SAMPLE
     //    |      |
     //    |      |
     //    5      6  <- Births
-    //
-    //  Alive should be treated like "sample"
     //
     pub struct Topology5b {
         pub node0: Node,
@@ -1610,10 +1607,11 @@ mod graph_fixtures {
 
     impl Topology5b {
         pub fn new() -> Self {
+            todo!("this test may be invalid? -- how can we even get this setup?");
             let mut graph = Graph::new(100).unwrap();
             let node0 = graph.add_node(NodeStatus::Ancestor, 0);
-            let node1 = graph.add_node(NodeStatus::Alive, 1);
-            let node2 = graph.add_node(NodeStatus::Alive, 1);
+            let node1 = graph.add_node(NodeStatus::Sample, 1);
+            let node2 = graph.add_node(NodeStatus::Sample, 1);
             let node3 = graph.add_node(NodeStatus::Death, 2);
             let node4 = graph.add_node(NodeStatus::Death, 2);
             let node5 = graph.add_birth(3).unwrap();
