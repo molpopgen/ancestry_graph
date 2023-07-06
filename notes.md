@@ -74,6 +74,21 @@ so that we are simplifying at each "tick" of the simulation clock?
 * See comments for Topology5. It is currently hard to make a node
   a sample after its initial birth time.
 
+### Graph public/internal API issues 
+
+#### Caching births
+
+NOTE: this is fixed in this branch
+
+This is NOT necessary!
+This is O(N) memory and time that we can lose.
+We should be able to:
+
+1. Count how many births happened.
+2. During transmission propagation, change status from Birth -> Alive,
+   incrementing a count of how many status changes we made.
+3. Assert no. status changes == no. births.
+
 ## Making the queue generation work over an iterable.
 
 Ideally we want to iterate over input parental ancestry.
