@@ -829,8 +829,6 @@ fn output_overlaps(
         }
     }
 
-    // TODO this logic is getting messy...
-    let mut num_added = 0;
     for po in parental_overlaps {
         if po.to_child() && !parental_nodes_lost.contains(&po.node) {
             println!("ONODE = {:?}", po.node);
@@ -839,7 +837,6 @@ fn output_overlaps(
                 segment,
                 node: po.node,
             });
-            num_added += 1;
         } else {
             println!("LNODE = {:?}", po.node);
         }
