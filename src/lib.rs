@@ -1548,6 +1548,106 @@ mod graph_fixtures {
         }
     }
 
+    // Tree 1:
+    //
+    //       0
+    //    --------
+    //    |      |
+    //    1      2  <- ALIVE
+    //    |      |
+    //    3      4  <- Deaths
+    //
+    //  Tree 2:
+    //
+    //       0
+    //    --------
+    //    |      |
+    //    1      2  <- ALIVE
+    //    |      |
+    //    |      |
+    //    5      6  <- Births
+    //
+    //  Alive should be treated like "sample"
+    //
+    pub struct Topology5b {
+        pub node0: Node,
+        pub node1: Node,
+        pub node2: Node,
+        pub node3: Node,
+        pub node4: Node,
+        pub node5: Node,
+        pub node6: Node,
+        pub inner_seg1: Segment,
+        pub inner_seg2: Segment,
+        pub graph: Graph,
+    }
+
+    impl Topology5b {
+        pub fn new() -> Self {
+            let mut graph = Graph::new(100).unwrap();
+            let node0 = graph.add_node(NodeStatus::Ancestor, 0);
+            let node1 = graph.add_node(NodeStatus::Alive, 1);
+            let node2 = graph.add_node(NodeStatus::Alive, 1);
+            let node3 = graph.add_node(NodeStatus::Death, 2);
+            let node4 = graph.add_node(NodeStatus::Death, 2);
+            let node5 = graph.add_birth(3).unwrap();
+            let node6 = graph.add_birth(3).unwrap();
+
+            let inner_seg1 = Segment::new(10, 20).unwrap();
+            let inner_seg2 = Segment::new(40, 43).unwrap();
+
+            graph
+                .record_transmission(inner_seg2.left, inner_seg2.right, node1, node5)
+                .unwrap();
+            graph
+                .record_transmission(inner_seg2.left, inner_seg2.right, node2, node6)
+                .unwrap();
+
+            for node in [node1, node2] {
+                graph.children[node0.as_index()].insert(node);
+                graph.parents[node.as_index()].insert(node0);
+
+                for seg in [inner_seg2, inner_seg1] {
+                    graph.add_ancestry_to_child_from_raw(seg.left, seg.right, node0, node);
+                }
+            }
+
+            // NOTE: w/o complete ancestry here, we have
+            // test failure later.
+            // Thus, it is currently difficult to make a node
+            // a sample node after its initial birth time.
+            //graph.add_ancestry_to_self_from_raw(0, inner_seg1.left, node1);
+            graph.add_ancestry_to_child_from_raw(inner_seg1.left, inner_seg1.right, node1, node3);
+            //graph.add_ancestry_to_self_from_raw(inner_seg1.right, graph.genome_length(), node1);
+
+            //graph.add_ancestry_to_self_from_raw(0, inner_seg1.left, node2);
+            graph.add_ancestry_to_child_from_raw(inner_seg1.left, inner_seg1.right, node2, node4);
+            //graph.add_ancestry_to_self_from_raw(inner_seg1.right, graph.genome_length(), node2);
+
+            for node in [node3, node4] {
+                graph.deaths.push(node);
+                graph.add_ancestry_to_self_from_raw(0, graph.genome_length(), node);
+            }
+            graph.parents[node3.as_index()].insert(node1);
+            graph.parents[node4.as_index()].insert(node2);
+            graph.children[node1.as_index()].insert(node3);
+            graph.children[node2.as_index()].insert(node4);
+
+            Self {
+                node0,
+                node1,
+                node2,
+                node3,
+                node4,
+                node5,
+                node6,
+                inner_seg1,
+                inner_seg2,
+                graph,
+            }
+        }
+    }
+
     //     0      <- Death
     //   -----
     //   |   |
@@ -2418,6 +2518,67 @@ mod test_standard_case {
             assert!(graph.has_ancestry_to_self_raw(inner_seg1.left, inner_seg1.right, node));
         }
         assert!(graph.has_ancestry_to_child_raw(inner_seg2.left, inner_seg2.right, node1, node5));
+        assert!(graph.has_ancestry_to_child_raw(inner_seg2.left, inner_seg2.right, node2, node6));
+
+        // test that nodes 1 and 2 have genome-wide andestry
+        for node in [node1, node2] {
+            let mut unique_segments = graph.ancestry[node.as_index()]
+                .iter()
+                .map(|a| a.segment)
+                .collect::<Vec<_>>();
+            unique_segments.sort_unstable();
+            unique_segments.dedup();
+            let sum: i64 = unique_segments.iter().map(|s| s.right() - s.left()).sum();
+            assert_eq!(
+                sum,
+                graph.genome_length,
+                "{node:?} => {:?}",
+                graph.ancestry[node.as_index()]
+            );
+        }
+    }
+
+    #[test]
+    fn test_topology5b() {
+        let graph_fixtures::Topology5b {
+            node0,
+            node1,
+            node2,
+            node3,
+            node4,
+            node5,
+            node6,
+            inner_seg1,
+            inner_seg2,
+            mut graph,
+        } = graph_fixtures::Topology5b::new();
+        for node in [node0, node1, node2, node3, node4, node5, node6] {
+            println!("{node:?} => {:?}", graph.ancestry[node.as_index()]);
+            println!("         => {:?}", graph.parents[node.as_index()]);
+            println!("         => {:?}", graph.children[node.as_index()]);
+        }
+        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        for node in [node3, node4] {
+            assert!(node_is_extinct(node, &graph));
+        }
+        for node in [node0, node1, node2, node5, node6] {
+            assert!(!node_is_extinct(node, &graph));
+        }
+
+        assert_eq!(graph.free_nodes.len(), 2);
+        assert_eq!(graph.ancestry[node0.as_index()].len(), 4);
+        assert_eq!(graph.children[node0.as_index()].len(), 2);
+        for node in [node1, node2] {
+            assert!(graph.children[node0.as_index()].contains(&node));
+            assert_eq!(graph.parents[node.as_index()].len(), 1, "{node:?}");
+            assert!(graph.parents[node.as_index()].contains(&node0));
+            assert!(graph.has_ancestry_to_self_raw(inner_seg1.left, inner_seg1.right, node));
+        }
+        assert!(
+            graph.has_ancestry_to_child_raw(inner_seg2.left, inner_seg2.right, node1, node5),
+            "{:?}",
+            graph.ancestry[node1.as_index()]
+        );
         assert!(graph.has_ancestry_to_child_raw(inner_seg2.left, inner_seg2.right, node2, node6));
 
         // test that nodes 1 and 2 have genome-wide andestry
