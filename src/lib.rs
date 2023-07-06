@@ -42,7 +42,7 @@ impl AncestrySegment<OverlapState> {
         Self::new(segment, node, OverlapState::ToChild)
     }
 
-    fn to_child(&self) -> bool {
+    fn maps_to_child(&self) -> bool {
         matches!(self.state, OverlapState::ToChild)
     }
 }
@@ -830,7 +830,7 @@ fn output_overlaps(
     }
 
     for po in parental_overlaps {
-        if po.to_child() && !parental_nodes_lost.contains(&po.node) {
+        if po.maps_to_child() && !parental_nodes_lost.contains(&po.node) {
             println!("ONODE = {:?}", po.node);
             output_ancestry.push(OutputSegment {
                 segment,
