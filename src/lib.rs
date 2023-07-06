@@ -1011,7 +1011,8 @@ impl AncestryOverlapper {
     }
 }
 
-fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
+// Returns the last ancestor visited.
+fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) -> Option<Node> {
     println!(
         "the input options are {options:?}, {}",
         options.keep_unary_nodes()
@@ -1075,7 +1076,9 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
     //     println!("{q:?} -> {:?}", ancestry_changes_to_process.get(&q.node));
     // }
 
+    let mut rv = None;
     while let Some(queued_parent) = parent_queue.pop() {
+        rv = Some(queued_parent.node);
         println!(
             "processing {queued_parent:?} => {:?}, {:?}",
             graph.status[queued_parent.node.as_index()],
@@ -1112,6 +1115,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
     assert!(parent_queue.is_empty());
     assert!(hashed_nodes.is_empty());
     assert!(ancestry_changes_to_process.is_empty());
+    rv
 }
 
 // We could do all this with rstest,
@@ -1761,7 +1765,8 @@ mod test_standard_case {
             assert!(matches!(graph.status[node.as_index()], NodeStatus::Birth));
         }
 
-        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        let last = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        assert_eq!(last, Some(node0));
 
         assert!(graph.ancestry[node1.as_index()].is_empty());
         assert!(graph.parents[node1.as_index()].is_empty());
@@ -2592,10 +2597,12 @@ mod test_unary_nodes {
         graph.status[node5.as_index()] = NodeStatus::Death;
 
         graph.deaths.push(node5);
-        propagate_ancestry_changes(
+        let last = propagate_ancestry_changes(
             PropagationOptions::default().with_keep_unary_nodes(),
             &mut graph,
         );
+        assert!(last.is_some());
+        assert_ne!(last, Some(node0));
 
         assert_eq!(graph.ancestry[node0.as_index()].len(), 2);
         assert_eq!(graph.ancestry[node1.as_index()].len(), 2_usize);
@@ -2649,10 +2656,11 @@ mod test_unary_nodes {
             mut graph,
         } = graph_fixtures::Topology3::new();
 
-        propagate_ancestry_changes(
+        let last = propagate_ancestry_changes(
             PropagationOptions::default().with_keep_unary_nodes(),
             &mut graph,
         );
+        assert_eq!(last, Some(node0));
 
         for node in [node2, node3, node4] {
             assert!(node_is_extinct(node, &graph));
@@ -2699,7 +2707,6 @@ mod test_internal_samples {
     // * should never visit node0
     #[test]
     fn test_subtree_propagation_with_internal_sample() {
-        // todo!("this test should never visit node0");
         let graph_fixtures::Topology2 {
             node0,
             node1,
@@ -2717,7 +2724,9 @@ mod test_internal_samples {
         // With node2 marked as an internal sample, we
         // should get the same results as the previous test
         // with the default options.
-        propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        let last_ancestor = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        assert!(last_ancestor.is_some());
+        assert_ne!(last_ancestor.unwrap(), node0);
 
         assert_eq!(graph.ancestry[node0.as_index()].len(), 2);
         assert_eq!(graph.ancestry[node1.as_index()].len(), 2_usize);
