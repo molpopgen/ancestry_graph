@@ -441,11 +441,11 @@ fn queue_identical_parental_segments(
 }
 
 fn generate_overlap_queue(
-    parent: Node,
+    node_is_sample: bool,
     parental_node_ancestry: &[AncestrySegment<OverlapState>],
     ancestry_changes: &[AncestrySegment<ChangeState>],
 ) -> Vec<AncestryOverlap> {
-    todo!("we are not accepting overlaps to be sent up if therre is no existing ancestry and the node is sample");
+    //todo!("we are not accepting overlaps to be sent up if therre is no existing ancestry and the node is sample");
     // TODO: should have a way to detect this and return an Error
     assert!(parental_node_ancestry.windows(2).all(|w| w[0] <= w[1]));
     assert!(
@@ -888,7 +888,10 @@ impl AncestryOverlapper {
         parental_node_ancestry: &[AncestrySegment<OverlapState>],
         ancestry_changes: &[AncestrySegment<ChangeState>],
     ) -> Self {
-        let mut queue = generate_overlap_queue(parent, parental_node_ancestry, ancestry_changes);
+        let node_is_sample = matches!(parent_status, NodeStatus::Sample)
+            || matches!(parent_status, NodeStatus::Alive);
+        let mut queue =
+            generate_overlap_queue(node_is_sample, parental_node_ancestry, ancestry_changes);
         let num_overlaps = queue.len();
         // Add sentinel
         queue.push(AncestryOverlap::Parental(AncestrySegment::new_to_self(
