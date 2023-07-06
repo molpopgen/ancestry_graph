@@ -1,7 +1,6 @@
 use nohash::BuildNoHashHasher;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::hash::BuildHasherDefault;
 
 // NOTE: for design purposes -- delete later.
 mod overlapper_experiments;
@@ -109,8 +108,6 @@ pub enum NodeStatus {
 
 /// TODO: could be a newtype?
 type NodeHash = HashSet<Node, BuildNoHashHasher<usize>>;
-/// TODO: could be a newtype?
-type ChildMap = HashMap<Node, Vec<Segment>, BuildNoHashHasher<usize>>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Segment {
@@ -221,8 +218,8 @@ impl Graph {
     fn with_initial_nodes(num_nodes: usize, genome_length: i64) -> Option<Self> {
         let status = vec![NodeStatus::Ancestor; num_nodes];
         let birth_time = vec![Some(0); num_nodes];
-        let parents = vec![NodeHash::with_hasher(BuildHasherDefault::default()); num_nodes];
-        let children = vec![NodeHash::with_hasher(BuildHasherDefault::default()); num_nodes];
+        let parents = vec![NodeHash::with_hasher(BuildNoHashHasher::default()); num_nodes];
+        let children = vec![NodeHash::with_hasher(BuildNoHashHasher::default()); num_nodes];
         let transmissions = vec![];
         let mut ancestry = vec![];
         let seg = Segment::new(0, genome_length)?;
@@ -286,9 +283,9 @@ impl Graph {
                 self.birth_time.push(Some(birth_time));
                 self.status.push(status);
                 self.parents
-                    .push(NodeHash::with_hasher(BuildHasherDefault::default()));
+                    .push(NodeHash::with_hasher(BuildNoHashHasher::default()));
                 self.children
-                    .push(NodeHash::with_hasher(BuildHasherDefault::default()));
+                    .push(NodeHash::with_hasher(BuildNoHashHasher::default()));
                 let index = self.birth_time.len() - 1;
                 match status {
                     NodeStatus::Birth => self.ancestry.push(vec![AncestrySegment::new_to_self(
@@ -570,7 +567,7 @@ impl<'graph> ReachableNodes<'graph> {
     fn new(graph: &'graph Graph) -> Self {
         let mut node_queue: std::collections::BinaryHeap<QueuedNode> =
             std::collections::BinaryHeap::new();
-        let mut queued_nodes: NodeHash = HashSet::with_hasher(BuildHasherDefault::default());
+        let mut queued_nodes: NodeHash = HashSet::with_hasher(BuildNoHashHasher::default());
         for node in &graph.births {
             if !queued_nodes.contains(node) {
                 node_queue.push(QueuedNode {
@@ -1019,13 +1016,13 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) {
         "the input options are {options:?}, {}",
         options.keep_unary_nodes()
     );
-    let mut hashed_nodes: NodeHash = NodeHash::with_hasher(BuildHasherDefault::default());
+    let mut hashed_nodes: NodeHash = NodeHash::with_hasher(BuildNoHashHasher::default());
     let mut parent_queue: std::collections::BinaryHeap<QueuedNode> =
         std::collections::BinaryHeap::new();
     let mut ancestry_changes_to_process: HashMap<Node, Vec<AncestrySegment<ChangeState>>> =
         HashMap::new();
 
-    let mut unique_child_visits: NodeHash = HashSet::with_hasher(BuildHasherDefault::default());
+    let mut unique_child_visits: NodeHash = HashSet::with_hasher(BuildNoHashHasher::default());
     for &tranmission in graph.transmissions.iter() {
         assert!(matches!(
             graph.status[tranmission.child.as_index()],
