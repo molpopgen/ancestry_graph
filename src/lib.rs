@@ -481,15 +481,23 @@ fn generate_overlap_queue(
                     ac.state,
                 )));
             } else if node_is_sample {
-                // FIXME: this is not quite right:
-                // Doing this makes Topology5b pass but
-                // causes Topology5 to fail.
-                println!("not adding {ac:?}");
-                queue.push(AncestryOverlap::Change(AncestrySegment::new(
-                    Segment::new(ac.left(), ac.right()).unwrap(),
-                    ac.node,
-                    ac.state,
-                )));
+                if d < parental_node_ancestry.len() - 1 {
+                    if ac.left() >= parental_node_ancestry[d].right()
+                        && ac.right() <= parental_node_ancestry[d + 1].left()
+                    {
+                        queue.push(AncestryOverlap::Change(AncestrySegment::new(
+                            Segment::new(ac.left(), ac.right()).unwrap(),
+                            ac.node,
+                            ac.state,
+                        )));
+                    }
+                } else {
+                    queue.push(AncestryOverlap::Change(AncestrySegment::new(
+                        Segment::new(ac.left(), ac.right()).unwrap(),
+                        ac.node,
+                        ac.state,
+                    )));
+                }
             }
         }
         d += update;
@@ -502,7 +510,11 @@ fn generate_overlap_queue(
     // "no changes" up to parents.
     assert!(!queue.is_empty());
 
-    debug_assert!(queue.windows(2).all(|w| w[0].left() <= w[1].left()), "{:?}", queue);
+    debug_assert!(
+        queue.windows(2).all(|w| w[0].left() <= w[1].left()),
+        "{:?}",
+        queue
+    );
 
     queue
 }
