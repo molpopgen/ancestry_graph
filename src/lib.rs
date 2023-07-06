@@ -108,6 +108,7 @@ pub enum NodeStatus {
 
 /// TODO: could be a newtype?
 type NodeHash = HashSet<Node, BuildNoHashHasher<usize>>;
+type AncestryChanges = HashMap<Node, Vec<AncestrySegment<ChangeState>>, BuildNoHashHasher<usize>>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Segment {
@@ -538,7 +539,7 @@ fn update_internal_stuff(
 fn push_ancestry_changes_to_parent<I: Iterator<Item = AncestrySegment<ChangeState>>>(
     parent: Node,
     ancestry_changes: I,
-    ancestry_changes_to_process: &mut HashMap<Node, Vec<AncestrySegment<ChangeState>>>,
+    ancestry_changes_to_process: &mut AncestryChanges,
 ) {
     match ancestry_changes_to_process.get_mut(&parent) {
         Some(changes) => changes.extend(ancestry_changes),
@@ -623,7 +624,7 @@ fn process_queued_node(
     parent_status: NodeStatus,
     hashed_nodes: &mut NodeHash,
     parent_queue: &mut std::collections::BinaryHeap<QueuedNode>,
-    ancestry_changes_to_process: &mut HashMap<Node, Vec<AncestrySegment<ChangeState>>>,
+    ancestry_changes_to_process: &mut AncestryChanges,
     graph: &mut Graph,
 ) {
     assert!(!matches!(
@@ -1020,8 +1021,8 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     let mut hashed_nodes: NodeHash = NodeHash::with_hasher(BuildNoHashHasher::default());
     let mut parent_queue: std::collections::BinaryHeap<QueuedNode> =
         std::collections::BinaryHeap::new();
-    let mut ancestry_changes_to_process: HashMap<Node, Vec<AncestrySegment<ChangeState>>> =
-        HashMap::new();
+    let mut ancestry_changes_to_process =
+        AncestryChanges::with_hasher(BuildNoHashHasher::default());
 
     let mut unique_child_visits: NodeHash = HashSet::with_hasher(BuildNoHashHasher::default());
     for &tranmission in graph.transmissions.iter() {
