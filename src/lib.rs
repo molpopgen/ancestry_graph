@@ -275,10 +275,10 @@ impl Graph {
                 self.birth_time[index] = Some(birth_time);
                 self.status[index] = status;
                 if matches!(status, NodeStatus::Birth) {
-                    self.ancestry[index].push(AncestrySegment::new_to_self(
+                    self.add_ancestry_to_self(
                         Segment::new(0, self.genome_length).unwrap(),
                         Node(index),
-                    ));
+                    )
                 }
                 Node(index)
             }
