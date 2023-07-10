@@ -731,6 +731,7 @@ fn process_queued_node(
         graph.status[queued_parent.node.as_index()],
         NodeStatus::Birth
     ));
+    let mut cached_changes = vec![];
     match ancestry_changes_to_process.get_mut(&queued_parent.node) {
         Some(ancestry_changes) => {
             ancestry_changes.sort_unstable_by_key(|ac| ac.change.left());
@@ -768,19 +769,7 @@ fn process_queued_node(
                 // all of the logic below.
                 if let Some(ancestry_change) = overlaps.parental_ancestry_change {
                     println!("change detected for {queued_parent:?} is {ancestry_change:?}");
-                    for parent in graph.parents(queued_parent.node) {
-                        update_internal_stuff(*parent, hashed_nodes, parent_queue, graph);
-                        println!(
-                            "parent {parent:?} anc = {:?}",
-                            graph.ancestry[parent.as_index()]
-                        );
-                        push_ancestry_changes_to_parent(
-                            *parent,
-                            queued_parent.node,
-                            [ancestry_change].into_iter(),
-                            ancestry_changes_to_process,
-                        );
-                    }
+                    cached_changes.push(ancestry_change);
                 } else {
                     println!(
                         "no ancestry change detected for {queued_parent:?} on [{}, {})",
@@ -799,21 +788,12 @@ fn process_queued_node(
                             "children of lost node = {:?}",
                             graph.children[queued_parent.node.as_index()]
                         );
-                        for parent in graph.parents(queued_parent.node) {
-                            println!(
-                                "{:?} sending {:?} to {parent:?}",
-                                queued_parent.node, overlaps.overlaps
-                            );
-                            push_ancestry_changes_to_parent(
-                                *parent,
-                                queued_parent.node,
-                                overlaps
-                                    .overlaps()
-                                    .iter()
-                                    .map(|a| AncestrySegment::new_overlap(a.segment, a.node)),
-                                ancestry_changes_to_process,
-                            )
-                        }
+                        cached_changes.extend(
+                            overlaps
+                                .overlaps()
+                                .iter()
+                                .map(|a| AncestrySegment::new_overlap(a.segment, a.node)),
+                        );
                     }
                     _ => {
                         if (matches!(parent_status, NodeStatus::Sample)
@@ -863,6 +843,22 @@ fn process_queued_node(
             }
         }
         None => panic!(),
+    }
+
+    if !cached_changes.is_empty() {
+        for parent in graph.parents(queued_parent.node) {
+            println!(
+                "{:?} sending {:?} to {parent:?}",
+                queued_parent.node, cached_changes
+            );
+            update_internal_stuff(*parent, hashed_nodes, parent_queue, graph);
+            push_ancestry_changes_to_parent(
+                *parent,
+                queued_parent.node,
+                cached_changes.iter().cloned(),
+                ancestry_changes_to_process,
+            )
+        }
     }
 
     // NOTE: major perf implications
