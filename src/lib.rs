@@ -563,7 +563,9 @@ fn generate_overlap_queue(
                     }
                 }
             }
-            //TODO: can break here if ac.left() >= current_parental_segment.right()
+            if ac.change.left() >= current_parental_segment.right() {
+                break;
+            }
         }
         d += update;
     }
