@@ -767,7 +767,7 @@ fn process_queued_node(
                 // ancestry changes marked as not None, which is befuddling
                 // all of the logic below.
                 if let Some(ancestry_change) = overlaps.parental_ancestry_change {
-                    println!("change for {queued_parent:?} is {ancestry_change:?}");
+                    println!("change detected for {queued_parent:?} is {ancestry_change:?}");
                     for parent in graph.parents(queued_parent.node) {
                         update_internal_stuff(*parent, hashed_nodes, parent_queue, graph);
                         println!(
@@ -782,7 +782,10 @@ fn process_queued_node(
                         );
                     }
                 } else {
-                    println!("no ancestry change detected for {queued_parent:?}");
+                    println!(
+                        "no ancestry change detected for {queued_parent:?} on [{}, {})",
+                        overlaps.left, overlaps.right
+                    );
                 }
                 // Output the new ancestry for the parent
                 match overlaps.parental_ancestry_change {
