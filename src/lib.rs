@@ -838,6 +838,7 @@ fn process_queued_node(
         }
     }
 
+    let mut num_uncovered_parents = 0_usize;
     if !cached_changes.is_empty() {
         for parent_node in graph.parents(queued_parent) {
             #[cfg(debug_assertions)]
@@ -845,6 +846,17 @@ fn process_queued_node(
                 "{:?} sending {:?} to {parent_node:?}",
                 queued_parent, cached_changes
             );
+            if !graph.ancestry[parent_node.as_index()]
+                .iter()
+                .filter(|a| a.node == *parent_node)
+                .any(|a| {
+                    cached_changes.iter().any(|c| {
+                        c.segment.right() > a.segment.left() && a.segment.right() > c.segment.left()
+                    })
+                })
+            {
+                num_uncovered_parents += 1;
+            }
             push_ancestry_changes_to_parent(
                 *parent_node,
                 queued_parent,
@@ -853,6 +865,19 @@ fn process_queued_node(
             )
         }
     }
+
+    if num_uncovered_parents > 0 {
+        println!(
+            "UNCOVERED {num_uncovered_parents} {}",
+            graph.parents[queued_parent.as_index()].len()
+        );
+    } else {
+        println!(
+            "NOT UNCOVERED {:?}",
+            graph.parents[queued_parent.as_index()].len()
+        )
+    }
+    assert_eq!(num_uncovered_parents, 0);
 
     // NOTE: major perf implications
     for c in graph.children[queued_parent.as_index()].iter() {
