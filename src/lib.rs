@@ -836,6 +836,8 @@ fn process_queued_node(
             NodeStatus::Extinct => panic!(),
             _ => (),
         }
+    } else {
+        return;
     }
 
     let mut num_uncovered_parents = 0_usize;
@@ -848,7 +850,7 @@ fn process_queued_node(
             );
             if !graph.ancestry[parent_node.as_index()]
                 .iter()
-                .filter(|a| a.node == *parent_node)
+                //.filter(|a| a.node == *parent_node)
                 .any(|a| {
                     cached_changes.iter().any(|c| {
                         c.segment.right() > a.segment.left() && a.segment.right() > c.segment.left()
@@ -868,9 +870,13 @@ fn process_queued_node(
 
     if num_uncovered_parents > 0 {
         println!(
-            "UNCOVERED {num_uncovered_parents} {}",
-            graph.parents[queued_parent.as_index()].len()
+            "UNCOVERED node = {queued_parent:?}, {num_uncovered_parents} {}, {:?}",
+            graph.parents[queued_parent.as_index()].len(),
+            cached_changes,
         );
+        for p in graph.parents[queued_parent.as_index()].iter() {
+            println!("parent {p:?}\t{:?}", graph.ancestry[p.as_index()]);
+        }
     } else {
         println!(
             "NOT UNCOVERED {:?}",
