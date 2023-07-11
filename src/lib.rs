@@ -504,7 +504,7 @@ fn generate_overlap_queue(
     let mut d = 0_usize;
 
     let mut last_left: Option<i64> = None;
-    let mut num_hits =0;
+    let mut num_hits = 0;
     while d < parental_node_ancestry.len() {
         // Take the current node here to minimize bounds checks
         let current_parental_segment = &parental_node_ancestry[d];
@@ -551,7 +551,7 @@ fn generate_overlap_queue(
             if ac.change.right() > current_parental_segment.left()
                 && current_parental_segment.right() > ac.change.left()
             {
-                num_hits+=1;
+                num_hits += 1;
                 let left = std::cmp::max(ac.change.left(), current_parental_segment.left());
                 let right = std::cmp::min(ac.change.right(), current_parental_segment.right());
                 if ac.change.is_birth() {
@@ -578,7 +578,9 @@ fn generate_overlap_queue(
         }
         d += update;
     }
-    if num_hits==0{queue.clear()}
+    if num_hits == 0 {
+        queue.clear()
+    }
 
     #[cfg(debug_assertions)]
     println!("queue = {queue:?}");
@@ -753,7 +755,9 @@ fn process_queued_node(
         &graph.ancestry[queued_parent.as_index()],
         &ancestry_changes,
     );
-    if overlapper.queue.is_empty(){return}
+    if overlapper.queue.is_empty() {
+        return;
+    }
     // Clear parental ancestry
     graph.ancestry[queued_parent.as_index()].clear();
     let mut previous_right: i64 = 0;
