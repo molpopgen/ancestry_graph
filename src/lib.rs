@@ -836,6 +836,8 @@ fn process_queued_node(
             NodeStatus::Extinct => panic!(),
             _ => (),
         }
+    } else {
+        return;
     }
 
     if !cached_changes.is_empty() {
