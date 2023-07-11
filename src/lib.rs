@@ -715,6 +715,7 @@ fn process_queued_node(
     options: PropagationOptions,
     queued_parent: Node,
     parent_status: NodeStatus,
+    ancestry_changes: Vec<CandidateChange>,
     ancestry_changes_to_process: &mut AncestryChanges,
     graph: &mut Graph,
 ) {
@@ -723,121 +724,113 @@ fn process_queued_node(
         NodeStatus::Birth
     ));
     let mut cached_changes = vec![];
-    if let Some(mut ancestry_changes) = ancestry_changes_to_process.remove(&queued_parent) {
-        ancestry_changes.sort_unstable_by_key(|ac| ac.change.left());
-        let mut overlapper = AncestryOverlapper::new(
-            queued_parent,
-            graph.status[queued_parent.as_index()],
-            &graph.ancestry[queued_parent.as_index()],
-            &ancestry_changes,
+    let mut ancestry_changes = ancestry_changes;
+    ancestry_changes.sort_unstable_by_key(|ac| ac.change.left());
+    let mut overlapper = AncestryOverlapper::new(
+        queued_parent,
+        graph.status[queued_parent.as_index()],
+        &graph.ancestry[queued_parent.as_index()],
+        &ancestry_changes,
+    );
+    // Clear parental ancestry
+    graph.ancestry[queued_parent.as_index()].clear();
+    let mut previous_right: i64 = 0;
+    while let Some(overlaps) = overlapper.calculate_next_overlap_set(options) {
+        #[cfg(debug_assertions)]
+        println!(
+            "COORDS: {previous_right} -> ({}, {}), {}",
+            overlaps.left,
+            overlaps.right,
+            matches!(parent_status, NodeStatus::Sample)
         );
-        // Clear parental ancestry
-        graph.ancestry[queued_parent.as_index()].clear();
-        let mut previous_right: i64 = 0;
-        while let Some(overlaps) = overlapper.calculate_next_overlap_set(options) {
+
+        if previous_right != overlaps.left
+            && (matches!(parent_status, NodeStatus::Sample)
+                || matches!(parent_status, NodeStatus::Alive))
+        {
+            #[cfg(debug_assertions)]
+            println!("FILLING IN GAP on {} {}", overlaps.left, overlaps.right);
+            graph.add_ancestry_to_self_from_raw(previous_right, overlaps.left, queued_parent)
+        }
+
+        // There is some ugliness here: sample nodes are getting
+        // ancestry changes marked as not None, which is befuddling
+        // all of the logic below.
+        if let Some(ancestry_change) = overlaps.parental_ancestry_change {
+            #[cfg(debug_assertions)]
+            println!("change detected for {queued_parent:?} is {ancestry_change:?}");
+            cached_changes.push(ancestry_change);
+        } else {
             #[cfg(debug_assertions)]
             println!(
-                "COORDS: {previous_right} -> ({}, {}), {}",
-                overlaps.left,
-                overlaps.right,
-                matches!(parent_status, NodeStatus::Sample)
+                "no ancestry change detected for {queued_parent:?} on [{}, {})",
+                overlaps.left, overlaps.right
             );
-
-            if previous_right != overlaps.left
-                && (matches!(parent_status, NodeStatus::Sample)
-                    || matches!(parent_status, NodeStatus::Alive))
-            {
-                #[cfg(debug_assertions)]
-                println!("FILLING IN GAP on {} {}", overlaps.left, overlaps.right);
-                graph.add_ancestry_to_self_from_raw(previous_right, overlaps.left, queued_parent)
-            }
-
-            // There is some ugliness here: sample nodes are getting
-            // ancestry changes marked as not None, which is befuddling
-            // all of the logic below.
-            if let Some(ancestry_change) = overlaps.parental_ancestry_change {
-                #[cfg(debug_assertions)]
-                println!("change detected for {queued_parent:?} is {ancestry_change:?}");
-                cached_changes.push(ancestry_change);
-            } else {
+        }
+        // Output the new ancestry for the parent
+        match overlaps.parental_ancestry_change {
+            Some(x) if x.is_loss() => {
                 #[cfg(debug_assertions)]
                 println!(
-                    "no ancestry change detected for {queued_parent:?} on [{}, {})",
-                    overlaps.left, overlaps.right
+                    "parents of lost node = {:?}",
+                    graph.parents[queued_parent.as_index()]
+                );
+
+                #[cfg(debug_assertions)]
+                println!(
+                    "children of lost node = {:?}",
+                    graph.children[queued_parent.as_index()]
+                );
+                cached_changes.extend(
+                    overlaps
+                        .overlaps()
+                        .iter()
+                        .map(|a| AncestrySegment::new_overlap(a.segment, a.node)),
                 );
             }
-            // Output the new ancestry for the parent
-            match overlaps.parental_ancestry_change {
-                Some(x) if x.is_loss() => {
+            _ => {
+                if (matches!(parent_status, NodeStatus::Sample)
+                    || matches!(parent_status, NodeStatus::Alive))
+                    && overlaps.overlaps.is_empty()
+                {
                     #[cfg(debug_assertions)]
-                    println!(
-                        "parents of lost node = {:?}",
-                        graph.parents[queued_parent.as_index()]
+                    println!("EMPTY on {} {}", overlaps.left, overlaps.right);
+                    graph.add_ancestry_to_self_from_raw(
+                        overlaps.left,
+                        overlaps.right,
+                        queued_parent,
                     );
-
-                    #[cfg(debug_assertions)]
-                    println!(
-                        "children of lost node = {:?}",
-                        graph.children[queued_parent.as_index()]
-                    );
-                    cached_changes.extend(
-                        overlaps
-                            .overlaps()
-                            .iter()
-                            .map(|a| AncestrySegment::new_overlap(a.segment, a.node)),
-                    );
-                }
-                _ => {
-                    if (matches!(parent_status, NodeStatus::Sample)
-                        || matches!(parent_status, NodeStatus::Alive))
-                        && overlaps.overlaps.is_empty()
-                    {
+                } else {
+                    for &a in overlaps.overlaps() {
                         #[cfg(debug_assertions)]
-                        println!("EMPTY on {} {}", overlaps.left, overlaps.right);
-                        graph.add_ancestry_to_self_from_raw(
-                            overlaps.left,
-                            overlaps.right,
-                            queued_parent,
+                        println!(
+                            "adding new ancestry {a:?} to {queued_parent:?}|{}",
+                            overlaps.overlaps.len()
                         );
-                    } else {
-                        for &a in overlaps.overlaps() {
-                            #[cfg(debug_assertions)]
-                            println!(
-                                "adding new ancestry {a:?} to {queued_parent:?}|{}",
-                                overlaps.overlaps.len()
-                            );
-                            graph.add_ancestry_to_child(a.segment, queued_parent, a.node);
-                            graph.parents[a.node.as_index()].insert(queued_parent);
-                            graph.children[queued_parent.as_index()].insert(a.node);
-                        }
+                        graph.add_ancestry_to_child(a.segment, queued_parent, a.node);
+                        graph.parents[a.node.as_index()].insert(queued_parent);
+                        graph.children[queued_parent.as_index()].insert(a.node);
                     }
                 }
             }
-            previous_right = overlaps.right;
-            #[cfg(debug_assertions)]
-            println!("last right = {previous_right}");
         }
-        if (matches!(parent_status, NodeStatus::Sample)
-            || matches!(parent_status, NodeStatus::Alive))
-            && previous_right != graph.genome_length()
-        {
-            graph.add_ancestry_to_self_from_raw(
-                previous_right,
-                graph.genome_length(),
-                queued_parent,
-            );
-        }
-        match graph.status[queued_parent.as_index()] {
-            NodeStatus::Death => {
-                if !graph.ancestry[queued_parent.as_index()].is_empty() {
-                    graph.status[queued_parent.as_index()] = NodeStatus::Ancestor;
-                }
+        previous_right = overlaps.right;
+        #[cfg(debug_assertions)]
+        println!("last right = {previous_right}");
+    }
+    if (matches!(parent_status, NodeStatus::Sample) || matches!(parent_status, NodeStatus::Alive))
+        && previous_right != graph.genome_length()
+    {
+        graph.add_ancestry_to_self_from_raw(previous_right, graph.genome_length(), queued_parent);
+    }
+    match graph.status[queued_parent.as_index()] {
+        NodeStatus::Death => {
+            if !graph.ancestry[queued_parent.as_index()].is_empty() {
+                graph.status[queued_parent.as_index()] = NodeStatus::Ancestor;
             }
-            NodeStatus::Extinct => panic!(),
-            _ => (),
         }
-    } else {
-        return;
+        NodeStatus::Extinct => panic!(),
+        _ => (),
     }
 
     if !cached_changes.is_empty() {
@@ -1226,18 +1219,19 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
         None => panic!(),
     };
     for &node in extant_nodes.iter().rev() {
-        if ancestry_changes_to_process.contains_key(&node) {
+        if let Some(ancestry_changes) = ancestry_changes_to_process.remove(&node) {
             rv = Some(node);
             #[cfg(debug_assertions)]
             println!(
                 "processing {node:?} => {:?}, {:?}",
                 graph.status[node.as_index()],
-                ancestry_changes_to_process.get(&node)
+                ancestry_changes
             );
             process_queued_node(
                 options,
                 node,
                 graph.status[node.as_index()],
+                ancestry_changes,
                 &mut ancestry_changes_to_process,
                 graph,
             );
