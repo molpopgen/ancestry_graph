@@ -1264,8 +1264,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
         }
     }
     extant_nodes.retain(|n| graph.birth_time[n.as_index()].is_some());
-    extant_nodes.extend_from_slice(&graph.cached_extant_nodes);
-    graph.cached_extant_nodes.clear();
+    extant_nodes.append(&mut graph.cached_extant_nodes);
     assert!(
         ancestry_changes_to_process.is_empty(),
         "{:?}",
