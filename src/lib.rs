@@ -3498,4 +3498,10 @@ mod public_api_design {
             validate_reachable(&graph)
         }
     }
+
+    #[test]
+    #[ignore]
+    fn crude_perf_test() {
+        let _ = simulate(65134451251234, 1000, 10000000, 500);
+    }
 }
