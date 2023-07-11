@@ -492,7 +492,9 @@ fn generate_overlap_queue(
     assert!(!ancestry_changes.is_empty());
     let mut queue = vec![];
 
+    #[cfg(debug_assertions)]
     println!("parental_node_ancestry = {parental_node_ancestry:?}");
+    #[cfg(debug_assertions)]
     println!("ancestry_changes = {ancestry_changes:?}");
     let mut d = 0_usize;
 
@@ -570,6 +572,7 @@ fn generate_overlap_queue(
         d += update;
     }
 
+    #[cfg(debug_assertions)]
     println!("queue = {queue:?}");
 
     // TODO: should be an error?.
@@ -745,6 +748,7 @@ fn process_queued_node(
             graph.ancestry[queued_parent.node.as_index()].clear();
             let mut previous_right: i64 = 0;
             while let Some(overlaps) = overlapper.calculate_next_overlap_set(options) {
+                #[cfg(debug_assertions)]
                 println!(
                     "COORDS: {previous_right} -> ({}, {}), {}",
                     overlaps.left,
@@ -756,6 +760,7 @@ fn process_queued_node(
                     && (matches!(parent_status, NodeStatus::Sample)
                         || matches!(parent_status, NodeStatus::Alive))
                 {
+                    #[cfg(debug_assertions)]
                     println!("FILLING IN GAP on {} {}", overlaps.left, overlaps.right);
                     graph.add_ancestry_to_self_from_raw(
                         previous_right,
@@ -768,9 +773,11 @@ fn process_queued_node(
                 // ancestry changes marked as not None, which is befuddling
                 // all of the logic below.
                 if let Some(ancestry_change) = overlaps.parental_ancestry_change {
+                    #[cfg(debug_assertions)]
                     println!("change detected for {queued_parent:?} is {ancestry_change:?}");
                     cached_changes.push(ancestry_change);
                 } else {
+                    #[cfg(debug_assertions)]
                     println!(
                         "no ancestry change detected for {queued_parent:?} on [{}, {})",
                         overlaps.left, overlaps.right
@@ -779,11 +786,13 @@ fn process_queued_node(
                 // Output the new ancestry for the parent
                 match overlaps.parental_ancestry_change {
                     Some(x) if x.is_loss() => {
+                        #[cfg(debug_assertions)]
                         println!(
                             "parents of lost node = {:?}",
                             graph.parents[queued_parent.node.as_index()]
                         );
 
+                        #[cfg(debug_assertions)]
                         println!(
                             "children of lost node = {:?}",
                             graph.children[queued_parent.node.as_index()]
@@ -800,6 +809,7 @@ fn process_queued_node(
                             || matches!(parent_status, NodeStatus::Alive))
                             && overlaps.overlaps.is_empty()
                         {
+                            #[cfg(debug_assertions)]
                             println!("EMPTY on {} {}", overlaps.left, overlaps.right);
                             graph.add_ancestry_to_self_from_raw(
                                 overlaps.left,
@@ -808,6 +818,7 @@ fn process_queued_node(
                             );
                         } else {
                             for &a in overlaps.overlaps() {
+                                #[cfg(debug_assertions)]
                                 println!(
                                     "adding new ancestry {a:?} to {queued_parent:?}|{}",
                                     overlaps.overlaps.len()
@@ -820,6 +831,7 @@ fn process_queued_node(
                     }
                 }
                 previous_right = overlaps.right;
+                #[cfg(debug_assertions)]
                 println!("last right = {previous_right}");
             }
             if (matches!(parent_status, NodeStatus::Sample)
@@ -847,6 +859,7 @@ fn process_queued_node(
 
     if !cached_changes.is_empty() {
         for parent in graph.parents(queued_parent.node) {
+            #[cfg(debug_assertions)]
             println!(
                 "{:?} sending {:?} to {parent:?}",
                 queued_parent.node, cached_changes
@@ -878,6 +891,7 @@ fn process_queued_node(
             .any(|a| a.node == child || matches!(a.state, OverlapState::ToSelf))
     });
 
+    #[cfg(debug_assertions)]
     println!(
         "final ancestry len of {:?} = {}",
         queued_parent.node,
@@ -960,12 +974,14 @@ fn output_overlaps(
 
     for po in parental_overlaps {
         if po.maps_to_child() && !parental_nodes_lost.contains(&po.node) {
+            #[cfg(debug_assertions)]
             println!("ONODE = {:?}", po.node);
             output_ancestry.push(OutputSegment {
                 segment,
                 node: po.node,
             });
         } else {
+            #[cfg(debug_assertions)]
             println!("LNODE = {:?}", po.node);
         }
     }
@@ -973,6 +989,7 @@ fn output_overlaps(
     let node_is_sample =
         matches!(parent_status, NodeStatus::Sample) || matches!(parent_status, NodeStatus::Alive);
 
+    #[cfg(debug_assertions)]
     println!("the overlaps are {output_ancestry:?}");
     let change_type = match output_ancestry.len() {
         0 => {
@@ -1064,7 +1081,6 @@ impl AncestryOverlapper {
                 if x.is_loss() && !self.parental_nodes_lost.contains(&x.node) {
                     self.parental_nodes_lost.push(x.node)
                 }
-                println!("retaining change {x:?}");
                 true
             } else {
                 false
@@ -1073,6 +1089,7 @@ impl AncestryOverlapper {
     }
 
     fn make_overlaps(&mut self, options: PropagationOptions) -> Overlaps {
+        #[cfg(debug_assertions)]
         println!(
             "LOST = {:?}, {} {}",
             self.parental_nodes_lost, self.left, self.right
@@ -1087,6 +1104,7 @@ impl AncestryOverlapper {
             &self.change_overlaps,
             &mut self.overlaps,
         );
+        #[cfg(debug_assertions)]
         println!("self.overlaps = {:?} | {ancestry_change:?}", self.overlaps);
         Overlaps::new(
             self.left,
@@ -1145,6 +1163,7 @@ impl AncestryOverlapper {
 
 // Returns the last ancestor visited.
 fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) -> Option<Node> {
+    #[cfg(debug_assertions)]
     println!(
         "the input options are {options:?}, {}",
         options.keep_unary_nodes()
@@ -1167,6 +1186,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
         let change = AncestrySegment::new_birth(tranmission.into(), tranmission.child);
         for parent in graph.parents(tranmission.child) {
             if parent == &tranmission.parent {
+                #[cfg(debug_assertions)]
                 println!(
                     "updating transmission from {:?} to {:?} on [{}, {}) to parent {parent:?}, and the actual parent is {:?}",
                     parent, tranmission.child, tranmission.left, tranmission.right, tranmission.parent
@@ -1188,6 +1208,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
         update_internal_stuff(*death, &mut hashed_nodes, &mut parent_queue, graph);
         // Dangling death
         if graph.children[death.as_index()].is_empty() {
+            #[cfg(debug_assertions)]
             println!(
                 "converting segments {:?} to losses for {death:?}",
                 graph.ancestry[death.as_index()]
@@ -1222,6 +1243,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     let mut rv = None;
     while let Some(queued_parent) = parent_queue.pop() {
         rv = Some(queued_parent.node);
+        #[cfg(debug_assertions)]
         println!(
             "processing {queued_parent:?} => {:?}, {:?}",
             graph.status[queued_parent.node.as_index()],
@@ -2193,8 +2215,6 @@ mod test_standard_case {
         graph
             .record_transmission(crossover_pos, graph.genome_length(), node2, node3)
             .unwrap();
-
-        println!("tranmissions = {:?}", graph.transmissions);
 
         // NOTE: we need to add "dummy" ancestry to the parents
         // to have a valid data structure for testing.
@@ -3339,11 +3359,13 @@ mod public_api_design {
         let sample_breakpoint = rand::distributions::Uniform::new(1, genome_length);
         let mut children = vec![];
 
+        #[cfg(debug_assertions)]
         println!("CTIME {}", graph.current_time());
         for _ in 0..num_generations {
             children.clear();
             // Advance time
             graph.advance_time().unwrap();
+            #[cfg(debug_assertions)]
             println!("CTIME {}", graph.current_time());
             // Mark parents as dead in the graph
             // TODO: mark_node_death needs testing in lib.rs!
