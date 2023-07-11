@@ -761,6 +761,7 @@ fn process_queued_node(
     // Clear parental ancestry
     graph.ancestry[queued_parent.as_index()].clear();
     let mut previous_right: i64 = 0;
+    let mut new_children = NodeHash::with_hasher(BuildNoHashHasher::default());
     while let Some(overlaps) = overlapper.calculate_next_overlap_set(options) {
         #[cfg(debug_assertions)]
         println!(
@@ -835,7 +836,7 @@ fn process_queued_node(
                         );
                         graph.add_ancestry_to_child(a.segment, queued_parent, a.node);
                         graph.parents[a.node.as_index()].insert(queued_parent);
-                        graph.children[queued_parent.as_index()].insert(a.node);
+                        new_children.insert(a.node);
                     }
                 }
             }
@@ -876,22 +877,16 @@ fn process_queued_node(
         }
     }
 
-    // NOTE: major perf implications
     for c in graph.children[queued_parent.as_index()].iter() {
-        if !graph.ancestry[queued_parent.as_index()]
-            .iter()
-            .any(|a| &a.node == c)
-        {
+        if !new_children.contains(c) {
             graph.parents[c.as_index()].remove(&queued_parent);
         }
     }
 
-    // NOTE: major perf implications
-    graph.children[queued_parent.as_index()].retain(|&child| {
-        graph.ancestry[queued_parent.as_index()]
-            .iter()
-            .any(|a| a.node == child || matches!(a.state, OverlapState::ToSelf))
-    });
+    std::mem::swap(
+        &mut graph.children[queued_parent.as_index()],
+        &mut new_children,
+    );
 
     #[cfg(debug_assertions)]
     println!(
