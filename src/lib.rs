@@ -504,6 +504,7 @@ fn generate_overlap_queue(
     let mut d = 0_usize;
 
     let mut last_left: Option<i64> = None;
+    let mut num_hits =0;
     while d < parental_node_ancestry.len() {
         // Take the current node here to minimize bounds checks
         let current_parental_segment = &parental_node_ancestry[d];
@@ -550,6 +551,7 @@ fn generate_overlap_queue(
             if ac.change.right() > current_parental_segment.left()
                 && current_parental_segment.right() > ac.change.left()
             {
+                num_hits+=1;
                 let left = std::cmp::max(ac.change.left(), current_parental_segment.left());
                 let right = std::cmp::min(ac.change.right(), current_parental_segment.right());
                 if ac.change.is_birth() {
@@ -576,6 +578,7 @@ fn generate_overlap_queue(
         }
         d += update;
     }
+    if num_hits==0{queue.clear()}
 
     #[cfg(debug_assertions)]
     println!("queue = {queue:?}");
@@ -584,7 +587,7 @@ fn generate_overlap_queue(
     // But, an error/assert means that,
     // internally, we MUST not send
     // "no changes" up to parents.
-    assert!(!queue.is_empty());
+    //assert!(!queue.is_empty());
 
     debug_assert!(queue.windows(2).all(|w| w[0].left() <= w[1].left()));
 
@@ -619,19 +622,37 @@ impl Ord for QueuedNode {
 }
 
 fn push_ancestry_changes_to_parent<I: Iterator<Item = AncestrySegment<ChangeState>>>(
+    graph: &Graph,
     parent: Node,
     source: Node,
     ancestry_changes: I,
     ancestry_changes_to_process: &mut AncestryChanges,
 ) {
+    let left = match graph.ancestry[parent.as_index()].first() {
+        Some(a) => a.left(),
+        None => panic!(),
+    };
+    let right = match graph.ancestry[parent.as_index()].last() {
+        Some(a) => a.right(),
+        None => panic!(),
+    };
     match ancestry_changes_to_process.get_mut(&parent) {
         Some(changes) => {
-            changes.extend(ancestry_changes.map(|change| CandidateChange { source, change }));
+            changes.extend(
+                ancestry_changes
+                    .filter(|c| c.right() > left && right > c.left())
+                    .map(|change| CandidateChange { source, change }),
+            );
         }
         None => {
-            let changes =
-                Vec::from_iter(ancestry_changes.map(|change| CandidateChange { source, change }));
-            ancestry_changes_to_process.insert(parent, changes);
+            let changes = Vec::from_iter(
+                ancestry_changes
+                    .filter(|c| c.right() > left && right > c.left())
+                    .map(|change| CandidateChange { source, change }),
+            );
+            if !changes.is_empty() {
+                ancestry_changes_to_process.insert(parent, changes);
+            }
         }
     }
 }
@@ -732,6 +753,7 @@ fn process_queued_node(
         &graph.ancestry[queued_parent.as_index()],
         &ancestry_changes,
     );
+    if overlapper.queue.is_empty(){return}
     // Clear parental ancestry
     graph.ancestry[queued_parent.as_index()].clear();
     let mut previous_right: i64 = 0;
@@ -841,6 +863,7 @@ fn process_queued_node(
                 queued_parent, cached_changes
             );
             push_ancestry_changes_to_parent(
+                graph,
                 *parent_node,
                 queued_parent,
                 cached_changes.iter().cloned(),
@@ -1011,10 +1034,12 @@ impl AncestryOverlapper {
         let mut queue = generate_overlap_queue(parent, parental_node_ancestry, ancestry_changes);
         let num_overlaps = queue.len();
         // Add sentinel
-        queue.push(AncestryOverlap::Parental(AncestrySegment::new_to_self(
-            Segment::sentinel(),
-            parent,
-        )));
+        if num_overlaps > 0 {
+            queue.push(AncestryOverlap::Parental(AncestrySegment::new_to_self(
+                Segment::sentinel(),
+                parent,
+            )));
+        }
         let right = if num_overlaps > 0 {
             queue[0].right()
         } else {
@@ -1166,6 +1191,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
                     parent, tranmission.child, tranmission.left, tranmission.right, tranmission.parent
                 );
                 push_ancestry_changes_to_parent(
+                    graph,
                     *parent,
                     tranmission.child,
                     [change].into_iter(),
