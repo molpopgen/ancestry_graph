@@ -1182,22 +1182,13 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
             num_births_visited += 1;
         }
         let change = AncestrySegment::new_birth(tranmission.into(), tranmission.child);
-        for parent in graph.parents(tranmission.child) {
-            if parent == &tranmission.parent {
-                #[cfg(debug_assertions)]
-                println!(
-                    "updating transmission from {:?} to {:?} on [{}, {}) to parent {parent:?}, and the actual parent is {:?}",
-                    parent, tranmission.child, tranmission.left, tranmission.right, tranmission.parent
-                );
-                push_ancestry_changes_to_parent(
-                    graph,
-                    *parent,
-                    tranmission.child,
-                    [change].into_iter(),
-                    &mut ancestry_changes_to_process,
-                );
-            }
-        }
+        push_ancestry_changes_to_parent(
+            graph,
+            tranmission.parent,
+            tranmission.child,
+            [change].into_iter(),
+            &mut ancestry_changes_to_process,
+        );
     }
     graph.transmissions.clear();
     assert_eq!(graph.num_births, num_births_visited);
