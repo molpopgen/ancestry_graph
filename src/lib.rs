@@ -3395,8 +3395,9 @@ mod public_api_design {
                 let left_parent = parents[rng.sample(sample_parent)];
                 let right_parent = parents[rng.sample(sample_parent)];
                 let breakpoint = rng.sample(sample_breakpoint);
-                // NOTE: we may not need the argument now?
                 let child = graph.add_birth(graph.current_time()).unwrap();
+                println!("GRAPH {left_parent:?}, {right_parent:?} {breakpoint} to child {child:?}");
+                // NOTE: we may not need the argument now?
                 assert!(breakpoint > 0);
                 assert!(breakpoint < graph.genome_length());
                 graph
@@ -3420,7 +3421,78 @@ mod public_api_design {
         graph
     }
 
-    // NOTE: uses internal details
+    fn simulate_using_tskit(
+        seed: u64,
+        popsize: usize,
+        genome_length: i64,
+        num_generations: i32,
+    ) -> tskit::TreeSequence {
+        use rand::distributions::Distribution;
+        assert!(popsize > 0);
+        assert!(num_generations > 0);
+        let mut tables = tskit::TableCollection::new(genome_length as f64).unwrap();
+
+        // create parental nodes
+        let mut parents_and_children = {
+            let mut temp = vec![];
+            let parental_time = f64::from(num_generations);
+            for _ in 0..popsize {
+                let node = tables.add_node(0, parental_time, -1, -1).unwrap();
+                temp.push(node);
+            }
+            temp
+        };
+
+        // allocate space for offspring nodes
+        parents_and_children.resize(2 * parents_and_children.len(), tskit::NodeId::NULL);
+
+        // Construct non-overlapping mutable slices into our vector.
+        let (mut parents, mut children) = parents_and_children.split_at_mut(popsize);
+
+        let parent_picker = rand::distributions::Uniform::new(0, popsize);
+        let breakpoint_generator = rand::distributions::Uniform::new(1, genome_length);
+        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+
+        for birth_time in (0..num_generations).rev() {
+            for c in children.iter_mut() {
+                let bt = f64::from(birth_time);
+                let child = tables.add_node(0, bt, -1, -1).unwrap();
+                let left_parent = parents.get(parent_picker.sample(&mut rng)).unwrap();
+                let right_parent = parents.get(parent_picker.sample(&mut rng)).unwrap();
+                let breakpoint = breakpoint_generator.sample(&mut rng);
+                println!("TSK {left_parent:?}, {right_parent:?} {breakpoint} to child {child}");
+                tables
+                    .add_edge(0., breakpoint as f64, *left_parent, child)
+                    .unwrap();
+                tables
+                    .add_edge(
+                        breakpoint as f64,
+                        genome_length as f64,
+                        *right_parent,
+                        child,
+                    )
+                    .unwrap();
+                *c = child;
+            }
+
+            std::mem::swap(&mut parents, &mut children);
+        }
+        tables.full_sort(0).unwrap();
+        if let Some(idmap) = tables
+            .simplify(parents, tskit::SimplificationOptions::default(), true)
+            .unwrap()
+        {
+            // remap child nodes
+            for o in children.iter_mut() {
+                *o = idmap[usize::try_from(*o).unwrap()];
+            }
+        }
+        tables.build_index().unwrap();
+        tables
+            .tree_sequence(tskit::TreeSequenceFlags::default())
+            .unwrap()
+    }
+
     fn validate_reachable(graph: &Graph) {
         let reachable = Vec::from_iter(super::reachable_nodes(graph));
         for &r in &reachable {
@@ -3516,6 +3588,35 @@ mod public_api_design {
         fn test_5_individuals(seed in 0..u64::MAX) {
             let graph = simulate(seed, 5, 100, 10);
             validate_reachable(&graph)
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_against_tskit(seed in 0..u64::MAX) {
+            let num_generations = 10;
+            let genome_length = 10000;
+            let graph = simulate(seed, 10, genome_length, num_generations);
+            let treeseq = simulate_using_tskit(seed, 10, genome_length, num_generations as i32);
+            let extant = graph.birth_time.iter().filter(|x| x.is_some()).count();
+            assert_eq!(extant as u64, treeseq.nodes().num_rows());
+
+            // Get the birth times of each node -- sorted vectors
+            // must be IDENTICAL (after converting our time to backwards time)
+            let mut node_times = graph
+                .birth_time
+                .iter()
+                .filter_map(|x| x.map(|time| -(time - num_generations)))
+                .collect::<Vec<_>>();
+            node_times.sort_unstable();
+            let mut tsk_times = treeseq
+                .nodes()
+                .time_slice()
+                .iter()
+                .map(|t| f64::from(*t) as i64)
+                .collect::<Vec<_>>();
+            tsk_times.sort_unstable();
+            assert_eq!(node_times, tsk_times);
         }
     }
 
