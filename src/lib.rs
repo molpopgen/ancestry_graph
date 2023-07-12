@@ -3591,32 +3591,40 @@ mod public_api_design {
         }
     }
 
+    fn run_test_against_tskit(seed: u64, popsize: usize, genome_length: i64, num_generations: i64) {
+        let graph = simulate(seed, popsize, genome_length, num_generations);
+        let treeseq = simulate_using_tskit(seed, popsize, genome_length, num_generations as i32);
+        let extant = graph.birth_time.iter().filter(|x| x.is_some()).count();
+        assert_eq!(extant as u64, treeseq.nodes().num_rows());
+
+        // Get the birth times of each node -- sorted vectors
+        // must be IDENTICAL (after converting our time to backwards time).
+        // It is ~impossible for this to match if we have simplification errors.
+        // We'd either retain too many or too few nodes long the way.
+        // (TODO: But it is possible that we retain too much ancestry such that
+        // edges are wrong, which we'll test later.)
+        let mut node_times = graph
+            .birth_time
+            .iter()
+            .filter_map(|x| x.map(|time| -(time - num_generations)))
+            .collect::<Vec<_>>();
+        node_times.sort_unstable();
+        let mut tsk_times = treeseq
+            .nodes()
+            .time_slice()
+            .iter()
+            .map(|t| f64::from(*t) as i64)
+            .collect::<Vec<_>>();
+        tsk_times.sort_unstable();
+        assert_eq!(node_times, tsk_times);
+    }
+
     proptest! {
         #[test]
         fn test_against_tskit(seed in 0..u64::MAX) {
             let num_generations = 10;
             let genome_length = 10000;
-            let graph = simulate(seed, 10, genome_length, num_generations);
-            let treeseq = simulate_using_tskit(seed, 10, genome_length, num_generations as i32);
-            let extant = graph.birth_time.iter().filter(|x| x.is_some()).count();
-            assert_eq!(extant as u64, treeseq.nodes().num_rows());
-
-            // Get the birth times of each node -- sorted vectors
-            // must be IDENTICAL (after converting our time to backwards time)
-            let mut node_times = graph
-                .birth_time
-                .iter()
-                .filter_map(|x| x.map(|time| -(time - num_generations)))
-                .collect::<Vec<_>>();
-            node_times.sort_unstable();
-            let mut tsk_times = treeseq
-                .nodes()
-                .time_slice()
-                .iter()
-                .map(|t| f64::from(*t) as i64)
-                .collect::<Vec<_>>();
-            tsk_times.sort_unstable();
-            assert_eq!(node_times, tsk_times);
+            run_test_against_tskit(seed, 10, genome_length, num_generations)
         }
     }
 
