@@ -3396,7 +3396,6 @@ mod public_api_design {
                 let right_parent = parents[rng.sample(sample_parent)];
                 let breakpoint = rng.sample(sample_breakpoint);
                 let child = graph.add_birth(graph.current_time()).unwrap();
-                println!("GRAPH {left_parent:?}, {right_parent:?} {breakpoint} to child {child:?}");
                 // NOTE: we may not need the argument now?
                 assert!(breakpoint > 0);
                 assert!(breakpoint < graph.genome_length());
@@ -3460,7 +3459,6 @@ mod public_api_design {
                 let left_parent = parents.get(parent_picker.sample(&mut rng)).unwrap();
                 let right_parent = parents.get(parent_picker.sample(&mut rng)).unwrap();
                 let breakpoint = breakpoint_generator.sample(&mut rng);
-                println!("TSK {left_parent:?}, {right_parent:?} {breakpoint} to child {child}");
                 tables
                     .add_edge(0., breakpoint as f64, *left_parent, child)
                     .unwrap();
