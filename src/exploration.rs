@@ -7,7 +7,7 @@ struct Ancestry {
     node: Node,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 struct Edge {
     segment: Segment,
     child: Node,
@@ -115,18 +115,26 @@ mod test_standard_case {
         println!("{node:?} <-- {children:?}");
         let mut q = vec![];
 
-        for e in graph.edges[node.as_index()].iter() {
+        let mut edges_not_found = vec![];
+        for (idx, e) in graph.edges[node.as_index()].iter().enumerate() {
+            let mut found = false;
             while let Some(child) = children.pop() {
                 for a in graph.ancestry[child].iter() {
                     if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
                         let left = std::cmp::max(e.segment.left, a.segment.left);
                         let right = std::cmp::max(e.segment.right, a.segment.right);
+                        if a.node == e.child {
+                            found = true;
+                        }
                         q.push(Ancestry {
                             segment: Segment { left, right },
                             node: a.node,
                         });
                     }
                 }
+            }
+            if !found {
+                edges_not_found.push(idx);
             }
             // Below is "classic tskit" style
             //for a in graph.ancestry[e.child.as_index()].iter() {
@@ -141,6 +149,7 @@ mod test_standard_case {
             //}
         }
         println!("{node:?} <-- {children:?}");
+        println!("lost edges = {edges_not_found:?}");
 
         q
     }
@@ -192,6 +201,9 @@ mod test_standard_case {
                         }
                     }
                 }
+                // Set node status to "extinct"
+                graph.edges[node.as_index()].clear();
+                graph.birth_time[node.as_index()] = None;
             } else if q.len() > 1 {
             }
         }
@@ -207,7 +219,22 @@ mod test_standard_case {
         assert!(!graph.ancestry[3].is_empty());
         assert!(!graph.ancestry[4].is_empty());
 
+        for node in [1, 2, 3, 4] {
+            assert!(graph.edges[node].is_empty());
+        }
+
         // This is the tough case
         assert!(!graph.ancestry[0].is_empty());
+        assert_eq!(graph.ancestry[0].len(), 1);
+        assert_eq!(graph.edges[0].len(), 2);
+        let segment = Segment { left: 0, right: 50 };
+        for child in [node3, node4] {
+            let edge = Edge { segment, child };
+            assert!(
+                graph.edges[0].contains(&edge),
+                "{edge:?}, {:?}",
+                graph.edges[0]
+            );
+        }
     }
 }
