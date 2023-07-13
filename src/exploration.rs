@@ -172,14 +172,24 @@ mod graph_fixtures {
                     segment,
                     child: node3,
                 }],
-                vec![Edge {
-                    segment,
-                    child: node4,
-                }],
+                vec![
+                    Edge {
+                        segment,
+                        child: node4,
+                    },
+                    Edge {
+                        segment,
+                        child: node5,
+                    },
+                ],
                 vec![],
                 vec![],
                 vec![],
             ];
+            assert_eq!(birth_time.len(), 6);
+            assert_eq!(edges.len(), 6);
+            assert_eq!(ancestry.len(), 6);
+
             let graph = Graph {
                 birth_time,
                 ancestry,
@@ -215,7 +225,9 @@ mod test_standard_case {
         for (idx, e) in graph.edges[node.as_index()].iter().enumerate() {
             let mut found = false;
             while let Some(child) = children.pop() {
+                println!("child {child} has ancestry {:?}", graph.ancestry[child]);
                 for a in graph.ancestry[child].iter() {
+                    println!("child segment is {a:?}");
                     if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
                         let left = std::cmp::max(e.segment.left, a.segment.left);
                         let right = std::cmp::max(e.segment.right, a.segment.right);
@@ -230,6 +242,7 @@ mod test_standard_case {
                 }
             }
             if !found {
+                println!("parental node {e:?} has no overlaps");
                 edges_not_found.push(idx);
             }
             // Below is "classic tskit" style
@@ -279,6 +292,7 @@ mod test_standard_case {
                 graph.edges[node.as_index()].clear();
                 graph.birth_time[node.as_index()] = None;
             } else if q.len() > 1 {
+                println!("overlaps {node:?}: {q:?}");
                 assert!(lost_edges.windows(2).all(|w| w[0] < w[1]));
 
                 // Remove lost edges.
@@ -290,7 +304,9 @@ mod test_standard_case {
                 // NOTE: this will do bad things if a node
                 // is retained as an edge -- we won't move it,
                 // and we'll re-push it.
+                println!("current edges = {:?}", graph.edges[node.as_index()]);
                 for a in q {
+                    println!("Adding edge to node {:?}", a.node);
                     graph.edges[node.as_index()].push(Edge {
                         segment: a.segment,
                         child: a.node,
@@ -351,7 +367,6 @@ mod test_standard_case {
             assert!(graph.edges[node].is_empty());
         }
 
-        // This is the tough case
         assert!(!graph.ancestry[0].is_empty());
         assert_eq!(graph.ancestry[0].len(), 1);
         assert_eq!(graph.edges[0].len(), 2);
@@ -377,7 +392,7 @@ mod test_standard_case {
             mut graph,
         } = graph_fixtures::Topology1::new();
 
-        // NOTE: we have to treat node3/4 as "special"
+        // NOTE: we have to treat node3/4/5 as "special"
         // because they are births.
         // We skip that for now.
         let nodes = vec![node0, node1, node2];
@@ -387,7 +402,9 @@ mod test_standard_case {
             vec![4_usize, 5_usize],
             vec![],
             vec![],
+            vec![],
         ];
+        assert_eq!(graph.edges[2].len(), 2);
 
         // Seems we need this in graph!
         let parents = vec![
@@ -408,20 +425,23 @@ mod test_standard_case {
             );
         }
         assert!(graph.ancestry[1].is_empty());
-        assert!(graph.ancestry[2].is_empty());
         assert!(!graph.ancestry[3].is_empty());
         assert!(!graph.ancestry[4].is_empty());
+        assert!(!graph.ancestry[5].is_empty());
 
-        for node in [1, 2, 3, 4] {
+        for node in [1, 3, 4, 5] {
             assert!(graph.edges[node].is_empty());
         }
 
         // This is the tough case
+        assert_eq!(graph.ancestry[2].len(), 1);
+        assert_eq!(graph.edges[2].len(), 2);
+
         assert!(!graph.ancestry[0].is_empty());
         assert_eq!(graph.ancestry[0].len(), 1);
         assert_eq!(graph.edges[0].len(), 2);
         let segment = Segment { left: 0, right: 50 };
-        for child in [node3, node4] {
+        for child in [node3, node2] {
             let edge = Edge { segment, child };
             assert!(
                 graph.edges[0].contains(&edge),
