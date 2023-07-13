@@ -213,11 +213,7 @@ mod graph_fixtures {
 mod test_standard_case {
     use super::*;
 
-    fn build_queue(
-        graph: &Graph,
-        node: Node,
-        children: &mut Vec<usize>,
-    ) -> (Vec<Ancestry>, Vec<usize>) {
+    fn build_queue(graph: &Graph, node: Node, children: &[usize]) -> (Vec<Ancestry>, Vec<usize>) {
         println!("{node:?} <-- {children:?}");
         let mut q = vec![];
 
@@ -275,8 +271,7 @@ mod test_standard_case {
 
         // backwards in time thru nodes.
         for node in nodes.iter().rev() {
-            let (q, lost_edges) =
-                build_queue(&graph, *node, &mut children_to_check[node.as_index()]);
+            let (q, lost_edges) = build_queue(&graph, *node, &children_to_check[node.as_index()]);
             // The latter case is "no overlaps with children" == extinct node
             if q.len() == 1 || q.is_empty() {
                 graph.ancestry[node.as_index()].clear();
