@@ -222,16 +222,17 @@ mod test_standard_case {
         let mut q = vec![];
 
         let mut edges_not_found = vec![];
-        for (idx, e) in graph.edges[node.as_index()].iter().enumerate() {
+        for (idx, e) in graph.ancestry[node.as_index()].iter().enumerate() {
             let mut found = false;
-            while let Some(child) = children.pop() {
+            //while let Some(child) = children.pop() {
+            for &child in children.iter() {
                 println!("child {child} has ancestry {:?}", graph.ancestry[child]);
                 for a in graph.ancestry[child].iter() {
                     println!("child segment is {a:?}");
                     if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
                         let left = std::cmp::max(e.segment.left, a.segment.left);
                         let right = std::cmp::max(e.segment.right, a.segment.right);
-                        if a.node == e.child {
+                        if a.node == e.node {
                             found = true;
                         }
                         q.push(Ancestry {
@@ -305,6 +306,7 @@ mod test_standard_case {
                 // is retained as an edge -- we won't move it,
                 // and we'll re-push it.
                 println!("current edges = {:?}", graph.edges[node.as_index()]);
+                graph.edges[node.as_index()].clear();
                 for a in q {
                     println!("Adding edge to node {:?}", a.node);
                     graph.edges[node.as_index()].push(Edge {
