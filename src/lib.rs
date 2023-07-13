@@ -4,6 +4,8 @@ use std::collections::HashSet;
 
 // NOTE: for design purposes -- delete later.
 mod overlapper_experiments;
+// NOTE: for design purposes -- delete later.
+mod exploration;
 
 mod flags;
 
