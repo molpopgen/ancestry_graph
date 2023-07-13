@@ -111,7 +111,11 @@ mod graph_fixtures {
 mod test_standard_case {
     use super::*;
 
-    fn build_queue(graph: &Graph, node: Node, children: &mut Vec<usize>) -> Vec<Ancestry> {
+    fn build_queue(
+        graph: &Graph,
+        node: Node,
+        children: &mut Vec<usize>,
+    ) -> (Vec<Ancestry>, Vec<usize>) {
         println!("{node:?} <-- {children:?}");
         let mut q = vec![];
 
@@ -151,7 +155,7 @@ mod test_standard_case {
         println!("{node:?} <-- {children:?}");
         println!("lost edges = {edges_not_found:?}");
 
-        q
+        (q, edges_not_found)
     }
 
     #[test]
@@ -188,7 +192,8 @@ mod test_standard_case {
 
         // backwards in time thru nodes.
         for node in nodes.iter().rev() {
-            let q = build_queue(&graph, *node, &mut children_to_check[node.as_index()]);
+            let (q, lost_edges) =
+                build_queue(&graph, *node, &mut children_to_check[node.as_index()]);
             // The latter case is "no overlaps with children" == extinct node
             if q.len() == 1 || q.is_empty() {
                 graph.ancestry[node.as_index()].clear();
@@ -205,6 +210,20 @@ mod test_standard_case {
                 graph.edges[node.as_index()].clear();
                 graph.birth_time[node.as_index()] = None;
             } else if q.len() > 1 {
+                assert!(lost_edges.windows(2).all(|w| w[0] < w[1]));
+
+                // Remove lost edges.
+                for lost in lost_edges.iter().rev() {
+                    graph.edges[node.as_index()].remove(*lost);
+                }
+
+                // Insert overlaps.
+                for a in q {
+                    graph.edges[node.as_index()].push(Edge {
+                        segment: a.segment,
+                        child: a.node,
+                    });
+                }
             }
         }
 
