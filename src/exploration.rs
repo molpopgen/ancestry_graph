@@ -269,6 +269,7 @@ mod test_standard_case {
         let mut graph = graph;
         let mut children_to_check = children_to_check;
 
+        todo!("it seems like we should be able to check if an existing anc segment changes and, if so, queue the parent for updating?");
         // backwards in time thru nodes.
         for node in nodes.iter().rev() {
             let (q, lost_edges) = build_queue(&graph, *node, &children_to_check[node.as_index()]);
