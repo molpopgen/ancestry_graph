@@ -218,6 +218,9 @@ mod test_standard_case {
                 }
 
                 // Insert overlaps.
+                // NOTE: this will do bad things if a node
+                // is retained as an edge -- we won't move it,
+                // and we'll re-push it.
                 for a in q {
                     graph.edges[node.as_index()].push(Edge {
                         segment: a.segment,
