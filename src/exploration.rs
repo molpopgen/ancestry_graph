@@ -158,37 +158,14 @@ mod test_standard_case {
         (q, edges_not_found)
     }
 
-    #[test]
-    fn test_topology0() {
-        let graph_fixtures::Topology0 {
-            node0,
-            node1,
-            node2,
-            node3,
-            node4,
-            mut graph,
-        } = graph_fixtures::Topology0::new();
-
-        // NOTE: we have to treat node3/4 as "special"
-        // because they are births.
-        // We skip that for now.
-        let nodes = vec![node0, node1, node2];
-        let mut children_to_check = vec![
-            vec![1_usize, 2_usize],
-            vec![3_usize],
-            vec![4_usize],
-            vec![],
-            vec![],
-        ];
-
-        // Seems we need this in graph!
-        let parents = vec![
-            None,
-            Some(vec![0_usize]),
-            Some(vec![0_usize]),
-            Some(vec![1_usize]),
-            Some(vec![2_usize]),
-        ];
+    fn propagate_changes(
+        nodes: &[Node],
+        graph: Graph,
+        children_to_check: Vec<Vec<usize>>,
+        parents: Vec<Option<Vec<usize>>>,
+    ) -> Graph {
+        let mut graph = graph;
+        let mut children_to_check = children_to_check;
 
         // backwards in time thru nodes.
         for node in nodes.iter().rev() {
@@ -229,6 +206,43 @@ mod test_standard_case {
                 }
             }
         }
+
+        graph
+    }
+
+    #[test]
+    fn test_topology0() {
+        let graph_fixtures::Topology0 {
+            node0,
+            node1,
+            node2,
+            node3,
+            node4,
+            mut graph,
+        } = graph_fixtures::Topology0::new();
+
+        // NOTE: we have to treat node3/4 as "special"
+        // because they are births.
+        // We skip that for now.
+        let nodes = vec![node0, node1, node2];
+        let mut children_to_check = vec![
+            vec![1_usize, 2_usize],
+            vec![3_usize],
+            vec![4_usize],
+            vec![],
+            vec![],
+        ];
+
+        // Seems we need this in graph!
+        let parents = vec![
+            None,
+            Some(vec![0_usize]),
+            Some(vec![0_usize]),
+            Some(vec![1_usize]),
+            Some(vec![2_usize]),
+        ];
+
+        graph = propagate_changes(&nodes, graph, children_to_check, parents);
 
         for node in 0..graph.ancestry.len() {
             println!(
