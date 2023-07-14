@@ -233,6 +233,8 @@ mod graph_fixtures {
         pub node4: Node,
         pub node5: Node,
         pub node6: Node,
+        pub lsegment: Segment,
+        pub rsegment: Segment,
         pub graph: Graph,
     }
 
@@ -330,6 +332,8 @@ mod graph_fixtures {
                 node4,
                 node5,
                 node6,
+                lsegment,
+                rsegment,
                 graph,
             }
         }
@@ -630,6 +634,8 @@ mod test_standard_case {
             node4,
             node5,
             node6,
+            lsegment,
+            rsegment,
             mut graph,
         } = graph_fixtures::Topology2::new();
 
@@ -662,5 +668,22 @@ mod test_standard_case {
                 graph.ancestry[node], graph.edges[node]
             );
         }
+
+        for node in [node1, node2] {
+            assert_eq!(
+                graph.edges[node.as_index()]
+                    .iter()
+                    .filter(|e| e.segment == rsegment)
+                    .count(),
+                2
+            );
+        }
+        assert_eq!(
+            graph.edges[node2.as_index()]
+                .iter()
+                .filter(|e| e.segment == lsegment)
+                .count(),
+            3
+        );
     }
 }
