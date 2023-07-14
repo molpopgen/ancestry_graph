@@ -219,6 +219,9 @@ mod test_standard_case {
     //
     // POSSIBLE SOLUTION: label ancestry as unary or overlap,
     // and use that in combination w/options re: retaining unary status
+    //
+    // Oh, we actually know this...the output node is either == current
+    // node (overlap) or not (unary)
     fn build_queue(graph: &Graph, node: Node, children: &[usize]) -> (Vec<Ancestry>, Vec<usize>) {
         println!("{node:?} <-- {children:?}");
         let mut q = vec![];
