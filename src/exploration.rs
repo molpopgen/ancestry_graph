@@ -276,6 +276,8 @@ mod test_standard_case {
             let (q, lost_edges) = build_queue(&graph, *node, &children_to_check[node.as_index()]);
             // The latter case is "no overlaps with children" == extinct node
             if q.len() == 1 || q.is_empty() {
+                // FIXME: don't do this -- it is bad for mutation 
+                // simplification
                 graph.ancestry[node.as_index()].clear();
                 for edge in graph.edges[node.as_index()].iter() {
                     if let Some(node_parents) = &parents[node.as_index()] {
