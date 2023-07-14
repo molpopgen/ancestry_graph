@@ -34,6 +34,17 @@ struct Overlaps<'overlapper> {
     overlaps: &'overlapper [Ancestry],
 }
 
+enum ChangeType {
+    Loss,
+    Overlap,
+}
+
+struct AncestryChange {
+    segment: Segment,
+    node: Node,
+    change_type: ChangeType,
+}
+
 impl AncestryOverlapper {
     fn new(parent: Node, queue: Vec<Ancestry>) -> Self {
         let mut queue = queue;
