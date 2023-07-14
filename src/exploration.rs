@@ -207,6 +207,133 @@ mod graph_fixtures {
             }
         }
     }
+
+    // Tree 1:
+    //     0
+    //  -------
+    //  |     |
+    //  1     2
+    //  |     -----
+    //  |     | | |
+    //  3     4 5 6
+    //
+    // Tree 2:
+    //     0
+    //  -------
+    //  |     |
+    //  1     2
+    //  ---   ---
+    //  | |   | |
+    //  4 6   3 5
+    pub struct Topology2 {
+        pub node0: Node,
+        pub node1: Node,
+        pub node2: Node,
+        pub node3: Node,
+        pub node4: Node,
+        pub node5: Node,
+        pub node6: Node,
+        pub graph: Graph,
+    }
+
+    impl Topology2 {
+        pub fn new() -> Self {
+            let mut birth_time = vec![];
+            for i in [0_i64, 1, 1, 2, 2, 2, 2] {
+                birth_time.push(Some(i))
+            }
+            let (node0, node1, node2, node3, node4, node5, node6) = (
+                Node(0),
+                Node(1),
+                Node(2),
+                Node(3),
+                Node(4),
+                Node(5),
+                Node(6),
+            );
+            let mut ancestry = vec![];
+            let segment = Segment { left: 0, right: 50 };
+            for i in 0..birth_time.len() {
+                ancestry.push(vec![Ancestry {
+                    segment,
+                    node: Node(i),
+                }]);
+            }
+            let lsegment = Segment { left: 0, right: 25 };
+            let rsegment = Segment {
+                left: 25,
+                right: 50,
+            };
+            let edges = vec![
+                vec![
+                    Edge {
+                        segment,
+                        child: node1,
+                    },
+                    Edge {
+                        segment,
+                        child: node2,
+                    },
+                ],
+                vec![
+                    Edge {
+                        segment: lsegment,
+                        child: node3,
+                    },
+                    Edge {
+                        segment: rsegment,
+                        child: node6,
+                    },
+                    Edge {
+                        segment: rsegment,
+                        child: node4,
+                    },
+                ],
+                vec![
+                    Edge {
+                        segment: lsegment,
+                        child: node5,
+                    },
+                    Edge {
+                        segment: lsegment,
+                        child: node6,
+                    },
+                    Edge {
+                        segment: lsegment,
+                        child: node4,
+                    },
+                    Edge {
+                        segment: rsegment,
+                        child: node3,
+                    },
+                    Edge {
+                        segment: rsegment,
+                        child: node5,
+                    },
+                ],
+                vec![],
+                vec![],
+                vec![],
+                vec![],
+            ];
+
+            let graph = Graph {
+                birth_time,
+                ancestry,
+                edges,
+            };
+            Self {
+                node0,
+                node1,
+                node2,
+                node3,
+                node4,
+                node5,
+                node6,
+                graph,
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -285,7 +412,7 @@ mod test_standard_case {
             let (q, lost_edges) = build_queue(&graph, *node, &children_to_check[node.as_index()]);
             // The latter case is "no overlaps with children" == extinct node
             if q.len() == 1 || q.is_empty() {
-                // FIXME: don't do this -- it is bad for mutation 
+                // FIXME: don't do this -- it is bad for mutation
                 // simplification
                 graph.ancestry[node.as_index()].clear();
                 for edge in graph.edges[node.as_index()].iter() {
@@ -488,6 +615,50 @@ mod test_standard_case {
                 graph.edges[0].contains(&edge),
                 "{edge:?}, {:?}",
                 graph.edges[0]
+            );
+        }
+    }
+
+    #[test]
+    fn test_topology2() {
+        let graph_fixtures::Topology2 {
+            node0,
+            node1,
+            node2,
+            node3,
+            node4,
+            node5,
+            node6,
+            mut graph,
+        } = graph_fixtures::Topology2::new();
+
+        let mut children_to_check = vec![
+            vec![1_usize, 2_usize],
+            vec![3_usize, 4, 6],
+            vec![4_usize, 5_usize, 3, 6],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+        ];
+
+        // Seems we need this in graph!
+        let mut parents = vec![
+            None,
+            Some(vec![0_usize]),
+            Some(vec![0_usize]),
+            Some(vec![1_usize, 2]),
+            Some(vec![2_usize, 1]),
+            Some(vec![2_usize]),
+            Some(vec![2_usize]),
+        ];
+        let nodes = (0..graph.birth_time.len()).map(Node).collect::<Vec<Node>>();
+        graph = propagate_changes(&nodes, graph, &mut parents, &mut children_to_check);
+
+        for node in 0..graph.ancestry.len() {
+            println!(
+                "{node} => {:?}, {:?}",
+                graph.ancestry[node], graph.edges[node]
             );
         }
     }
