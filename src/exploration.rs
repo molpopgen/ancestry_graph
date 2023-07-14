@@ -507,7 +507,37 @@ mod test_standard_case {
         children_to_check: &mut Vec<Vec<usize>>,
         graph: &mut Graph,
     ) {
-        todo!()
+        // Remap the unary node to point to child
+        graph.ancestry[node.as_index()][0].node = overlaps.overlaps[0].node;
+        for edge in graph.edges[node.as_index()].iter() {
+            if let Some(node_parents) = &parents[node.as_index()] {
+                for &parent in node_parents.iter() {
+                    // NOTE: unclear on the utility of this...
+                    // The ONE benefit is that it will let us
+                    // NOT CLEAR the unary ancestry from an extinct node,
+                    // making mutation simplification more feasible.
+                    if let Some(needle) = children_to_check[parent]
+                        .iter()
+                        .position(|x| x == &node.as_index())
+                    {
+                        children_to_check[parent].remove(needle);
+                    }
+
+                    if !children_to_check[parent].contains(&edge.child.as_index()) {
+                        children_to_check[parent].push(edge.child.as_index());
+                    }
+                }
+            }
+            if let Some(cparents) = &mut parents[edge.child.as_index()] {
+                if let Some(needle) = cparents.iter().position(|x| x == &node.as_index()) {
+                    cparents.remove(needle);
+                }
+            }
+        }
+        // Set node status to "extinct"
+        graph.edges[node.as_index()].clear();
+        graph.birth_time[node.as_index()] = None;
+        parents[node.as_index()] = None;
     }
 
     fn process_coalescent_overlap(
@@ -517,7 +547,12 @@ mod test_standard_case {
         children_to_check: &mut Vec<Vec<usize>>,
         graph: &mut Graph,
     ) {
-        todo!()
+        for o in overlaps.overlaps {
+            graph.edges[node.as_index()].push(Edge {
+                segment: o.segment,
+                child: o.node,
+            });
+        }
     }
 
     fn process_overlaps(
