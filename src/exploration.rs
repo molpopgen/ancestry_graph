@@ -460,21 +460,38 @@ mod test_standard_case {
         let mut edges_not_found = vec![];
         for (idx, e) in graph.ancestry[node.as_index()].iter().enumerate() {
             let mut found = false;
-            //while let Some(child) = children.pop() {
             for &child in children.iter() {
                 println!("child {child} has ancestry {:?}", graph.ancestry[child]);
                 for a in graph.ancestry[child].iter() {
-                    println!("child segment is {a:?}");
-                    if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
-                        let left = std::cmp::max(e.segment.left, a.segment.left);
-                        let right = std::cmp::max(e.segment.right, a.segment.right);
-                        if a.node == e.node {
-                            found = true;
+                    if a.node != Node(child) {
+                        // it is unary
+                        //for e in graph.edges[node.as_index()].iter() {
+                            for ua in graph.ancestry[a.node.as_index()].iter() {
+                                let left = std::cmp::max(e.segment.left, ua.segment.left);
+                                let right = std::cmp::max(e.segment.right, ua.segment.right);
+                                if ua.node == e.node {
+                                    found = true;
+                                }
+                                q.push(Ancestry {
+                                    segment: Segment { left, right },
+                                    node: ua.node,
+                                });
+                            }
+                        //}
+                    } else {
+                        // the overlap is coalescent
+                        println!("child segment is {a:?}");
+                        if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
+                            let left = std::cmp::max(e.segment.left, a.segment.left);
+                            let right = std::cmp::max(e.segment.right, a.segment.right);
+                            if a.node == e.node {
+                                found = true;
+                            }
+                            q.push(Ancestry {
+                                segment: Segment { left, right },
+                                node: a.node,
+                            });
                         }
-                        q.push(Ancestry {
-                            segment: Segment { left, right },
-                            node: a.node,
-                        });
                     }
                 }
             }
