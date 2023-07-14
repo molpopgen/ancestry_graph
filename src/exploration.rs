@@ -263,15 +263,16 @@ mod test_standard_case {
     fn propagate_changes(
         nodes: &[Node],
         graph: Graph,
-        children_to_check: Vec<Vec<usize>>,
-        parents: Vec<Option<Vec<usize>>>,
+        parents: &mut Vec<Option<Vec<usize>>>,
+        children_to_check: &mut Vec<Vec<usize>>,
     ) -> Graph {
         let mut graph = graph;
-        let mut children_to_check = children_to_check;
 
-        todo!("it seems like we should be able to check if an existing anc segment changes and, if so, queue the parent for updating?");
+        //  todo!("it seems like we should be able to check if an existing anc segment changes and, if so, queue the parent for updating?");
         // backwards in time thru nodes.
         for node in nodes.iter().rev() {
+            println!("{children_to_check:?}");
+            println!("{parents:?}");
             let (q, lost_edges) = build_queue(&graph, *node, &children_to_check[node.as_index()]);
             // The latter case is "no overlaps with children" == extinct node
             if q.len() == 1 || q.is_empty() {
@@ -279,6 +280,16 @@ mod test_standard_case {
                 if let Some(parents) = &parents[node.as_index()] {
                     for edge in graph.edges[node.as_index()].iter() {
                         for &parent in parents {
+                            // NOTE: unclear on the utility of this...
+                            // The ONE benefit is that it will let us
+                            // NOT CLEAR the unary ancestry from an extinct node,
+                            // making mutation simplification more feasible.
+                            if let Some(needle) = children_to_check[parent]
+                                .iter()
+                                .position(|x| x == &node.as_index())
+                            {
+                                children_to_check[parent].remove(needle);
+                            }
                             if !children_to_check[parent].contains(&edge.child.as_index()) {
                                 children_to_check[parent].push(edge.child.as_index());
                             }
@@ -288,6 +299,7 @@ mod test_standard_case {
                 // Set node status to "extinct"
                 graph.edges[node.as_index()].clear();
                 graph.birth_time[node.as_index()] = None;
+                parents[node.as_index()]=None;
             } else if q.len() > 1 {
                 println!("overlaps {node:?}: {q:?}");
                 assert!(lost_edges.windows(2).all(|w| w[0] < w[1]));
@@ -331,7 +343,7 @@ mod test_standard_case {
         // because they are births.
         // We skip that for now.
         let nodes = vec![node0, node1, node2];
-        let children_to_check = vec![
+        let mut children_to_check = vec![
             vec![1_usize, 2_usize],
             vec![3_usize],
             vec![4_usize],
@@ -340,7 +352,7 @@ mod test_standard_case {
         ];
 
         // Seems we need this in graph!
-        let parents = vec![
+        let mut parents = vec![
             None,
             Some(vec![0_usize]),
             Some(vec![0_usize]),
@@ -348,7 +360,7 @@ mod test_standard_case {
             Some(vec![2_usize]),
         ];
 
-        graph = propagate_changes(&nodes, graph, children_to_check, parents);
+        graph = propagate_changes(&nodes, graph, &mut parents, &mut children_to_check);
 
         for node in 0..graph.ancestry.len() {
             println!(
@@ -394,7 +406,7 @@ mod test_standard_case {
         // because they are births.
         // We skip that for now.
         let nodes = vec![node0, node1, node2];
-        let children_to_check = vec![
+        let mut children_to_check = vec![
             vec![1_usize, 2_usize],
             vec![3_usize],
             vec![4_usize, 5_usize],
@@ -405,7 +417,7 @@ mod test_standard_case {
         assert_eq!(graph.edges[2].len(), 2);
 
         // Seems we need this in graph!
-        let parents = vec![
+        let mut parents = vec![
             None,
             Some(vec![0_usize]),
             Some(vec![0_usize]),
@@ -414,7 +426,7 @@ mod test_standard_case {
             Some(vec![2_usize]),
         ];
 
-        graph = propagate_changes(&nodes, graph, children_to_check, parents);
+        graph = propagate_changes(&nodes, graph, &mut  parents, &mut children_to_check);
 
         for node in 0..graph.ancestry.len() {
             println!(
