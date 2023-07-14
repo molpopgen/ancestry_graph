@@ -500,6 +500,40 @@ mod test_standard_case {
         (q, edges_not_found)
     }
 
+    fn process_unary_overlap(
+        node: Node,
+        overlaps: &Overlaps,
+        parents: &mut Vec<Option<Vec<usize>>>,
+        children_to_check: &mut Vec<Vec<usize>>,
+        graph: &mut Graph,
+    ) {
+        todo!()
+    }
+
+    fn process_coalescent_overlap(
+        node: Node,
+        overlaps: &Overlaps,
+        parents: &mut Vec<Option<Vec<usize>>>,
+        children_to_check: &mut Vec<Vec<usize>>,
+        graph: &mut Graph,
+    ) {
+        todo!()
+    }
+
+    fn process_overlaps(
+        node: Node,
+        overlaps: &Overlaps,
+        parents: &mut Vec<Option<Vec<usize>>>,
+        children_to_check: &mut Vec<Vec<usize>>,
+        graph: &mut Graph,
+    ) {
+        match overlaps.overlaps.len() {
+            0 => panic!(),
+            1 => process_unary_overlap(node, overlaps, parents, children_to_check, graph),
+            _ => process_coalescent_overlap(node, overlaps, parents, children_to_check, graph),
+        }
+    }
+
     fn propagate_changes(
         nodes: &[Node],
         graph: Graph,
@@ -515,68 +549,72 @@ mod test_standard_case {
             println!("{parents:?}");
             let (q, lost_edges) = build_queue(&graph, *node, &children_to_check[node.as_index()]);
             println!("q =  {q:?}");
-            // The latter case is "no overlaps with children" == extinct node
-            if q.len() == 1 || q.is_empty() {
-                // FIXME: don't do this -- it is bad for mutation
-                // simplification
-                graph.ancestry[node.as_index()].clear();
-                for edge in graph.edges[node.as_index()].iter() {
-                    if let Some(node_parents) = &parents[node.as_index()] {
-                        for &parent in node_parents.iter() {
-                            // NOTE: unclear on the utility of this...
-                            // The ONE benefit is that it will let us
-                            // NOT CLEAR the unary ancestry from an extinct node,
-                            // making mutation simplification more feasible.
-                            if let Some(needle) = children_to_check[parent]
-                                .iter()
-                                .position(|x| x == &node.as_index())
-                            {
-                                children_to_check[parent].remove(needle);
-                            }
-
-                            if !children_to_check[parent].contains(&edge.child.as_index()) {
-                                children_to_check[parent].push(edge.child.as_index());
-                            }
-                        }
-                    }
-                    if let Some(cparents) = &mut parents[edge.child.as_index()] {
-                        if let Some(needle) = cparents.iter().position(|x| x == &node.as_index()) {
-                            cparents.remove(needle);
-                        }
-                    }
-                }
-                // Set node status to "extinct"
-                graph.edges[node.as_index()].clear();
-                graph.birth_time[node.as_index()] = None;
-                parents[node.as_index()] = None;
-            } else if q.len() > 1 {
-                println!("overlaps {node:?}: {q:?}");
-                assert!(lost_edges.windows(2).all(|w| w[0] < w[1]));
-
-                // Remove lost edges.
-                for lost in lost_edges.iter().rev() {
-                    graph.edges[node.as_index()].remove(*lost);
-                }
-
-                // Insert overlaps.
-                // NOTE: this will do bad things if a node
-                // is retained as an edge -- we won't move it,
-                // and we'll re-push it.
-                println!("current edges = {:?}", graph.edges[node.as_index()]);
-                graph.edges[node.as_index()].clear();
-                for a in q {
-                    println!("Adding edge to node {:?}", a.node);
-                    graph.edges[node.as_index()].push(Edge {
-                        segment: a.segment,
-                        child: a.node,
-                    });
-                    if let Some(cparents) = &mut parents[a.node.as_index()] {
-                        if !cparents.contains(&node.as_index()) {
-                            cparents.push(node.as_index());
-                        }
-                    }
-                }
+            let mut overlapper = AncestryOverlapper::new(*node, q);
+            while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
+                process_overlaps(*node, &overlaps, parents, children_to_check, &mut graph);
             }
+            // The latter case is "no overlaps with children" == extinct node
+            //if q.len() == 1 || q.is_empty() {
+            //    // FIXME: don't do this -- it is bad for mutation
+            //    // simplification
+            //    graph.ancestry[node.as_index()].clear();
+            //    for edge in graph.edges[node.as_index()].iter() {
+            //        if let Some(node_parents) = &parents[node.as_index()] {
+            //            for &parent in node_parents.iter() {
+            //                // NOTE: unclear on the utility of this...
+            //                // The ONE benefit is that it will let us
+            //                // NOT CLEAR the unary ancestry from an extinct node,
+            //                // making mutation simplification more feasible.
+            //                if let Some(needle) = children_to_check[parent]
+            //                    .iter()
+            //                    .position(|x| x == &node.as_index())
+            //                {
+            //                    children_to_check[parent].remove(needle);
+            //                }
+
+            //                if !children_to_check[parent].contains(&edge.child.as_index()) {
+            //                    children_to_check[parent].push(edge.child.as_index());
+            //                }
+            //            }
+            //        }
+            //        if let Some(cparents) = &mut parents[edge.child.as_index()] {
+            //            if let Some(needle) = cparents.iter().position(|x| x == &node.as_index()) {
+            //                cparents.remove(needle);
+            //            }
+            //        }
+            //    }
+            //    // Set node status to "extinct"
+            //    graph.edges[node.as_index()].clear();
+            //    graph.birth_time[node.as_index()] = None;
+            //    parents[node.as_index()] = None;
+            //} else if q.len() > 1 {
+            //    println!("overlaps {node:?}: {q:?}");
+            //    assert!(lost_edges.windows(2).all(|w| w[0] < w[1]));
+
+            //    // Remove lost edges.
+            //    for lost in lost_edges.iter().rev() {
+            //        graph.edges[node.as_index()].remove(*lost);
+            //    }
+
+            //    // Insert overlaps.
+            //    // NOTE: this will do bad things if a node
+            //    // is retained as an edge -- we won't move it,
+            //    // and we'll re-push it.
+            //    println!("current edges = {:?}", graph.edges[node.as_index()]);
+            //    graph.edges[node.as_index()].clear();
+            //    for a in q {
+            //        println!("Adding edge to node {:?}", a.node);
+            //        graph.edges[node.as_index()].push(Edge {
+            //            segment: a.segment,
+            //            child: a.node,
+            //        });
+            //        if let Some(cparents) = &mut parents[a.node.as_index()] {
+            //            if !cparents.contains(&node.as_index()) {
+            //                cparents.push(node.as_index());
+            //            }
+            //        }
+            //    }
+            //}
         }
 
         graph
