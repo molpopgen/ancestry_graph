@@ -34,11 +34,13 @@ struct Overlaps<'overlapper> {
     overlaps: &'overlapper [Ancestry],
 }
 
+#[derive(Clone, Copy, Debug)]
 enum ChangeType {
     Loss,
     Overlap,
 }
 
+#[derive(Clone, Copy, Debug)]
 struct AncestryChange {
     segment: Segment,
     node: Node,
@@ -586,6 +588,7 @@ mod test_standard_case {
     fn propagate_changes(
         nodes: &[Node],
         graph: Graph,
+        ancestry_changes: &mut [Vec<AncestryChange>],
         parents: &mut Vec<Option<Vec<usize>>>,
         children_to_check: &mut Vec<Vec<usize>>,
     ) -> Graph {
@@ -701,7 +704,15 @@ mod test_standard_case {
             Some(vec![2_usize]),
         ];
 
-        graph = propagate_changes(&nodes, graph, &mut parents, &mut children_to_check);
+        let mut ancestry_changes = vec![vec![]; graph.birth_time.len()];
+
+        graph = propagate_changes(
+            &nodes,
+            graph,
+            &mut ancestry_changes,
+            &mut parents,
+            &mut children_to_check,
+        );
 
         for node in 0..graph.ancestry.len() {
             println!(
@@ -776,7 +787,14 @@ mod test_standard_case {
             Some(vec![2_usize]),
         ];
 
-        graph = propagate_changes(&nodes, graph, &mut parents, &mut children_to_check);
+        let mut ancestry_changes = vec![vec![]; graph.birth_time.len()];
+        graph = propagate_changes(
+            &nodes,
+            graph,
+            &mut ancestry_changes,
+            &mut parents,
+            &mut children_to_check,
+        );
 
         for node in 0..graph.ancestry.len() {
             println!(
@@ -847,7 +865,14 @@ mod test_standard_case {
             Some(vec![2_usize]),
         ];
         let nodes = (0..3).map(Node).collect::<Vec<Node>>();
-        graph = propagate_changes(&nodes, graph, &mut parents, &mut children_to_check);
+        let mut ancestry_changes = vec![vec![]; graph.birth_time.len()];
+        graph = propagate_changes(
+            &nodes,
+            graph,
+            &mut ancestry_changes,
+            &mut parents,
+            &mut children_to_check,
+        );
 
         for node in 0..graph.ancestry.len() {
             println!(
