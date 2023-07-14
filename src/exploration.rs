@@ -213,6 +213,12 @@ mod graph_fixtures {
 mod test_standard_case {
     use super::*;
 
+    // NOTE: ancestry to ancestry overlap is flawed:
+    // * unary ancestry is used to mutation simplification
+    // * therefore, we will FALSELY detect overlaps later
+    //
+    // POSSIBLE SOLUTION: label ancestry as unary or overlap,
+    // and use that in combination w/options re: retaining unary status
     fn build_queue(graph: &Graph, node: Node, children: &[usize]) -> (Vec<Ancestry>, Vec<usize>) {
         println!("{node:?} <-- {children:?}");
         let mut q = vec![];
