@@ -936,3 +936,98 @@ mod test_standard_case {
         );
     }
 }
+
+#[test]
+fn nothing_to_queue() {
+    let edges = [0, 1];
+    let ancestry = [[0], [1]];
+
+    let mut q = vec![];
+
+    for e in &edges {
+        for a in &ancestry[*e] {
+            if a != e {
+                q.push(*a);
+            }
+        }
+    }
+    assert!(q.is_empty());
+}
+
+#[test]
+fn one_to_queue() {
+    let edges = [0, 1];
+    let ancestry = [[0], [2]];
+
+    let mut q = vec![];
+
+    for e in &edges {
+        for a in &ancestry[*e] {
+            if a != e {
+                q.push(*a);
+            }
+        }
+    }
+    assert!(!q.is_empty());
+    assert_eq!(q, [2]);
+
+    // Now, we "just" have to update the child of 1 to point to 2!!
+}
+
+#[test]
+fn gain_overlap_from_birth() {
+    // Some transmission
+    let edges = vec![vec![1, 2], vec![], vec![]];
+    // All nodes map to self
+    let ancestry = [vec![0], vec![1], vec![2]];
+    let mut q = vec![];
+
+    for e in &edges[0] {
+        for a in &ancestry[*e] {
+            // either a different node OR
+            // current parental anc. segment "maps to self"
+            if a != e || ancestry[0][0] == 0 {
+                q.push(*a);
+            }
+        }
+    }
+    assert!(!q.is_empty());
+    assert_eq!(q, [1, 2]);
+}
+
+#[test]
+fn detect_edge_death() {
+    todo!("this need refinement, but may be in the right direction");
+    struct Change {
+        node: usize,
+        change_type: ChangeType,
+    }
+    // Some transmission
+    let edges = vec![vec![1, 2], vec![], vec![]];
+    // Node 2 has "gone totally extinct"
+    // NOTE: I **think** that this would normally happen
+    // only if a node is born and then has no offspring?
+    // OR, we need some way to represent an "overlap to"
+    let ancestry = [vec![0], vec![1], vec![]];
+    let mut q = vec![];
+    let mut edge_losses = vec![];
+    for e in &edges[0] {
+        let mut overlaps = 0;
+        for a in &ancestry[*e] {
+            // child node ancestry is either unary
+            // or
+            // current parental anc. segment "maps to self"
+            if a != e || ancestry[0][0] == 0 {
+                overlaps += 1;
+                q.push(*a);
+            }
+        }
+        if overlaps == 0 {
+            edge_losses.push(*e);
+        }
+    }
+    assert!(!q.is_empty());
+    assert_eq!(q, [1]);
+    assert!(!edge_losses.is_empty());
+    assert_eq!(edge_losses, [2]);
+}
