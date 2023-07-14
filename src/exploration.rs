@@ -1,7 +1,7 @@
 use crate::Node;
 use crate::Segment;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct Ancestry {
     segment: Segment,
     node: Node,
@@ -17,6 +17,95 @@ pub struct Graph {
     birth_time: Vec<Option<i64>>,
     ancestry: Vec<Vec<Ancestry>>,
     edges: Vec<Vec<Edge>>,
+}
+
+struct AncestryOverlapper {
+    queue: Vec<Ancestry>,
+    num_overlaps: usize,
+    current_overlap: usize,
+    parent: Node,
+    left: i64,
+    right: i64,
+    overlaps: Vec<Ancestry>,
+}
+
+impl AncestryOverlapper {
+    fn new(parent: Node, queue: Vec<Ancestry>) -> Self {
+        let mut queue = queue;
+        let num_overlaps = queue.len();
+        if num_overlaps > 0 {
+            queue.push(Ancestry {
+                segment: Segment::sentinel(),
+                node: parent,
+            });
+        }
+        let right = if num_overlaps > 0 {
+            queue[0].segment.right()
+        } else {
+            i64::MAX
+        };
+        let left = i64::MAX;
+        Self {
+            queue,
+            num_overlaps,
+            current_overlap: 0,
+            parent,
+            left,
+            right,
+            overlaps: vec![],
+        }
+    }
+    fn filter_overlaps(&mut self) {
+        self.overlaps.retain(|x| x.segment.right() > self.left);
+    }
+
+    fn update_right_from_overlaps(&mut self) {
+        self.right = match self
+            .overlaps
+            .iter()
+            .map(|&overlap| overlap.segment.right())
+            .min()
+        {
+            Some(right) => right,
+            None => self.right,
+        };
+    }
+
+    fn calculate_next_overlap_set(&mut self) -> Option<&[Ancestry]> {
+        if self.current_overlap < self.num_overlaps {
+            self.left = self.right;
+            self.filter_overlaps();
+
+            // TODO: this should be a function call
+            if self.overlaps.is_empty() {
+                self.left = self.queue[self.current_overlap].segment.left();
+            }
+            self.current_overlap += self
+                .queue
+                .iter()
+                .skip(self.current_overlap)
+                .take_while(|x| x.segment.left() == self.left)
+                .inspect(|x| {
+                    self.right = std::cmp::min(self.right, x.segment.right());
+                    self.overlaps.push(**x);
+                })
+                .count();
+            self.update_right_from_overlaps();
+            self.right = std::cmp::min(self.right, self.queue[self.current_overlap].segment.left());
+            Some(self.overlaps.as_slice())
+        } else {
+            if !self.overlaps.is_empty() {
+                self.left = self.right;
+                self.filter_overlaps();
+            }
+            if !self.overlaps.is_empty() {
+                self.update_right_from_overlaps();
+                Some(self.overlaps.as_slice())
+            } else {
+                None
+            }
+        }
+    }
 }
 
 #[cfg(test)]
