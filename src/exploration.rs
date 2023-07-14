@@ -277,9 +277,9 @@ mod test_standard_case {
             // The latter case is "no overlaps with children" == extinct node
             if q.len() == 1 || q.is_empty() {
                 graph.ancestry[node.as_index()].clear();
-                if let Some(parents) = &parents[node.as_index()] {
+                if let Some(node_parents) = &parents[node.as_index()] {
                     for edge in graph.edges[node.as_index()].iter() {
-                        for &parent in parents {
+                        for &parent in node_parents.iter() {
                             // NOTE: unclear on the utility of this...
                             // The ONE benefit is that it will let us
                             // NOT CLEAR the unary ancestry from an extinct node,
@@ -290,16 +290,24 @@ mod test_standard_case {
                             {
                                 children_to_check[parent].remove(needle);
                             }
+
                             if !children_to_check[parent].contains(&edge.child.as_index()) {
                                 children_to_check[parent].push(edge.child.as_index());
                             }
                         }
                     }
                 }
+                for edge in graph.edges[node.as_index()].iter() {
+                    if let Some(cparents) = &mut parents[edge.child.as_index()] {
+                        if let Some(needle) = cparents.iter().position(|x| x == &node.as_index()) {
+                            cparents.remove(needle);
+                        }
+                    }
+                }
                 // Set node status to "extinct"
                 graph.edges[node.as_index()].clear();
                 graph.birth_time[node.as_index()] = None;
-                parents[node.as_index()]=None;
+                parents[node.as_index()] = None;
             } else if q.len() > 1 {
                 println!("overlaps {node:?}: {q:?}");
                 assert!(lost_edges.windows(2).all(|w| w[0] < w[1]));
@@ -321,6 +329,11 @@ mod test_standard_case {
                         segment: a.segment,
                         child: a.node,
                     });
+                    if let Some(cparents) = &mut parents[a.node.as_index()] {
+                        if !cparents.contains(&node.as_index()) {
+                            cparents.push(node.as_index());
+                        }
+                    }
                 }
             }
         }
@@ -389,7 +402,16 @@ mod test_standard_case {
                 graph.edges[0]
             );
         }
+        //validate parents
+        for node in [3, 4] {
+            assert!(parents[node].as_ref().unwrap().contains(&0));
+            assert_eq!(parents[node].as_ref().unwrap().len(), 1);
+        }
+        for node in [0, 1, 2] {
+            assert!(parents[node].is_none());
+        }
     }
+
     #[test]
     fn test_topology1() {
         let graph_fixtures::Topology1 {
@@ -426,7 +448,7 @@ mod test_standard_case {
             Some(vec![2_usize]),
         ];
 
-        graph = propagate_changes(&nodes, graph, &mut  parents, &mut children_to_check);
+        graph = propagate_changes(&nodes, graph, &mut parents, &mut children_to_check);
 
         for node in 0..graph.ancestry.len() {
             println!(
