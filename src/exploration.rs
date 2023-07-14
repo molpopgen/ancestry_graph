@@ -29,6 +29,11 @@ struct AncestryOverlapper {
     overlaps: Vec<Ancestry>,
 }
 
+struct Overlaps<'overlapper> {
+    segment: Segment,
+    overlaps: &'overlapper [Ancestry],
+}
+
 impl AncestryOverlapper {
     fn new(parent: Node, queue: Vec<Ancestry>) -> Self {
         let mut queue = queue;
@@ -71,7 +76,7 @@ impl AncestryOverlapper {
         };
     }
 
-    fn calculate_next_overlap_set(&mut self) -> Option<&[Ancestry]> {
+    fn calculate_next_overlap_set(&mut self) -> Option<Overlaps> {
         if self.current_overlap < self.num_overlaps {
             self.left = self.right;
             self.filter_overlaps();
@@ -92,7 +97,10 @@ impl AncestryOverlapper {
                 .count();
             self.update_right_from_overlaps();
             self.right = std::cmp::min(self.right, self.queue[self.current_overlap].segment.left());
-            Some(self.overlaps.as_slice())
+            Some(Overlaps {
+                segment: Segment::new(self.left, self.right).unwrap(),
+                overlaps: self.overlaps.as_slice(),
+            })
         } else {
             if !self.overlaps.is_empty() {
                 self.left = self.right;
@@ -100,7 +108,10 @@ impl AncestryOverlapper {
             }
             if !self.overlaps.is_empty() {
                 self.update_right_from_overlaps();
-                Some(self.overlaps.as_slice())
+                Some(Overlaps {
+                    segment: Segment::new(self.left, self.right).unwrap(),
+                    overlaps: self.overlaps.as_slice(),
+                })
             } else {
                 None
             }
