@@ -459,7 +459,7 @@ mod test_standard_case {
 
         let mut edges_not_found = vec![];
         for (idx, e) in graph.ancestry[node.as_index()].iter().enumerate() {
-            let mut found = false;
+            //let mut found = false;
             for &child in children.iter() {
                 println!("child {child} has ancestry {:?}", graph.ancestry[child]);
                 for a in graph.ancestry[child].iter() {
@@ -469,9 +469,9 @@ mod test_standard_case {
                             for ua in graph.ancestry[a.node.as_index()].iter() {
                                 let left = std::cmp::max(e.segment.left, ua.segment.left);
                                 let right = std::cmp::max(e.segment.right, ua.segment.right);
-                                if ua.node == e.node {
-                                    found = true;
-                                }
+                                //if ua.node == e.node {
+                                //    found = true;
+                                //}
                                 q.push(Ancestry {
                                     segment: Segment { left, right },
                                     node: ua.node,
@@ -484,9 +484,9 @@ mod test_standard_case {
                         if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
                             let left = std::cmp::max(e.segment.left, a.segment.left);
                             let right = std::cmp::max(e.segment.right, a.segment.right);
-                            if a.node == e.node {
-                                found = true;
-                            }
+                            //if a.node == e.node {
+                            //    found = true;
+                            //}
                             q.push(Ancestry {
                                 segment: Segment { left, right },
                                 node: a.node,
@@ -495,10 +495,10 @@ mod test_standard_case {
                     }
                 }
             }
-            if !found {
-                println!("parental node {e:?} has no overlaps");
-                edges_not_found.push(idx);
-            }
+            //if !found {
+            //    println!("parental node {e:?} has no overlaps");
+            //    edges_not_found.push(idx);
+            //}
             // Below is "classic tskit" style
             //for a in graph.ancestry[e.child.as_index()].iter() {
             //    if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
