@@ -410,6 +410,7 @@ mod test_standard_case {
             println!("{children_to_check:?}");
             println!("{parents:?}");
             let (q, lost_edges) = build_queue(&graph, *node, &children_to_check[node.as_index()]);
+            println!("q =  {q:?}");
             // The latter case is "no overlaps with children" == extinct node
             if q.len() == 1 || q.is_empty() {
                 // FIXME: don't do this -- it is bad for mutation
@@ -652,7 +653,7 @@ mod test_standard_case {
             Some(vec![2_usize]),
             Some(vec![2_usize]),
         ];
-        let nodes = (0..graph.birth_time.len()).map(Node).collect::<Vec<Node>>();
+        let nodes = (0..3).map(Node).collect::<Vec<Node>>();
         graph = propagate_changes(&nodes, graph, &mut parents, &mut children_to_check);
 
         for node in 0..graph.ancestry.len() {
