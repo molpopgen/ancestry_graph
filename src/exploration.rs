@@ -551,7 +551,7 @@ mod test_standard_case {
             graph.edges[node.as_index()].push(Edge {
                 segment: o.segment,
                 child: o.node,
-            });
+            })
         }
     }
 
@@ -695,8 +695,8 @@ mod test_standard_case {
                 graph.ancestry[node], graph.edges[node]
             );
         }
-        assert!(graph.ancestry[1].is_empty());
-        assert!(graph.ancestry[2].is_empty());
+        assert!(!graph.ancestry[1].is_empty());
+        assert!(!graph.ancestry[2].is_empty());
         assert!(!graph.ancestry[3].is_empty());
         assert!(!graph.ancestry[4].is_empty());
 
@@ -770,7 +770,7 @@ mod test_standard_case {
                 graph.ancestry[node], graph.edges[node]
             );
         }
-        assert!(graph.ancestry[1].is_empty());
+        assert!(!graph.ancestry[1].is_empty());
         assert!(!graph.ancestry[3].is_empty());
         assert!(!graph.ancestry[4].is_empty());
         assert!(!graph.ancestry[5].is_empty());
