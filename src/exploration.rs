@@ -519,31 +519,23 @@ mod test_standard_case {
     fn process_unary_overlap(
         node: Node,
         overlaps: &Overlaps,
+        ancestry_changes: &mut [Vec<AncestryChange>],
         parents: &mut Vec<Option<Vec<usize>>>,
         children_to_check: &mut Vec<Vec<usize>>,
         graph: &mut Graph,
     ) {
         // Remap the unary node to point to child
         graph.ancestry[node.as_index()][0].node = overlaps.overlaps[0].node;
+        if let Some(node_parents) = &parents[node.as_index()] {
+            for parent in node_parents {
+                ancestry_changes[*parent].push(AncestryChange {
+                    segment: overlaps.overlaps[0].segment,
+                    node,
+                    change_type: ChangeType::Loss,
+                })
+            }
+        }
         for edge in graph.edges[node.as_index()].iter() {
-            //if let Some(node_parents) = &parents[node.as_index()] {
-            //    for &parent in node_parents.iter() {
-            //        // NOTE: unclear on the utility of this...
-            //        // The ONE benefit is that it will let us
-            //        // NOT CLEAR the unary ancestry from an extinct node,
-            //        // making mutation simplification more feasible.
-            //        if let Some(needle) = children_to_check[parent]
-            //            .iter()
-            //            .position(|x| x == &node.as_index())
-            //        {
-            //            children_to_check[parent].remove(needle);
-            //        }
-
-            //        if !children_to_check[parent].contains(&edge.child.as_index()) {
-            //            children_to_check[parent].push(edge.child.as_index());
-            //        }
-            //    }
-            //}
             if let Some(cparents) = &mut parents[edge.child.as_index()] {
                 if let Some(needle) = cparents.iter().position(|x| x == &node.as_index()) {
                     cparents.remove(needle);
@@ -559,6 +551,7 @@ mod test_standard_case {
     fn process_coalescent_overlap(
         node: Node,
         overlaps: &Overlaps,
+        ancestry_changes: &mut [Vec<AncestryChange>],
         parents: &mut Vec<Option<Vec<usize>>>,
         children_to_check: &mut Vec<Vec<usize>>,
         graph: &mut Graph,
@@ -567,21 +560,52 @@ mod test_standard_case {
             graph.edges[node.as_index()].push(Edge {
                 segment: o.segment,
                 child: o.node,
-            })
+            });
+            if let Some(cparents) = &mut parents[o.node.as_index()] {
+                if !cparents.contains(&node.as_index()) {
+                    cparents.push(node.as_index());
+                }
+            }
+        }
+        // This may not be right
+        // We are also duplicating code!
+        if let Some(node_parents) = &parents[node.as_index()] {
+            for parent in node_parents {
+                ancestry_changes[*parent].push(AncestryChange {
+                    segment: overlaps.overlaps[0].segment,
+                    node: overlaps.overlaps[0].node,
+                    change_type: ChangeType::Overlap,
+                })
+            }
         }
     }
 
     fn process_overlaps(
         node: Node,
         overlaps: &Overlaps,
+        ancestry_changes: &mut [Vec<AncestryChange>],
         parents: &mut Vec<Option<Vec<usize>>>,
         children_to_check: &mut Vec<Vec<usize>>,
         graph: &mut Graph,
     ) {
         match overlaps.overlaps.len() {
             0 => panic!(),
-            1 => process_unary_overlap(node, overlaps, parents, children_to_check, graph),
-            _ => process_coalescent_overlap(node, overlaps, parents, children_to_check, graph),
+            1 => process_unary_overlap(
+                node,
+                overlaps,
+                ancestry_changes,
+                parents,
+                children_to_check,
+                graph,
+            ),
+            _ => process_coalescent_overlap(
+                node,
+                overlaps,
+                ancestry_changes,
+                parents,
+                children_to_check,
+                graph,
+            ),
         }
     }
 
@@ -599,11 +623,24 @@ mod test_standard_case {
         for node in nodes.iter().rev() {
             println!("{children_to_check:?}");
             println!("{parents:?}");
+            println!("changes = {:?}", ancestry_changes[node.as_index()]);
             let (q, lost_edges) = build_queue(&graph, *node, &children_to_check[node.as_index()]);
             println!("q =  {q:?}");
             let mut overlapper = AncestryOverlapper::new(*node, q);
+            println!("edges = {:?}", graph.edges[node.as_index()]);
+            for loss in ancestry_changes[node.as_index()].iter() {
+                graph.edges[node.as_index()].retain(|edge| edge.child != loss.node);
+            }
+            println!("edges after = {:?}", graph.edges[node.as_index()]);
             while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
-                process_overlaps(*node, &overlaps, parents, children_to_check, &mut graph);
+                process_overlaps(
+                    *node,
+                    &overlaps,
+                    ancestry_changes,
+                    parents,
+                    children_to_check,
+                    &mut graph,
+                );
             }
             // The latter case is "no overlaps with children" == extinct node
             //if q.len() == 1 || q.is_empty() {
