@@ -277,8 +277,8 @@ mod test_standard_case {
             // The latter case is "no overlaps with children" == extinct node
             if q.len() == 1 || q.is_empty() {
                 graph.ancestry[node.as_index()].clear();
-                if let Some(node_parents) = &parents[node.as_index()] {
-                    for edge in graph.edges[node.as_index()].iter() {
+                for edge in graph.edges[node.as_index()].iter() {
+                    if let Some(node_parents) = &parents[node.as_index()] {
                         for &parent in node_parents.iter() {
                             // NOTE: unclear on the utility of this...
                             // The ONE benefit is that it will let us
@@ -296,8 +296,6 @@ mod test_standard_case {
                             }
                         }
                     }
-                }
-                for edge in graph.edges[node.as_index()].iter() {
                     if let Some(cparents) = &mut parents[edge.child.as_index()] {
                         if let Some(needle) = cparents.iter().position(|x| x == &node.as_index()) {
                             cparents.remove(needle);
