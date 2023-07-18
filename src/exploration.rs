@@ -29,6 +29,7 @@ struct AncestryOverlapper {
     overlaps: Vec<Ancestry>,
 }
 
+#[derive(Debug)]
 struct Overlaps<'overlapper> {
     segment: Segment,
     overlaps: &'overlapper [Ancestry],
@@ -556,6 +557,8 @@ mod test_standard_case {
         children_to_check: &mut Vec<Vec<usize>>,
         graph: &mut Graph,
     ) {
+        println!("overlaps for {node:?} are {overlaps:?}");
+        println!("changes for {node:?} are {ancestry_changes:?}");
         for o in overlaps.overlaps {
             // NOTE: this is a hack.
             // We are failing to distinguish gains from losses.
@@ -576,15 +579,15 @@ mod test_standard_case {
         }
         // This may not be right
         // We are also duplicating code!
-        if let Some(node_parents) = &parents[node.as_index()] {
-            for parent in node_parents {
-                ancestry_changes[*parent].push(AncestryChange {
-                    segment: overlaps.overlaps[0].segment,
-                    node: overlaps.overlaps[0].node,
-                    change_type: ChangeType::Overlap,
-                })
-            }
-        }
+        //if let Some(node_parents) = &parents[node.as_index()] {
+        //    for parent in node_parents {
+        //        ancestry_changes[*parent].push(AncestryChange {
+        //            segment: overlaps.overlaps[0].segment,
+        //            node: overlaps.overlaps[0].node,
+        //            change_type: ChangeType::Overlap,
+        //        })
+        //    }
+        //}
     }
 
     fn process_overlaps(
