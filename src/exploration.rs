@@ -1119,7 +1119,7 @@ impl AncestryOverlapper2 {
                 segment: Segment::sentinel(),
                 mapped_node: parent,
                 source_node: parent,
-                change_type: ChangeType::Overlap
+                change_type: ChangeType::Overlap,
             });
         }
         let right = if num_overlaps > 0 {
@@ -1208,7 +1208,11 @@ struct Overlaps2<'overlapper> {
 // and a.source_node == mapped_node) vs mapping "thru" a unary node.
 // The latter is a case where we may need to update and edge's mapping
 // on a given segment.
-fn test_queue2(graph: &Graph, node: Node, changes: &[Vec<AncestryChange2>]) -> Vec<AncestryChange2> {
+fn test_queue2(
+    graph: &Graph,
+    node: Node,
+    changes: &[Vec<AncestryChange2>],
+) -> Vec<AncestryChange2> {
     let mut q = vec![];
 
     for e in graph.edges[node.as_index()].iter() {
@@ -1268,8 +1272,8 @@ fn explore_co_iteration() {
     for node in [node3, node4, node5] {
         ancestry_changes[node.as_index()].push(AncestryChange2 {
             segment: Segment { left: 0, right: 50 },
-            mapped_node:node,
-            source_node:node,
+            mapped_node: node,
+            source_node: node,
             change_type: ChangeType::Overlap,
         });
     }
@@ -1279,13 +1283,41 @@ fn explore_co_iteration() {
             graph.ancestry[node.as_index()]
         );
         // Step 1 is to build a queue based on ancestry/ancestry overlap
-        let q = test_queue(&graph, *node, &children_to_check[node.as_index()]);
+        //let q = test_queue(&graph, *node, &children_to_check[node.as_index()]);
         let q2 = test_queue2(&graph, *node, &ancestry_changes);
-        println!("q = {q:?}");
+        //println!("q = {q:?}");
         println!("q2 = {q2:?}");
-        let mut overlapper = AncestryOverlapper::new(*node, q);
+        //let mut overlapper = AncestryOverlapper::new(*node, q);
+        //let mut aindex = 0_usize;
+        //// Step 2: process each overlap
+        //while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
+        //    // 2a: find the parental ancestry segment corresponding
+        //    //     to the change.
+        //    // NOTE: we should be able to CACHE THIS when building the queue.
+        //    while aindex < graph.ancestry[node.as_index()].len() {
+        //        let a = &graph.ancestry[node.as_index()][aindex];
+        //        if a.segment.right > overlaps.segment.left
+        //            && overlaps.segment.right > a.segment.left
+        //        {
+        //            break;
+        //        }
+        //        aindex += 1;
+        //    }
+        //    println!("{overlaps:?}");
+        //    println!(
+        //        "corresponding ancestry segment = {:?}",
+        //        graph.ancestry[node.as_index()][aindex]
+        //    );
+        //    if graph.ancestry[node.as_index()][aindex].node == *node {
+        //        println!("coalescent");
+        //    } else {
+        //        println!("unary");
+        //    }
+        //}
+        // Pure testing...
+        let mut overlapper = AncestryOverlapper2::new(*node, q2);
         let mut aindex = 0_usize;
-        // Step 2: process each overlap
+        println!("overlapper = {overlapper:?}");
         while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
             // 2a: find the parental ancestry segment corresponding
             //     to the change.
@@ -1299,23 +1331,53 @@ fn explore_co_iteration() {
                 }
                 aindex += 1;
             }
-            println!("{overlaps:?}");
-            println!(
-                "corresponding ancestry segment = {:?}",
-                graph.ancestry[node.as_index()][aindex]
-            );
-            if graph.ancestry[node.as_index()][aindex].node == *node {
-                println!("coalescent");
+            println!("o2 = {overlaps:?}");
+            todo!("not handling losses properlyh!!");
+            if overlaps.overlaps.len() > 1 {
+                for o in overlaps.overlaps.iter() {
+                    // edge maps to a new node
+                    if o.mapped_node != o.source_node {
+                        println!("push");
+                        graph.edges[node.as_index()].push(Edge {
+                            segment: o.segment,
+                            child: o.mapped_node,
+                        });
+                    } else {
+                        println!("pass");
+                    }
+                }
+                graph.ancestry[node.as_index()][aindex].node = *node;
             } else {
                 println!("unary");
+                graph.ancestry[node.as_index()][aindex].node = overlaps.overlaps[0].mapped_node;
+                        ancestry_changes[node.as_index()].push(AncestryChange2 {
+                            segment: overlaps.overlaps[0].segment,
+                            mapped_node: overlaps.overlaps[0].mapped_node,
+                            source_node: *node,
+                            change_type: ChangeType::Loss,
+                        });
+
+                //if let Some(node_parents) = &mut parents[node.as_index()] {
+                //    for parent in node_parents {
+                //        println!("parent of unary node is {parent:?}");
+                //        ancestry_changes[*parent].push(AncestryChange2 {
+                //            segment: overlaps.overlaps[0].segment,
+                //            mapped_node: overlaps.overlaps[0].mapped_node,
+                //            source_node: *node,
+                //            change_type: ChangeType::Loss,
+                //        })
+                //    }
+                //}
             }
         }
-        // Pure testing...
-        let mut overlapper = AncestryOverlapper2::new(*node, q2);
-        println!("overlapper = {overlapper:?}");
-        while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
-            println!("o2 = {overlaps:?}");
-        }
-        todo!()
     }
+    println!("edge after");
+    for e in graph.edges {
+        println!("{e:?}");
+    }
+    println!("ancestry after");
+    for e in graph.ancestry {
+        println!("{e:?}");
+    }
+    todo!()
 }
