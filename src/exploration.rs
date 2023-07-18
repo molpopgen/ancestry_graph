@@ -557,10 +557,17 @@ mod test_standard_case {
         graph: &mut Graph,
     ) {
         for o in overlaps.overlaps {
-            graph.edges[node.as_index()].push(Edge {
+            // NOTE: this is a hack.
+            // We are failing to distinguish gains from losses.
+            if !graph.edges[node.as_index()].contains(&Edge {
                 segment: o.segment,
                 child: o.node,
-            });
+            }) {
+                graph.edges[node.as_index()].push(Edge {
+                    segment: o.segment,
+                    child: o.node,
+                });
+            }
             if let Some(cparents) = &mut parents[o.node.as_index()] {
                 if !cparents.contains(&node.as_index()) {
                     cparents.push(node.as_index());
