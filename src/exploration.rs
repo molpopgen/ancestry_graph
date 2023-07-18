@@ -1041,3 +1041,8 @@ fn detect_edge_death() {
     assert!(!edge_losses.is_empty());
     assert_eq!(edge_losses, [2]);
 }
+
+#[test]
+fn explore_co_iteration() {
+    todo!()
+}
