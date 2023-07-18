@@ -1099,7 +1099,7 @@ fn test_queue2(graph: &Graph, node: Node, changes: &[Vec<AncestryChange>]) -> Ve
     for e in graph.edges[node.as_index()].iter() {
         for a in changes[e.child.as_index()].iter() {
             println!("change is {a:?}, {}", a.node != e.child);
-            if (a.node == e.child)// || matches!(a.change_type, ChangeType::Loss))
+            if a.node == e.child
                 && a.segment.right > e.segment.left
                 && e.segment.right > a.segment.left
             {
