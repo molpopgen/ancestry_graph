@@ -1128,6 +1128,29 @@ fn explore_co_iteration() {
         let q = test_queue(&graph, *node, &children_to_check[node.as_index()]);
         println!("{q:?}");
         let mut overlapper = AncestryOverlapper::new(*node, q);
+        let mut aindex = 0_usize;
+        // Step 2: process each overlap
+        while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
+            // 2a: find the parental ancestry segment corresponding
+            //     to the change.
+            // NOTE: we should be able to CACHE THIS when building the queue.
+            while aindex < graph.ancestry[node.as_index()].len() {
+                let a = &graph.ancestry[node.as_index()][aindex];
+                if a.segment.right > overlaps.segment.left
+                    && overlaps.segment.right > a.segment.left
+                {
+                    break;
+                }
+                aindex += 1;
+            }
+            println!("{overlaps:?}");
+            println!("corresponding ancestry segment = {:?}", graph.ancestry[node.as_index()][aindex]);
+            if graph.ancestry[node.as_index()][aindex].node ==*node{
+                println!("coalescent");
+            }else{
+                println!("unary");
+            }
+        }
         todo!()
     }
 }
