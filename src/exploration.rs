@@ -1204,7 +1204,10 @@ struct Overlaps2<'overlapper> {
     overlaps: &'overlapper [AncestryChange2],
 }
 
-// NOTE: should be looking at overlaps w/ANCESTRY CHANGES!!!
+// NOTE: will need to distinguish mapping to an existing edge (e.child == a.source_node
+// and a.source_node == mapped_node) vs mapping "thru" a unary node.
+// The latter is a case where we may need to update and edge's mapping
+// on a given segment.
 fn test_queue2(graph: &Graph, node: Node, changes: &[Vec<AncestryChange2>]) -> Vec<AncestryChange2> {
     let mut q = vec![];
 
