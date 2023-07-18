@@ -1042,6 +1042,54 @@ fn detect_edge_death() {
     assert_eq!(edge_losses, [2]);
 }
 
+fn test_queue(graph: &Graph, node: Node, children: &[usize]) -> Vec<Ancestry> {
+    println!("{node:?} <-- {children:?}");
+    let mut q = vec![];
+
+    for (idx, e) in graph.ancestry[node.as_index()].iter().enumerate() {
+        for &child in children.iter() {
+            println!("child {child} has ancestry {:?}", graph.ancestry[child]);
+            for a in graph.ancestry[child].iter() {
+                if a.node != Node(child) {
+                    for ua in graph.ancestry[a.node.as_index()].iter() {
+                        let left = std::cmp::max(e.segment.left, ua.segment.left);
+                        let right = std::cmp::max(e.segment.right, ua.segment.right);
+                        q.push(Ancestry {
+                            segment: Segment { left, right },
+                            node: ua.node,
+                        });
+                    }
+                } else {
+                    // the overlap is coalescent
+                    println!("child segment is {a:?}");
+                    if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
+                        let left = std::cmp::max(e.segment.left, a.segment.left);
+                        let right = std::cmp::max(e.segment.right, a.segment.right);
+                        q.push(Ancestry {
+                            segment: Segment { left, right },
+                            node: a.node,
+                        });
+                    }
+                }
+            }
+        }
+        // Below is "classic tskit" style
+        //for a in graph.ancestry[e.child.as_index()].iter() {
+        //    if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
+        //        let left = std::cmp::max(e.segment.left, a.segment.left);
+        //        let right = std::cmp::max(e.segment.right, a.segment.right);
+        //        q.push(Ancestry {
+        //            segment: Segment { left, right },
+        //            node: a.node,
+        //        });
+        //    }
+        //}
+    }
+    println!("{node:?} <-- {children:?}");
+
+    q
+}
+
 #[test]
 fn explore_co_iteration() {
     let graph_fixtures::Topology1 {
@@ -1076,6 +1124,10 @@ fn explore_co_iteration() {
 
     let mut ancestry_changes: Vec<Vec<AncestryChange>> = vec![vec![]; graph.birth_time.len()];
     for node in nodes.iter().rev() {
+        // Step 1 is to build a queue based on ancestry/ancestry overlap
+        let q = test_queue(&graph, *node, &children_to_check[node.as_index()]);
+        println!("{q:?}");
+        let mut overlapper = AncestryOverlapper::new(*node, q);
         todo!()
     }
 }
