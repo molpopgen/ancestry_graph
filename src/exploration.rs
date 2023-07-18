@@ -1094,12 +1094,12 @@ fn test_queue(graph: &Graph, node: Node, children: &[usize]) -> Vec<Ancestry> {
 
 // NOTE: should be looking at overlaps w/ANCESTRY CHANGES!!!
 fn test_queue2(graph: &Graph, node: Node, changes: &[Vec<AncestryChange>]) -> Vec<Ancestry> {
-    todo!("we need a source node concept here");
     let mut q = vec![];
 
     for e in graph.edges[node.as_index()].iter() {
         for a in changes[e.child.as_index()].iter() {
-            if (a.node != e.child || matches!(a.change_type, ChangeType::Loss))
+            println!("change is {a:?}, {}", a.node != e.child);
+            if (a.node == e.child)// || matches!(a.change_type, ChangeType::Loss))
                 && a.segment.right > e.segment.left
                 && e.segment.right > a.segment.left
             {
@@ -1158,7 +1158,10 @@ fn explore_co_iteration() {
         });
     }
     for node in nodes.iter().rev() {
-        println!("getting around to node {node:?}");
+        println!(
+            "getting around to node {node:?}, w/ancestry {:?}",
+            graph.ancestry[node.as_index()]
+        );
         // Step 1 is to build a queue based on ancestry/ancestry overlap
         let q = test_queue(&graph, *node, &children_to_check[node.as_index()]);
         let q2 = test_queue2(&graph, *node, &ancestry_changes);
@@ -1197,6 +1200,6 @@ fn explore_co_iteration() {
         while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
             println!("o2 = {overlaps:?}");
         }
+        todo!()
     }
-    todo!()
 }
