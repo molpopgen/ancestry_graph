@@ -100,6 +100,7 @@ impl<T: SegmentState> AncestrySegment<T> {
 pub struct Node(usize);
 
 impl Node {
+    #[inline(always)]
     fn as_index(&self) -> usize {
         self.0
     }
