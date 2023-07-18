@@ -19,6 +19,7 @@ pub struct Graph {
     edges: Vec<Vec<Edge>>,
 }
 
+#[derive(Debug)]
 struct AncestryOverlapper {
     queue: Vec<Ancestry>,
     num_overlaps: usize,
@@ -106,6 +107,7 @@ impl AncestryOverlapper {
                 .take_while(|x| x.segment.left() == self.left)
                 .inspect(|x| {
                     self.right = std::cmp::min(self.right, x.segment.right());
+                    println!("pushing {x:?}");
                     self.overlaps.push(**x);
                 })
                 .count();
@@ -1090,6 +1092,29 @@ fn test_queue(graph: &Graph, node: Node, children: &[usize]) -> Vec<Ancestry> {
     q
 }
 
+// NOTE: should be looking at overlaps w/ANCESTRY CHANGES!!!
+fn test_queue2(graph: &Graph, node: Node, changes: &[Vec<AncestryChange>]) -> Vec<Ancestry> {
+    let mut q = vec![];
+
+    for e in graph.edges[node.as_index()].iter() {
+        for a in changes[e.child.as_index()].iter() {
+            if (a.node != e.child || matches!(a.change_type, ChangeType::Loss))
+                && a.segment.right > e.segment.left
+                && e.segment.right > a.segment.left
+            {
+                let left = std::cmp::max(e.segment.left, a.segment.left);
+                let right = std::cmp::max(e.segment.right, a.segment.right);
+                q.push(Ancestry {
+                    segment: Segment { left, right },
+                    node: a.node,
+                });
+            }
+        }
+    }
+
+    q
+}
+
 #[test]
 fn explore_co_iteration() {
     let graph_fixtures::Topology1 {
@@ -1123,10 +1148,20 @@ fn explore_co_iteration() {
     ];
 
     let mut ancestry_changes: Vec<Vec<AncestryChange>> = vec![vec![]; graph.birth_time.len()];
+
+    for node in [node3, node4, node5] {
+        ancestry_changes[node.as_index()].push(AncestryChange {
+            segment: Segment { left: 0, right: 50 },
+            node,
+            change_type: ChangeType::Overlap,
+        });
+    }
     for node in nodes.iter().rev() {
         // Step 1 is to build a queue based on ancestry/ancestry overlap
         let q = test_queue(&graph, *node, &children_to_check[node.as_index()]);
-        println!("{q:?}");
+        let q2 = test_queue2(&graph, *node, &ancestry_changes);
+        println!("q = {q:?}");
+        println!("q2 = {q2:?}");
         let mut overlapper = AncestryOverlapper::new(*node, q);
         let mut aindex = 0_usize;
         // Step 2: process each overlap
@@ -1144,12 +1179,21 @@ fn explore_co_iteration() {
                 aindex += 1;
             }
             println!("{overlaps:?}");
-            println!("corresponding ancestry segment = {:?}", graph.ancestry[node.as_index()][aindex]);
-            if graph.ancestry[node.as_index()][aindex].node ==*node{
+            println!(
+                "corresponding ancestry segment = {:?}",
+                graph.ancestry[node.as_index()][aindex]
+            );
+            if graph.ancestry[node.as_index()][aindex].node == *node {
                 println!("coalescent");
-            }else{
+            } else {
                 println!("unary");
             }
+        }
+        // Pure testing...
+        let mut overlapper = AncestryOverlapper::new(*node, q2);
+        println!("overlapper = {overlapper:?}");
+        while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
+            println!("o2 = {overlaps:?}");
         }
         todo!()
     }
