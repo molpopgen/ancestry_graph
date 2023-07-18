@@ -1044,5 +1044,38 @@ fn detect_edge_death() {
 
 #[test]
 fn explore_co_iteration() {
-    todo!()
+    let graph_fixtures::Topology1 {
+        node0,
+        node1,
+        node2,
+        node3,
+        node4,
+        node5,
+        mut graph,
+    } = graph_fixtures::Topology1::new();
+    let nodes = vec![node0, node1, node2];
+    let mut children_to_check = vec![
+        vec![1_usize, 2_usize],
+        vec![3_usize],
+        vec![4_usize, 5_usize],
+        vec![],
+        vec![],
+        vec![],
+    ];
+    assert_eq!(graph.edges[2].len(), 2);
+
+    // Seems we need this in graph!
+    let mut parents = vec![
+        None,
+        Some(vec![0_usize]),
+        Some(vec![0_usize]),
+        Some(vec![1_usize]),
+        Some(vec![2_usize]),
+        Some(vec![2_usize]),
+    ];
+
+    let mut ancestry_changes: Vec<Vec<AncestryChange>> = vec![vec![]; graph.birth_time.len()];
+    for node in nodes.iter().rev() {
+        todo!()
+    }
 }
