@@ -855,7 +855,18 @@ mod test_standard_case {
         ];
 
         let mut ancestry_changes = vec![vec![]; graph.birth_time.len()];
-        graph = propagate_changes(&nodes, graph, &mut ancestry_changes, &mut parents);
+        for node in [node3, node4, node5] {
+            ancestry_changes[node.as_index()].push(AncestryChange {
+                segment: Segment { left: 0, right: 50 },
+                mapped_node: node,
+                source_node: node,
+                change_type: ChangeType::Overlap,
+            })
+        }
+        //graph = propagate_changes(&nodes, graph, &mut ancestry_changes, &mut parents);
+        for node in nodes.iter().cloned().rev() {
+            propagation_design(node, &mut graph, &mut parents, &mut ancestry_changes);
+        }
 
         for node in 0..graph.ancestry.len() {
             println!(
@@ -863,6 +874,7 @@ mod test_standard_case {
                 graph.ancestry[node], graph.edges[node]
             );
         }
+    
         assert!(!graph.ancestry[1].is_empty());
         assert!(!graph.ancestry[3].is_empty());
         assert!(!graph.ancestry[4].is_empty());
