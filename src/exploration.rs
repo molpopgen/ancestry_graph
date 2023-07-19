@@ -661,6 +661,77 @@ mod test_standard_case {
         graph
     }
 
+    fn propagation_design(
+        node: Node,
+        graph: &mut Graph,
+        parents: &mut [Option<Vec<usize>>],
+        ancestry_changes: &mut [Vec<AncestryChange>],
+    ) {
+        let q = build_queue(graph, node, ancestry_changes);
+        println!("q = {q:?}");
+        let mut overlapper = AncestryOverlapper::new(node, q);
+        let mut current_ancestry_index = 0_usize;
+        while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
+            while current_ancestry_index < graph.ancestry[node.as_index()].len() {
+                let aseg = &graph.ancestry[node.as_index()][current_ancestry_index];
+                if aseg.segment.right > overlaps.segment.left
+                    && overlaps.segment.right > aseg.segment.left
+                {
+                    break;
+                }
+                current_ancestry_index += 1;
+            }
+            println!("overlaps = {overlaps:?}");
+            let num_overlaps = graph.ancestry[node.as_index()][current_ancestry_index].num_overlaps;
+
+            if num_overlaps == 1 {
+                //current node is unary
+                let current_anc = &mut graph.ancestry[node.as_index()][current_ancestry_index];
+                // remap it "down" the graph
+                current_anc.node = overlaps.overlaps[0].mapped_node;
+                println!("removing {:?} as parent of edges", node);
+                // Remove this node as anyone's parent
+                for e in graph.edges[node.as_index()].iter() {
+                    println!("removing {:?} as parent of {:?}", node, e.child);
+                    if let Some(node_parents) = &mut parents[e.child.as_index()] {
+                        node_parents.retain(|p| p != &node.as_index());
+                    }
+                }
+                // Clear edges
+                graph.edges[node.as_index()].clear();
+                // Remove parents
+                parents[node.as_index()] = None;
+
+                // Push an ancestry change.
+                // NOTE: change_type may not be assigned the right variant here.
+                ancestry_changes[node.as_index()].push(AncestryChange {
+                    segment: overlaps.segment,
+                    mapped_node: current_anc.node,
+                    source_node: node,
+                    change_type: ChangeType::Overlap,
+                });
+            } else {
+                // make sure 0 never happens
+                assert!(num_overlaps > 1);
+                // Specific to this test
+                assert_eq!(overlaps.overlaps.len(), 2);
+                for overlap in overlaps.overlaps {
+                    println!("OOOO {overlap:?}");
+                    for edge in &mut graph.edges[node.as_index()].iter_mut() {
+                        if edge.child == overlap.source_node {
+                            edge.child = overlap.mapped_node;
+                            if let Some(node_parents) = &mut parents[edge.child.0] {
+                                node_parents.push(node.0);
+                            } else {
+                                todo!()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     #[test]
     fn test_topology0() {
         let graph_fixtures::Topology0 {
@@ -698,71 +769,7 @@ mod test_standard_case {
 
         //graph = propagate_changes(&nodes, graph, &mut ancestry_changes, &mut parents);
         for node in nodes.iter().cloned().rev() {
-            println!("procesing {node:?}");
-            let q = build_queue(&graph, node, &ancestry_changes);
-            println!("q = {q:?}");
-            let mut overlapper = AncestryOverlapper::new(node, q);
-            let mut current_ancestry_index = 0_usize;
-            while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
-                while current_ancestry_index < graph.ancestry[node.as_index()].len() {
-                    let aseg = &graph.ancestry[node.as_index()][current_ancestry_index];
-                    if aseg.segment.right > overlaps.segment.left
-                        && overlaps.segment.right > aseg.segment.left
-                    {
-                        break;
-                    }
-                    current_ancestry_index += 1;
-                }
-                println!("overlaps = {overlaps:?}");
-                let num_overlaps =
-                    graph.ancestry[node.as_index()][current_ancestry_index].num_overlaps;
-
-                if num_overlaps == 1 {
-                    //current node is unary
-                    let current_anc = &mut graph.ancestry[node.as_index()][current_ancestry_index];
-                    // remap it "down" the graph
-                    current_anc.node = overlaps.overlaps[0].mapped_node;
-                    println!("removing {:?} as parent of edges", node);
-                    // Remove this node as anyone's parent
-                    for e in graph.edges[node.as_index()].iter() {
-                        println!("removing {:?} as parent of {:?}", node, e.child);
-                        if let Some(node_parents) = &mut parents[e.child.as_index()] {
-                            node_parents.retain(|p| p != &node.as_index());
-                        }
-                    }
-                    // Clear edges
-                    graph.edges[node.as_index()].clear();
-                    // Remove parents
-                    parents[node.as_index()] = None;
-
-                    // Push an ancestry change.
-                    // NOTE: change_type may not be assigned the right variant here.
-                    ancestry_changes[node.as_index()].push(AncestryChange {
-                        segment: overlaps.segment,
-                        mapped_node: current_anc.node,
-                        source_node: node,
-                        change_type: ChangeType::Overlap,
-                    });
-                } else {
-                    // make sure 0 never happens
-                    assert!(num_overlaps > 1);
-                    // Specific to this test
-                    assert_eq!(overlaps.overlaps.len(), 2);
-                    for overlap in overlaps.overlaps {
-                        println!("OOOO {overlap:?}");
-                        for edge in &mut graph.edges[node.as_index()].iter_mut() {
-                            if edge.child == overlap.source_node {
-                                edge.child = overlap.mapped_node;
-                                if let Some(node_parents) = &mut parents[edge.child.0] {
-                                    node_parents.push(node.0);
-                                } else {
-                                    todo!()
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            propagation_design(node, &mut graph, &mut parents, &mut ancestry_changes);
         }
 
         for node in 0..graph.ancestry.len() {
