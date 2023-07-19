@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::Node;
 use crate::Segment;
 
@@ -1215,7 +1217,22 @@ fn test_queue2(
 ) -> Vec<AncestryChange2> {
     let mut q = vec![];
 
+    let mut current_ancestry_index = 0_usize;
     for e in graph.edges[node.as_index()].iter() {
+        // Suss out how many overlaps there are for the each parental anc segment
+        // Is that not something that we should just book-keep in the ancestry
+        // type?
+        while current_ancestry_index < graph.ancestry[node.as_index()].len() {
+            let aseg = &graph.ancestry[node.as_index()][current_ancestry_index];
+            if aseg.segment.right > e.segment.left && e.segment.right > aseg.segment.left {
+                break;
+            }
+            current_ancestry_index += 1;
+        }
+        let aseg = &graph.ancestry[node.as_index()][current_ancestry_index];
+        if aseg.segment.right > e.segment.left && e.segment.right > aseg.segment.left {
+            println!("edge to self anc overlap");
+        }
         for a in changes[e.child.as_index()].iter() {
             if a.source_node == e.child
                 && a.segment.right > e.segment.left
@@ -1224,10 +1241,26 @@ fn test_queue2(
                 let left = std::cmp::max(e.segment.left, a.segment.left);
                 let right = std::cmp::max(e.segment.right, a.segment.right);
                 println!("OVERLAP {e:?} => {a:?}");
+                // This could be a gain or a loss...
                 q.push(AncestryChange2 {
                     segment: Segment { left, right },
                     ..*a
                 });
+                // This is a remapping of
+                // this edge on this interval
+                // In a sense, this is a "gain", but we need
+                // to know how to represent it...
+                if a.mapped_node != e.child {
+                    q.push(AncestryChange2 {
+                        segment: Segment { left, right },
+                        mapped_node: a.mapped_node,
+                        source_node: a.source_node,
+                        // This may not be the right enum variant.
+                        // Perhaps we need something to represent
+                        // a "remapping"
+                        change_type: ChangeType::Overlap,
+                    });
+                }
             }
         }
     }
@@ -1371,12 +1404,13 @@ fn explore_co_iteration() {
         }
     }
     println!("edge after");
-    for e in graph.edges {
+    for e in &graph.edges {
         println!("{e:?}");
     }
     println!("ancestry after");
     for e in &graph.ancestry {
         println!("{e:?}");
     }
-    assert_eq!(graph.ancestry[node0.as_index()][0].node, Node(0))
+    assert_eq!(graph.ancestry[node0.as_index()][0].node, Node(0));
+    assert_eq!(graph.edges[node0.as_index()].len(), 2);
 }
