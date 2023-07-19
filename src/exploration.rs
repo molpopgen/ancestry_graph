@@ -1332,7 +1332,6 @@ fn explore_co_iteration() {
                 aindex += 1;
             }
             println!("o2 = {overlaps:?}");
-            todo!("not handling losses properlyh!!");
             if overlaps.overlaps.len() > 1 {
                 for o in overlaps.overlaps.iter() {
                     // edge maps to a new node
@@ -1350,12 +1349,12 @@ fn explore_co_iteration() {
             } else {
                 println!("unary");
                 graph.ancestry[node.as_index()][aindex].node = overlaps.overlaps[0].mapped_node;
-                        ancestry_changes[node.as_index()].push(AncestryChange2 {
-                            segment: overlaps.overlaps[0].segment,
-                            mapped_node: overlaps.overlaps[0].mapped_node,
-                            source_node: *node,
-                            change_type: ChangeType::Loss,
-                        });
+                ancestry_changes[node.as_index()].push(AncestryChange2 {
+                    segment: overlaps.overlaps[0].segment,
+                    mapped_node: overlaps.overlaps[0].mapped_node,
+                    source_node: *node,
+                    change_type: ChangeType::Loss,
+                });
 
                 //if let Some(node_parents) = &mut parents[node.as_index()] {
                 //    for parent in node_parents {
@@ -1376,8 +1375,8 @@ fn explore_co_iteration() {
         println!("{e:?}");
     }
     println!("ancestry after");
-    for e in graph.ancestry {
+    for e in &graph.ancestry {
         println!("{e:?}");
     }
-    todo!()
+    assert_eq!(graph.ancestry[node0.as_index()][0].node, Node(0))
 }
