@@ -22,23 +22,6 @@ pub struct Graph {
     edges: Vec<Vec<Edge>>,
 }
 
-#[derive(Debug)]
-struct AncestryOverlapper {
-    queue: Vec<Ancestry>,
-    num_overlaps: usize,
-    current_overlap: usize,
-    parent: Node,
-    left: i64,
-    right: i64,
-    overlaps: Vec<Ancestry>,
-}
-
-#[derive(Debug)]
-struct Overlaps<'overlapper> {
-    segment: Segment,
-    overlaps: &'overlapper [Ancestry],
-}
-
 #[derive(Clone, Copy, Debug)]
 enum ChangeType {
     Loss,
@@ -48,19 +31,38 @@ enum ChangeType {
 #[derive(Clone, Copy, Debug)]
 struct AncestryChange {
     segment: Segment,
-    node: Node,
+    mapped_node: Node,
+    source_node: Node,
     change_type: ChangeType,
 }
 
+#[derive(Debug)]
+struct Overlaps<'overlapper> {
+    segment: Segment,
+    overlaps: &'overlapper [AncestryChange],
+}
+
+#[derive(Debug)]
+struct AncestryOverlapper {
+    queue: Vec<AncestryChange>,
+    num_overlaps: usize,
+    current_overlap: usize,
+    parent: Node,
+    left: i64,
+    right: i64,
+    overlaps: Vec<AncestryChange>,
+}
+
 impl AncestryOverlapper {
-    fn new(parent: Node, queue: Vec<Ancestry>) -> Self {
+    fn new(parent: Node, queue: Vec<AncestryChange>) -> Self {
         let mut queue = queue;
         let num_overlaps = queue.len();
         if num_overlaps > 0 {
-            queue.push(Ancestry {
+            queue.push(AncestryChange {
                 segment: Segment::sentinel(),
-                node: parent,
-                num_overlaps,
+                mapped_node: parent,
+                source_node: parent,
+                change_type: ChangeType::Overlap,
             });
         }
         let right = if num_overlaps > 0 {
@@ -476,65 +478,64 @@ mod graph_fixtures {
 mod test_standard_case {
     use super::*;
 
-    // NOTE: ancestry to ancestry overlap is flawed:
-    // * unary ancestry is used to mutation simplification
-    // * therefore, we will FALSELY detect overlaps later
-    //
-    // POSSIBLE SOLUTION: label ancestry as unary or overlap,
-    // and use that in combination w/options re: retaining unary status
-    //
-    // Oh, we actually know this...the output node is either == current
-    // node (overlap) or not (unary)
-    fn build_queue(graph: &Graph, node: Node, children: &[usize]) -> (Vec<Ancestry>, Vec<usize>) {
-        println!("{node:?} <-- {children:?}");
+    fn build_queue(
+        graph: &Graph,
+        node: Node,
+        changes: &[Vec<AncestryChange>],
+    ) -> Vec<AncestryChange> {
         let mut q = vec![];
 
-        let mut edges_not_found = vec![];
-        for (idx, e) in graph.ancestry[node.as_index()].iter().enumerate() {
-            for &child in children.iter() {
-                println!("child {child} has ancestry {:?}", graph.ancestry[child]);
-                for a in graph.ancestry[child].iter() {
-                    if a.node != Node(child) {
-                        for ua in graph.ancestry[a.node.as_index()].iter() {
-                            let left = std::cmp::max(e.segment.left, ua.segment.left);
-                            let right = std::cmp::max(e.segment.right, ua.segment.right);
-                            q.push(Ancestry {
-                                segment: Segment { left, right },
-                                node: ua.node,
-                                num_overlaps: 1, // DUMMY
-                            });
-                        }
-                    } else {
-                        // the overlap is coalescent
-                        println!("child segment is {a:?}");
-                        if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
-                            let left = std::cmp::max(e.segment.left, a.segment.left);
-                            let right = std::cmp::max(e.segment.right, a.segment.right);
-                            q.push(Ancestry {
-                                segment: Segment { left, right },
-                                node: a.node,
-                                num_overlaps: 1, // DUMMY
-                            });
-                        }
+        let mut current_ancestry_index = 0_usize;
+        for e in graph.edges[node.as_index()].iter() {
+            // Suss out how many overlaps there are for the each parental anc segment
+            // Is that not something that we should just book-keep in the ancestry
+            // type?
+            while current_ancestry_index < graph.ancestry[node.as_index()].len() {
+                let aseg = &graph.ancestry[node.as_index()][current_ancestry_index];
+                if aseg.segment.right > e.segment.left && e.segment.right > aseg.segment.left {
+                    break;
+                }
+                current_ancestry_index += 1;
+            }
+            let aseg = &graph.ancestry[node.as_index()][current_ancestry_index];
+            if aseg.segment.right > e.segment.left && e.segment.right > aseg.segment.left {
+                println!("edge to self anc overlap");
+            }
+            for a in changes[e.child.as_index()].iter() {
+                if a.source_node == e.child
+                    && a.segment.right > e.segment.left
+                    && e.segment.right > a.segment.left
+                {
+                    let left = std::cmp::max(e.segment.left, a.segment.left);
+                    let right = std::cmp::max(e.segment.right, a.segment.right);
+                    println!("OVERLAP {e:?} => {a:?}");
+                    // This could be a gain or a loss...
+                    q.push(AncestryChange {
+                        segment: Segment { left, right },
+                        ..*a
+                    });
+                    // This is a remapping of
+                    // this edge on this interval
+                    // In a sense, this is a "gain", but we need
+                    // to know how to represent it...
+                    if a.mapped_node != e.child {
+                        let overlap = AncestryChange {
+                            segment: Segment { left, right },
+                            mapped_node: a.mapped_node,
+                            source_node: node,
+                            // This may not be the right enum variant.
+                            // Perhaps we need something to represent
+                            // a "remapping"
+                            change_type: ChangeType::Overlap,
+                        };
+                        println!("we also have an overlap to handle: {overlap:?}");
+                        q.push(overlap);
                     }
                 }
             }
-            // Below is "classic tskit" style
-            //for a in graph.ancestry[e.child.as_index()].iter() {
-            //    if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
-            //        let left = std::cmp::max(e.segment.left, a.segment.left);
-            //        let right = std::cmp::max(e.segment.right, a.segment.right);
-            //        q.push(Ancestry {
-            //            segment: Segment { left, right },
-            //            node: a.node,
-            //        });
-            //    }
-            //}
         }
-        println!("{node:?} <-- {children:?}");
-        println!("lost edges = {edges_not_found:?}");
 
-        (q, edges_not_found)
+        q
     }
 
     fn process_unary_overlap(
@@ -545,28 +546,7 @@ mod test_standard_case {
         children_to_check: &mut Vec<Vec<usize>>,
         graph: &mut Graph,
     ) {
-        // Remap the unary node to point to child
-        graph.ancestry[node.as_index()][0].node = overlaps.overlaps[0].node;
-        if let Some(node_parents) = &parents[node.as_index()] {
-            for parent in node_parents {
-                ancestry_changes[*parent].push(AncestryChange {
-                    segment: overlaps.overlaps[0].segment,
-                    node,
-                    change_type: ChangeType::Loss,
-                })
-            }
-        }
-        for edge in graph.edges[node.as_index()].iter() {
-            if let Some(cparents) = &mut parents[edge.child.as_index()] {
-                if let Some(needle) = cparents.iter().position(|x| x == &node.as_index()) {
-                    cparents.remove(needle);
-                }
-            }
-        }
-        // Set node status to "extinct"
-        graph.edges[node.as_index()].clear();
-        graph.birth_time[node.as_index()] = None;
-        parents[node.as_index()] = None;
+        todo!()
     }
 
     fn process_coalescent_overlap(
@@ -577,37 +557,7 @@ mod test_standard_case {
         children_to_check: &mut Vec<Vec<usize>>,
         graph: &mut Graph,
     ) {
-        println!("overlaps for {node:?} are {overlaps:?}");
-        println!("changes for {node:?} are {ancestry_changes:?}");
-        for o in overlaps.overlaps {
-            // NOTE: this is a hack.
-            // We are failing to distinguish gains from losses.
-            if !graph.edges[node.as_index()].contains(&Edge {
-                segment: o.segment,
-                child: o.node,
-            }) {
-                graph.edges[node.as_index()].push(Edge {
-                    segment: o.segment,
-                    child: o.node,
-                });
-            }
-            if let Some(cparents) = &mut parents[o.node.as_index()] {
-                if !cparents.contains(&node.as_index()) {
-                    cparents.push(node.as_index());
-                }
-            }
-        }
-        // This may not be right
-        // We are also duplicating code!
-        //if let Some(node_parents) = &parents[node.as_index()] {
-        //    for parent in node_parents {
-        //        ancestry_changes[*parent].push(AncestryChange {
-        //            segment: overlaps.overlaps[0].segment,
-        //            node: overlaps.overlaps[0].node,
-        //            change_type: ChangeType::Overlap,
-        //        })
-        //    }
-        //}
+        todo!()
     }
 
     fn process_overlaps(
@@ -615,28 +565,9 @@ mod test_standard_case {
         overlaps: &Overlaps,
         ancestry_changes: &mut [Vec<AncestryChange>],
         parents: &mut Vec<Option<Vec<usize>>>,
-        children_to_check: &mut Vec<Vec<usize>>,
         graph: &mut Graph,
     ) {
-        match overlaps.overlaps.len() {
-            0 => panic!(),
-            1 => process_unary_overlap(
-                node,
-                overlaps,
-                ancestry_changes,
-                parents,
-                children_to_check,
-                graph,
-            ),
-            _ => process_coalescent_overlap(
-                node,
-                overlaps,
-                ancestry_changes,
-                parents,
-                children_to_check,
-                graph,
-            ),
-        }
+        todo!()
     }
 
     fn propagate_changes(
@@ -644,33 +575,24 @@ mod test_standard_case {
         graph: Graph,
         ancestry_changes: &mut [Vec<AncestryChange>],
         parents: &mut Vec<Option<Vec<usize>>>,
-        children_to_check: &mut Vec<Vec<usize>>,
     ) -> Graph {
         let mut graph = graph;
 
         //  todo!("it seems like we should be able to check if an existing anc segment changes and, if so, queue the parent for updating?");
         // backwards in time thru nodes.
         for node in nodes.iter().rev() {
-            println!("{children_to_check:?}");
             println!("{parents:?}");
             println!("changes = {:?}", ancestry_changes[node.as_index()]);
-            let (q, lost_edges) = build_queue(&graph, *node, &children_to_check[node.as_index()]);
+            let q = build_queue(&graph, *node, ancestry_changes);
             println!("q =  {q:?}");
             let mut overlapper = AncestryOverlapper::new(*node, q);
             println!("edges = {:?}", graph.edges[node.as_index()]);
             for loss in ancestry_changes[node.as_index()].iter() {
-                graph.edges[node.as_index()].retain(|edge| edge.child != loss.node);
+                graph.edges[node.as_index()].retain(|edge| edge.child != loss.mapped_node);
             }
             println!("edges after = {:?}", graph.edges[node.as_index()]);
             while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
-                process_overlaps(
-                    *node,
-                    &overlaps,
-                    ancestry_changes,
-                    parents,
-                    children_to_check,
-                    &mut graph,
-                );
+                process_overlaps(*node, &overlaps, ancestry_changes, parents, &mut graph);
             }
             // The latter case is "no overlaps with children" == extinct node
             //if q.len() == 1 || q.is_empty() {
@@ -778,7 +700,6 @@ mod test_standard_case {
             graph,
             &mut ancestry_changes,
             &mut parents,
-            &mut children_to_check,
         );
 
         for node in 0..graph.ancestry.len() {
@@ -860,7 +781,6 @@ mod test_standard_case {
             graph,
             &mut ancestry_changes,
             &mut parents,
-            &mut children_to_check,
         );
 
         for node in 0..graph.ancestry.len() {
@@ -938,7 +858,6 @@ mod test_standard_case {
             graph,
             &mut ancestry_changes,
             &mut parents,
-            &mut children_to_check,
         );
 
         for node in 0..graph.ancestry.len() {
@@ -1060,377 +979,4 @@ fn detect_edge_death() {
     assert_eq!(q, [1]);
     assert!(!edge_losses.is_empty());
     assert_eq!(edge_losses, [2]);
-}
-
-fn test_queue(graph: &Graph, node: Node, children: &[usize]) -> Vec<Ancestry> {
-    println!("{node:?} <-- {children:?}");
-    let mut q = vec![];
-
-    for (idx, e) in graph.ancestry[node.as_index()].iter().enumerate() {
-        for &child in children.iter() {
-            println!("child {child} has ancestry {:?}", graph.ancestry[child]);
-            for a in graph.ancestry[child].iter() {
-                if a.node != Node(child) {
-                    for ua in graph.ancestry[a.node.as_index()].iter() {
-                        let left = std::cmp::max(e.segment.left, ua.segment.left);
-                        let right = std::cmp::max(e.segment.right, ua.segment.right);
-                        q.push(Ancestry {
-                            segment: Segment { left, right },
-                            node: ua.node,
-                            num_overlaps: 1, // DUMMY
-                        });
-                    }
-                } else {
-                    // the overlap is coalescent
-                    println!("child segment is {a:?}");
-                    if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
-                        let left = std::cmp::max(e.segment.left, a.segment.left);
-                        let right = std::cmp::max(e.segment.right, a.segment.right);
-                        q.push(Ancestry {
-                            segment: Segment { left, right },
-                            node: a.node,
-                            num_overlaps: 1, // DUMMY
-                        });
-                    }
-                }
-            }
-        }
-        // Below is "classic tskit" style
-        //for a in graph.ancestry[e.child.as_index()].iter() {
-        //    if a.segment.right > e.segment.left && e.segment.right > a.segment.left {
-        //        let left = std::cmp::max(e.segment.left, a.segment.left);
-        //        let right = std::cmp::max(e.segment.right, a.segment.right);
-        //        q.push(Ancestry {
-        //            segment: Segment { left, right },
-        //            node: a.node,
-        //        });
-        //    }
-        //}
-    }
-    println!("{node:?} <-- {children:?}");
-
-    q
-}
-
-#[derive(Clone, Copy, Debug)]
-struct AncestryChange2 {
-    segment: Segment,
-    mapped_node: Node,
-    source_node: Node,
-    change_type: ChangeType,
-}
-#[derive(Debug)]
-struct AncestryOverlapper2 {
-    queue: Vec<AncestryChange2>,
-    num_overlaps: usize,
-    current_overlap: usize,
-    parent: Node,
-    left: i64,
-    right: i64,
-    overlaps: Vec<AncestryChange2>,
-}
-
-impl AncestryOverlapper2 {
-    fn new(parent: Node, queue: Vec<AncestryChange2>) -> Self {
-        let mut queue = queue;
-        let num_overlaps = queue.len();
-        if num_overlaps > 0 {
-            queue.push(AncestryChange2 {
-                segment: Segment::sentinel(),
-                mapped_node: parent,
-                source_node: parent,
-                change_type: ChangeType::Overlap,
-            });
-        }
-        let right = if num_overlaps > 0 {
-            queue[0].segment.right()
-        } else {
-            i64::MAX
-        };
-        let left = i64::MAX;
-        Self {
-            queue,
-            num_overlaps,
-            current_overlap: 0,
-            parent,
-            left,
-            right,
-            overlaps: vec![],
-        }
-    }
-    fn filter_overlaps(&mut self) {
-        self.overlaps.retain(|x| x.segment.right() > self.left);
-    }
-
-    fn update_right_from_overlaps(&mut self) {
-        self.right = match self
-            .overlaps
-            .iter()
-            .map(|&overlap| overlap.segment.right())
-            .min()
-        {
-            Some(right) => right,
-            None => self.right,
-        };
-    }
-
-    fn calculate_next_overlap_set(&mut self) -> Option<Overlaps2> {
-        if self.current_overlap < self.num_overlaps {
-            self.left = self.right;
-            self.filter_overlaps();
-
-            // TODO: this should be a function call
-            if self.overlaps.is_empty() {
-                self.left = self.queue[self.current_overlap].segment.left();
-            }
-            self.current_overlap += self
-                .queue
-                .iter()
-                .skip(self.current_overlap)
-                .take_while(|x| x.segment.left() == self.left)
-                .inspect(|x| {
-                    self.right = std::cmp::min(self.right, x.segment.right());
-                    println!("pushing {x:?}");
-                    self.overlaps.push(**x);
-                })
-                .count();
-            self.update_right_from_overlaps();
-            self.right = std::cmp::min(self.right, self.queue[self.current_overlap].segment.left());
-            Some(Overlaps2 {
-                segment: Segment::new(self.left, self.right).unwrap(),
-                overlaps: self.overlaps.as_slice(),
-            })
-        } else {
-            if !self.overlaps.is_empty() {
-                self.left = self.right;
-                self.filter_overlaps();
-            }
-            if !self.overlaps.is_empty() {
-                self.update_right_from_overlaps();
-                Some(Overlaps2 {
-                    segment: Segment::new(self.left, self.right).unwrap(),
-                    overlaps: self.overlaps.as_slice(),
-                })
-            } else {
-                None
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-struct Overlaps2<'overlapper> {
-    segment: Segment,
-    overlaps: &'overlapper [AncestryChange2],
-}
-
-// NOTE: will need to distinguish mapping to an existing edge (e.child == a.source_node
-// and a.source_node == mapped_node) vs mapping "thru" a unary node.
-// The latter is a case where we may need to update and edge's mapping
-// on a given segment.
-fn test_queue2(
-    graph: &Graph,
-    node: Node,
-    changes: &[Vec<AncestryChange2>],
-) -> Vec<AncestryChange2> {
-    let mut q = vec![];
-
-    let mut current_ancestry_index = 0_usize;
-    for e in graph.edges[node.as_index()].iter() {
-        // Suss out how many overlaps there are for the each parental anc segment
-        // Is that not something that we should just book-keep in the ancestry
-        // type?
-        while current_ancestry_index < graph.ancestry[node.as_index()].len() {
-            let aseg = &graph.ancestry[node.as_index()][current_ancestry_index];
-            if aseg.segment.right > e.segment.left && e.segment.right > aseg.segment.left {
-                break;
-            }
-            current_ancestry_index += 1;
-        }
-        let aseg = &graph.ancestry[node.as_index()][current_ancestry_index];
-        if aseg.segment.right > e.segment.left && e.segment.right > aseg.segment.left {
-            println!("edge to self anc overlap");
-        }
-        for a in changes[e.child.as_index()].iter() {
-            if a.source_node == e.child
-                && a.segment.right > e.segment.left
-                && e.segment.right > a.segment.left
-            {
-                let left = std::cmp::max(e.segment.left, a.segment.left);
-                let right = std::cmp::max(e.segment.right, a.segment.right);
-                println!("OVERLAP {e:?} => {a:?}");
-                // This could be a gain or a loss...
-                q.push(AncestryChange2 {
-                    segment: Segment { left, right },
-                    ..*a
-                });
-                // This is a remapping of
-                // this edge on this interval
-                // In a sense, this is a "gain", but we need
-                // to know how to represent it...
-                if a.mapped_node != e.child {
-                    let overlap = AncestryChange2 {
-                        segment: Segment { left, right },
-                        mapped_node: a.mapped_node,
-                        source_node: node,
-                        // This may not be the right enum variant.
-                        // Perhaps we need something to represent
-                        // a "remapping"
-                        change_type: ChangeType::Overlap,
-                    };
-                    println!("we also have an overlap to handle: {overlap:?}");
-                    q.push(overlap);
-                }
-            }
-        }
-    }
-
-    q
-}
-
-#[test]
-fn explore_co_iteration() {
-    let graph_fixtures::Topology1 {
-        node0,
-        node1,
-        node2,
-        node3,
-        node4,
-        node5,
-        mut graph,
-    } = graph_fixtures::Topology1::new();
-    let nodes = vec![node0, node1, node2];
-    let mut children_to_check = vec![
-        vec![1_usize, 2_usize],
-        vec![3_usize],
-        vec![4_usize, 5_usize],
-        vec![],
-        vec![],
-        vec![],
-    ];
-    assert_eq!(graph.edges[2].len(), 2);
-
-    // Seems we need this in graph!
-    let mut parents = vec![
-        None,
-        Some(vec![0_usize]),
-        Some(vec![0_usize]),
-        Some(vec![1_usize]),
-        Some(vec![2_usize]),
-        Some(vec![2_usize]),
-    ];
-
-    let mut ancestry_changes: Vec<Vec<AncestryChange2>> = vec![vec![]; graph.birth_time.len()];
-
-    for node in [node3, node4, node5] {
-        ancestry_changes[node.as_index()].push(AncestryChange2 {
-            segment: Segment { left: 0, right: 50 },
-            mapped_node: node,
-            source_node: node,
-            change_type: ChangeType::Overlap,
-        });
-    }
-    for node in nodes.iter().rev() {
-        println!(
-            "getting around to node {node:?}, w/ancestry {:?}",
-            graph.ancestry[node.as_index()]
-        );
-        // Step 1 is to build a queue based on ancestry/ancestry overlap
-        //let q = test_queue(&graph, *node, &children_to_check[node.as_index()]);
-        let q2 = test_queue2(&graph, *node, &ancestry_changes);
-        //println!("q = {q:?}");
-        println!("q2 = {q2:?}");
-        //let mut overlapper = AncestryOverlapper::new(*node, q);
-        //let mut aindex = 0_usize;
-        //// Step 2: process each overlap
-        //while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
-        //    // 2a: find the parental ancestry segment corresponding
-        //    //     to the change.
-        //    // NOTE: we should be able to CACHE THIS when building the queue.
-        //    while aindex < graph.ancestry[node.as_index()].len() {
-        //        let a = &graph.ancestry[node.as_index()][aindex];
-        //        if a.segment.right > overlaps.segment.left
-        //            && overlaps.segment.right > a.segment.left
-        //        {
-        //            break;
-        //        }
-        //        aindex += 1;
-        //    }
-        //    println!("{overlaps:?}");
-        //    println!(
-        //        "corresponding ancestry segment = {:?}",
-        //        graph.ancestry[node.as_index()][aindex]
-        //    );
-        //    if graph.ancestry[node.as_index()][aindex].node == *node {
-        //        println!("coalescent");
-        //    } else {
-        //        println!("unary");
-        //    }
-        //}
-        // Pure testing...
-        let mut overlapper = AncestryOverlapper2::new(*node, q2);
-        let mut aindex = 0_usize;
-        println!("overlapper = {overlapper:?}");
-        while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
-            // 2a: find the parental ancestry segment corresponding
-            //     to the change.
-            // NOTE: we should be able to CACHE THIS when building the queue.
-            while aindex < graph.ancestry[node.as_index()].len() {
-                let a = &graph.ancestry[node.as_index()][aindex];
-                if a.segment.right > overlaps.segment.left
-                    && overlaps.segment.right > a.segment.left
-                {
-                    break;
-                }
-                aindex += 1;
-            }
-            println!("o2 = {overlaps:?}");
-            if overlaps.overlaps.len() > 1 {
-                for o in overlaps.overlaps.iter() {
-                    // edge maps to a new node
-                    if o.mapped_node != o.source_node {
-                        println!("push");
-                        graph.edges[node.as_index()].push(Edge {
-                            segment: o.segment,
-                            child: o.mapped_node,
-                        });
-                    } else {
-                        println!("pass");
-                    }
-                }
-                graph.ancestry[node.as_index()][aindex].node = *node;
-            } else {
-                println!("unary");
-                graph.ancestry[node.as_index()][aindex].node = overlaps.overlaps[0].mapped_node;
-                ancestry_changes[node.as_index()].push(AncestryChange2 {
-                    segment: overlaps.overlaps[0].segment,
-                    mapped_node: overlaps.overlaps[0].mapped_node,
-                    source_node: *node,
-                    change_type: ChangeType::Loss,
-                });
-
-                //if let Some(node_parents) = &mut parents[node.as_index()] {
-                //    for parent in node_parents {
-                //        println!("parent of unary node is {parent:?}");
-                //        ancestry_changes[*parent].push(AncestryChange2 {
-                //            segment: overlaps.overlaps[0].segment,
-                //            mapped_node: overlaps.overlaps[0].mapped_node,
-                //            source_node: *node,
-                //            change_type: ChangeType::Loss,
-                //        })
-                //    }
-                //}
-            }
-        }
-    }
-    println!("edge after");
-    for e in &graph.edges {
-        println!("{e:?}");
-    }
-    println!("ancestry after");
-    for e in &graph.ancestry {
-        println!("{e:?}");
-    }
-    assert_eq!(graph.ancestry[node0.as_index()][0].node, Node(0));
-    assert_eq!(graph.edges[node0.as_index()].len(), 2);
 }
