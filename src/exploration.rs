@@ -518,19 +518,19 @@ mod test_standard_case {
                     // this edge on this interval
                     // In a sense, this is a "gain", but we need
                     // to know how to represent it...
-                    if a.mapped_node != e.child {
-                        let overlap = AncestryChange {
-                            segment: Segment { left, right },
-                            mapped_node: a.mapped_node,
-                            source_node: node,
-                            // This may not be the right enum variant.
-                            // Perhaps we need something to represent
-                            // a "remapping"
-                            change_type: ChangeType::Overlap,
-                        };
-                        println!("we also have an overlap to handle: {overlap:?}");
-                        q.push(overlap);
-                    }
+                    // if a.mapped_node != e.child {
+                    //     let overlap = AncestryChange {
+                    //         segment: Segment { left, right },
+                    //         mapped_node: a.mapped_node,
+                    //         source_node: node,
+                    //         // This may not be the right enum variant.
+                    //         // Perhaps we need something to represent
+                    //         // a "remapping"
+                    //         change_type: ChangeType::Overlap,
+                    //     };
+                    //     println!("we also have an overlap to handle: {overlap:?}");
+                    //     q.push(overlap);
+                    // }
                 }
             }
         }
@@ -729,10 +729,19 @@ mod test_standard_case {
                     let current_anc = &mut graph.ancestry[node.as_index()][current_ancestry_index];
                     // remap it "down" the graph
                     current_anc.node = overlaps.overlaps[0].mapped_node;
+                    println!("removing {:?} as parent of edges", node);
+                    // Remove this node as anyone's parent
+                    for e in graph.edges[node.as_index()].iter() {
+                        println!("removing {:?} as parent of {:?}", node, e.child);
+                        if let Some(node_parents) = &mut parents[e.child.as_index()] {
+                            node_parents.retain(|p| p != &node.as_index());
+                        }
+                    }
                     // Clear edges
                     graph.edges[node.as_index()].clear();
-                    // TODO: remove this node as anyone's parent
-                    
+                    // Remove parents
+                    parents[node.as_index()] = None;
+
                     // Push an ancestry change.
                     // NOTE: change_type may not be assigned the right variant here.
                     ancestry_changes[node.as_index()].push(AncestryChange {
@@ -748,7 +757,16 @@ mod test_standard_case {
                     assert_eq!(overlaps.overlaps.len(), 2);
                     for overlap in overlaps.overlaps {
                         println!("OOOO {overlap:?}");
-
+                        for edge in &mut graph.edges[node.as_index()].iter_mut() {
+                            if edge.child == overlap.source_node {
+                                edge.child = overlap.mapped_node;
+                                if let Some(node_parents) = &mut parents[edge.child.0] {
+                                    node_parents.push(node.0);
+                                } else {
+                                    todo!()
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -783,11 +801,20 @@ mod test_standard_case {
         }
         //validate parents
         for node in [3, 4] {
-            assert!(parents[node].as_ref().unwrap().contains(&0));
-            assert_eq!(parents[node].as_ref().unwrap().len(), 1);
+            assert!(
+                parents[node].as_ref().unwrap().contains(&0),
+                "{:?}",
+                parents[node]
+            );
+            assert_eq!(
+                parents[node].as_ref().unwrap().len(),
+                1,
+                "{:?}",
+                parents[node]
+            );
         }
         for node in [0, 1, 2] {
-            assert!(parents[node].is_none());
+            assert!(parents[node].is_none(), "{node} has parents");
         }
     }
 
