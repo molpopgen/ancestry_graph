@@ -744,6 +744,12 @@ mod test_standard_case {
                 } else {
                     // make sure 0 never happens
                     assert!(num_overlaps > 1);
+                    // Specific to this test
+                    assert_eq!(overlaps.overlaps.len(), 2);
+                    for overlap in overlaps.overlaps {
+                        println!("OOOO {overlap:?}");
+
+                    }
                 }
             }
         }
