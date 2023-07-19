@@ -695,12 +695,7 @@ mod test_standard_case {
 
         let mut ancestry_changes = vec![vec![]; graph.birth_time.len()];
 
-        graph = propagate_changes(
-            &nodes,
-            graph,
-            &mut ancestry_changes,
-            &mut parents,
-        );
+        graph = propagate_changes(&nodes, graph, &mut ancestry_changes, &mut parents);
 
         for node in 0..graph.ancestry.len() {
             println!(
@@ -776,12 +771,7 @@ mod test_standard_case {
         ];
 
         let mut ancestry_changes = vec![vec![]; graph.birth_time.len()];
-        graph = propagate_changes(
-            &nodes,
-            graph,
-            &mut ancestry_changes,
-            &mut parents,
-        );
+        graph = propagate_changes(&nodes, graph, &mut ancestry_changes, &mut parents);
 
         for node in 0..graph.ancestry.len() {
             println!(
@@ -853,12 +843,7 @@ mod test_standard_case {
         ];
         let nodes = (0..3).map(Node).collect::<Vec<Node>>();
         let mut ancestry_changes = vec![vec![]; graph.birth_time.len()];
-        graph = propagate_changes(
-            &nodes,
-            graph,
-            &mut ancestry_changes,
-            &mut parents,
-        );
+        graph = propagate_changes(&nodes, graph, &mut ancestry_changes, &mut parents);
 
         for node in 0..graph.ancestry.len() {
             println!(
