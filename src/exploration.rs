@@ -740,7 +740,6 @@ mod test_standard_case {
             } else {
                 // make sure 0 never happens
                 assert!(num_overlaps > 1);
-                // Specific to this test
                 for overlap in overlaps.overlaps {
                     println!("OOOO {overlap:?}");
                     for edge in &mut graph.edges[node.as_index()].iter_mut() {
