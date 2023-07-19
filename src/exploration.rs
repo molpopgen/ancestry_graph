@@ -676,13 +676,6 @@ mod test_standard_case {
         // because they are births.
         // We skip that for now.
         let nodes = vec![node0, node1, node2];
-        let mut children_to_check = vec![
-            vec![1_usize, 2_usize],
-            vec![3_usize],
-            vec![4_usize],
-            vec![],
-            vec![],
-        ];
 
         // Seems we need this in graph!
         let mut parents = vec![
