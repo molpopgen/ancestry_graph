@@ -736,6 +736,19 @@ mod test_standard_case {
         graph
     }
 
+    fn make_node_extinct(node: Node, graph: &mut Graph, parents: &mut [Option<Vec<usize>>]) {
+        for e in graph.edges[node.as_index()].iter() {
+            println!("removing {:?} as parent of {:?}", node, e.child);
+            if let Some(node_parents) = &mut parents[e.child.as_index()] {
+                node_parents.retain(|p| p != &node.as_index());
+            }
+        }
+        // Clear edges
+        graph.edges[node.as_index()].clear();
+        // Remove parents
+        parents[node.as_index()] = None;
+    }
+
     fn propagation_design(
         node: Node,
         graph: &mut Graph,
@@ -768,20 +781,8 @@ mod test_standard_case {
                     let current_anc = &mut graph.ancestry[node.as_index()][current_ancestry_index];
                     // remap it "down" the graph
                     current_anc.node = overlaps.overlaps[0].mapped_node;
-                    println!("removing {:?} as parent of edges", node);
-                    // Remove this node as anyone's parent
-                    for e in graph.edges[node.as_index()].iter() {
-                        println!("removing {:?} as parent of {:?}", node, e.child);
-                        if let Some(node_parents) = &mut parents[e.child.as_index()] {
-                            node_parents.retain(|p| p != &node.as_index());
-                        }
-                    }
-                    // Clear edges
-                    graph.edges[node.as_index()].clear();
-                    // Remove parents
-                    parents[node.as_index()] = None;
 
-                    // Push an ancestry change.
+                    // Push an ancestry change to (unary) Overlap.
                     // NOTE: change_type may not be assigned the right variant here.
                     ancestry_changes[node.as_index()].push(AncestryChange {
                         segment: overlaps.segment,
@@ -789,6 +790,7 @@ mod test_standard_case {
                         source_node: node,
                         change_type: ChangeType::Overlap,
                     });
+                    make_node_extinct(node, graph, parents);
                 } else {
                     let current_anc = &mut graph.ancestry[node.as_index()][current_ancestry_index];
                     current_anc.node = node;
@@ -837,18 +839,15 @@ mod test_standard_case {
                 }
                 // Conversion to unary on this interval...
                 if num_overlaps == 1 {
-                    println!("removing {:?} as parent of edges", node);
-                    // Remove this node as anyone's parent
-                    for e in graph.edges[node.as_index()].iter() {
-                        println!("removing {:?} as parent of {:?}", node, e.child);
-                        if let Some(node_parents) = &mut parents[e.child.as_index()] {
-                            node_parents.retain(|p| p != &node.as_index());
-                        }
-                    }
-                    // Clear edges
-                    graph.edges[node.as_index()].clear();
-                    // Remove parents
-                    parents[node.as_index()] = None;
+                    make_node_extinct(node, graph, parents);
+                    // Push an ancestry change to (unary) Overlap.
+                    // NOTE: change_type may not be assigned the right variant here.
+                    ancestry_changes[node.as_index()].push(AncestryChange {
+                        segment: overlaps.segment,
+                        mapped_node: node,
+                        source_node: node,
+                        change_type: ChangeType::Overlap,
+                    });
 
                     // Push an ancestry change.
                     // NOTE: change_type may not be assigned the right variant here.
@@ -858,6 +857,7 @@ mod test_standard_case {
                         source_node: node,
                         change_type: ChangeType::Loss,
                     });
+                    graph.ancestry[node.as_index()][current_ancestry_index].num_overlaps = 1;
                 }
                 // Remove all lost edges
                 // Related to the HACK comment above
@@ -923,6 +923,7 @@ mod test_standard_case {
 
         assert!(!graph.ancestry[0].is_empty());
         assert_eq!(graph.ancestry[0].len(), 1);
+        assert_eq!(graph.ancestry[0][0].num_overlaps, 2);
         assert_eq!(graph.edges[0].len(), 2);
         let segment = Segment { left: 0, right: 50 };
         for child in [node3, node4] {
@@ -1016,6 +1017,7 @@ mod test_standard_case {
 
         assert!(!graph.ancestry[0].is_empty());
         assert_eq!(graph.ancestry[0].len(), 1);
+        assert_eq!(graph.ancestry[0][0].num_overlaps, 2);
         assert_eq!(graph.edges[0].len(), 2);
         let segment = Segment { left: 0, right: 50 };
         for child in [node3, node2] {
@@ -1163,6 +1165,7 @@ mod test_standard_case {
 
         assert!(!graph.ancestry[0].is_empty());
         assert_eq!(graph.ancestry[0].len(), 1);
+        assert_eq!(graph.ancestry[0][0].num_overlaps, 1);
         assert_eq!(graph.edges[0].len(), 0);
 
         for node in [3, 4] {
