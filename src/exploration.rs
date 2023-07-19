@@ -742,7 +742,7 @@ mod test_standard_case {
                         change_type: ChangeType::Overlap,
                     });
                 } else {
-                    // make suer 0 never happens
+                    // make sure 0 never happens
                     assert!(num_overlaps > 1);
                 }
             }
