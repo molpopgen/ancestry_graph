@@ -758,7 +758,8 @@ mod test_standard_case {
                 current_ancestry_index += 1;
             }
             println!("overlaps = {overlaps:?}");
-            let num_overlaps = graph.ancestry[node.as_index()][current_ancestry_index].num_overlaps;
+            let mut num_overlaps =
+                graph.ancestry[node.as_index()][current_ancestry_index].num_overlaps;
 
             if num_overlaps == 1 {
                 //current node is unary
@@ -816,18 +817,51 @@ mod test_standard_case {
                 // make sure 0 never happens
                 assert!(num_overlaps > 1);
                 for overlap in overlaps.overlaps {
-                    println!("OOOO {overlap:?}");
                     for edge in &mut graph.edges[node.as_index()].iter_mut() {
                         if edge.child == overlap.source_node {
-                            edge.child = overlap.mapped_node;
-                            if let Some(node_parents) = &mut parents[edge.child.0] {
-                                node_parents.push(node.0);
+                            if matches!(overlap.change_type, ChangeType::Loss) {
+                                println!("OOOO {overlap:?}");
+                                edge.segment = Segment::sentinel(); // HACK
+                                assert!(num_overlaps > 0);
+                                num_overlaps -= 1;
                             } else {
-                                todo!()
+                                edge.child = overlap.mapped_node;
+                                if let Some(node_parents) = &mut parents[edge.child.0] {
+                                    node_parents.push(node.0);
+                                } else {
+                                    todo!()
+                                }
                             }
                         }
                     }
                 }
+                // Conversion to unary on this interval...
+                if num_overlaps == 1 {
+                    println!("removing {:?} as parent of edges", node);
+                    // Remove this node as anyone's parent
+                    for e in graph.edges[node.as_index()].iter() {
+                        println!("removing {:?} as parent of {:?}", node, e.child);
+                        if let Some(node_parents) = &mut parents[e.child.as_index()] {
+                            node_parents.retain(|p| p != &node.as_index());
+                        }
+                    }
+                    // Clear edges
+                    graph.edges[node.as_index()].clear();
+                    // Remove parents
+                    parents[node.as_index()] = None;
+
+                    // Push an ancestry change.
+                    // NOTE: change_type may not be assigned the right variant here.
+                    ancestry_changes[node.as_index()].push(AncestryChange {
+                        segment: overlaps.segment,
+                        mapped_node: node,
+                        source_node: node,
+                        change_type: ChangeType::Loss,
+                    });
+                }
+                // Remove all lost edges
+                // Related to the HACK comment above
+                graph.edges[node.as_index()].retain(|e| e.segment.left != i64::MAX);
             }
         }
     }
@@ -1080,7 +1114,6 @@ mod test_standard_case {
             None,
             Some(vec![0_usize]),
             Some(vec![0_usize]),
-            Some(vec![1_usize]),
             Some(vec![2_usize]),
             Some(vec![2_usize]),
         ];
@@ -1120,13 +1153,21 @@ mod test_standard_case {
             assert!(graph.edges[node].is_empty());
         }
 
-        // This is the tough case
         assert_eq!(graph.ancestry[2].len(), 1);
         assert_eq!(graph.edges[2].len(), 2);
+        assert_eq!(parents[2], Some(vec![]));
+
+        assert_eq!(graph.ancestry[1].len(), 1);
+        assert_eq!(graph.edges[1].len(), 0);
+        assert_eq!(parents[1], Some(vec![]));
 
         assert!(!graph.ancestry[0].is_empty());
         assert_eq!(graph.ancestry[0].len(), 1);
         assert_eq!(graph.edges[0].len(), 0);
+
+        for node in [3, 4] {
+            assert_eq!(parents[node], Some(vec![2]));
+        }
     }
 }
 
