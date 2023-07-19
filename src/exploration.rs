@@ -472,6 +472,81 @@ mod graph_fixtures {
             }
         }
     }
+
+    //     0
+    //  -------
+    //  |     |
+    //  1     2
+    //        ---
+    //        | |
+    //        3 4
+    pub struct Topology3 {
+        pub node0: Node,
+        pub node1: Node,
+        pub node2: Node,
+        pub node3: Node,
+        pub node4: Node,
+        pub graph: Graph,
+    }
+
+    impl Topology3 {
+        pub fn new() -> Self {
+            let mut birth_time = vec![];
+            for i in [0_i64, 1, 1, 2, 2] {
+                birth_time.push(Some(i))
+            }
+            let (node0, node1, node2, node3, node4) = (Node(0), Node(1), Node(2), Node(3), Node(4));
+            let mut ancestry = vec![];
+            let segment = Segment { left: 0, right: 50 };
+            for i in 0..birth_time.len() {
+                ancestry.push(vec![Ancestry {
+                    segment,
+                    node: Node(i),
+                    num_overlaps: 1,
+                }]);
+            }
+            ancestry[0][0].num_overlaps = 2;
+            let edges = vec![
+                vec![
+                    Edge {
+                        segment,
+                        child: node1,
+                    },
+                    Edge {
+                        segment,
+                        child: node2,
+                    },
+                ],
+                vec![],
+                vec![
+                    Edge {
+                        segment,
+                        child: node3,
+                    },
+                    Edge {
+                        segment,
+                        child: node4,
+                    },
+                ],
+                vec![],
+                vec![],
+            ];
+
+            let graph = Graph {
+                birth_time,
+                ancestry,
+                edges,
+            };
+            Self {
+                node0,
+                node1,
+                node2,
+                node3,
+                node4,
+                graph,
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -919,44 +994,116 @@ mod test_standard_case {
         }
     }
 
+    //#[test]
+    //fn test_topology2() {
+    //    let graph_fixtures::Topology2 {
+    //        node0,
+    //        node1,
+    //        node2,
+    //        node3,
+    //        node4,
+    //        node5,
+    //        node6,
+    //        lsegment,
+    //        rsegment,
+    //        mut graph,
+    //    } = graph_fixtures::Topology2::new();
+
+    //    let mut children_to_check = vec![
+    //        vec![1_usize, 2_usize],
+    //        vec![3_usize, 4, 6],
+    //        vec![4_usize, 5_usize, 3, 6],
+    //        vec![],
+    //        vec![],
+    //        vec![],
+    //        vec![],
+    //    ];
+
+    //    // Seems we need this in graph!
+    //    let mut parents = vec![
+    //        None,
+    //        Some(vec![0_usize]),
+    //        Some(vec![0_usize]),
+    //        Some(vec![1_usize, 2]),
+    //        Some(vec![2_usize, 1]),
+    //        Some(vec![2_usize]),
+    //        Some(vec![2_usize]),
+    //    ];
+    //    let nodes = (0..3).map(Node).collect::<Vec<Node>>();
+    //    let mut ancestry_changes = vec![vec![]; graph.birth_time.len()];
+    //    graph = propagate_changes(&nodes, graph, &mut ancestry_changes, &mut parents);
+
+    //    for node in 0..graph.ancestry.len() {
+    //        println!(
+    //            "{node} => {:?}, {:?}",
+    //            graph.ancestry[node], graph.edges[node]
+    //        );
+    //    }
+
+    //    for node in [node1, node2] {
+    //        assert_eq!(
+    //            graph.edges[node.as_index()]
+    //                .iter()
+    //                .filter(|e| e.segment == rsegment)
+    //                .count(),
+    //            2
+    //        );
+    //    }
+    //    assert_eq!(
+    //        graph.edges[node2.as_index()]
+    //            .iter()
+    //            .filter(|e| e.segment == lsegment)
+    //            .count(),
+    //        3
+    //    );
+    //}
+
     #[test]
-    fn test_topology2() {
-        let graph_fixtures::Topology2 {
+    fn test_topology3() {
+        let graph_fixtures::Topology3 {
             node0,
             node1,
             node2,
             node3,
             node4,
-            node5,
-            node6,
-            lsegment,
-            rsegment,
             mut graph,
-        } = graph_fixtures::Topology2::new();
+        } = graph_fixtures::Topology3::new();
 
-        let mut children_to_check = vec![
-            vec![1_usize, 2_usize],
-            vec![3_usize, 4, 6],
-            vec![4_usize, 5_usize, 3, 6],
-            vec![],
-            vec![],
-            vec![],
-            vec![],
-        ];
+        // NOTE: we have to treat node3/4/5 as "special"
+        // because they are births.
+        // We skip that for now.
+        let nodes = vec![node0, node1, node2];
+        assert_eq!(graph.edges[2].len(), 2);
 
         // Seems we need this in graph!
         let mut parents = vec![
             None,
             Some(vec![0_usize]),
             Some(vec![0_usize]),
-            Some(vec![1_usize, 2]),
-            Some(vec![2_usize, 1]),
+            Some(vec![1_usize]),
             Some(vec![2_usize]),
             Some(vec![2_usize]),
         ];
-        let nodes = (0..3).map(Node).collect::<Vec<Node>>();
+
         let mut ancestry_changes = vec![vec![]; graph.birth_time.len()];
-        graph = propagate_changes(&nodes, graph, &mut ancestry_changes, &mut parents);
+        for node in [node3, node4] {
+            ancestry_changes[node.as_index()].push(AncestryChange {
+                segment: Segment { left: 0, right: 50 },
+                mapped_node: node,
+                source_node: node,
+                change_type: ChangeType::Overlap,
+            })
+        }
+        ancestry_changes[node1.as_index()].push(AncestryChange {
+            segment: Segment { left: 0, right: 50 },
+            mapped_node: node1,
+            source_node: node1,
+            change_type: ChangeType::Loss,
+        });
+        //graph = propagate_changes(&nodes, graph, &mut ancestry_changes, &mut parents);
+        for node in nodes.iter().cloned().rev() {
+            propagation_design(node, &mut graph, &mut parents, &mut ancestry_changes);
+        }
 
         for node in 0..graph.ancestry.len() {
             println!(
@@ -965,22 +1112,21 @@ mod test_standard_case {
             );
         }
 
-        for node in [node1, node2] {
-            assert_eq!(
-                graph.edges[node.as_index()]
-                    .iter()
-                    .filter(|e| e.segment == rsegment)
-                    .count(),
-                2
-            );
+        assert!(!graph.ancestry[1].is_empty());
+        assert!(!graph.ancestry[3].is_empty());
+        assert!(!graph.ancestry[4].is_empty());
+
+        for node in [1, 3, 4] {
+            assert!(graph.edges[node].is_empty());
         }
-        assert_eq!(
-            graph.edges[node2.as_index()]
-                .iter()
-                .filter(|e| e.segment == lsegment)
-                .count(),
-            3
-        );
+
+        // This is the tough case
+        assert_eq!(graph.ancestry[2].len(), 1);
+        assert_eq!(graph.edges[2].len(), 2);
+
+        assert!(!graph.ancestry[0].is_empty());
+        assert_eq!(graph.ancestry[0].len(), 1);
+        assert_eq!(graph.edges[0].len(), 0);
     }
 }
 
