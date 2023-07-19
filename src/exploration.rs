@@ -849,14 +849,6 @@ mod test_standard_case {
                         change_type: ChangeType::Overlap,
                     });
 
-                    // Push an ancestry change.
-                    // NOTE: change_type may not be assigned the right variant here.
-                    ancestry_changes[node.as_index()].push(AncestryChange {
-                        segment: overlaps.segment,
-                        mapped_node: node,
-                        source_node: node,
-                        change_type: ChangeType::Loss,
-                    });
                     graph.ancestry[node.as_index()][current_ancestry_index].num_overlaps = 1;
                 }
                 // Remove all lost edges
