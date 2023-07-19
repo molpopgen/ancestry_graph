@@ -1269,15 +1269,17 @@ fn test_queue2(
                 // In a sense, this is a "gain", but we need
                 // to know how to represent it...
                 if a.mapped_node != e.child {
-                    q.push(AncestryChange2 {
+                    let overlap = AncestryChange2 {
                         segment: Segment { left, right },
                         mapped_node: a.mapped_node,
-                        source_node: a.source_node,
+                        source_node: node,
                         // This may not be the right enum variant.
                         // Perhaps we need something to represent
                         // a "remapping"
                         change_type: ChangeType::Overlap,
-                    });
+                    };
+                    println!("we also have an overlap to handle: {overlap:?}");
+                    q.push(overlap);
                 }
             }
         }
