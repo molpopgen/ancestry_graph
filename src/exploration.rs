@@ -7,6 +7,7 @@ use crate::Segment;
 struct Ancestry {
     segment: Segment,
     node: Node,
+    num_overlaps: usize,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -59,6 +60,7 @@ impl AncestryOverlapper {
             queue.push(Ancestry {
                 segment: Segment::sentinel(),
                 node: parent,
+                num_overlaps,
             });
         }
         let right = if num_overlaps > 0 {
@@ -168,22 +170,27 @@ mod graph_fixtures {
             ancestry.push(vec![Ancestry {
                 segment,
                 node: node0,
+                num_overlaps: 2,
             }]);
             ancestry.push(vec![Ancestry {
                 segment,
                 node: node1,
+                num_overlaps: 1,
             }]);
             ancestry.push(vec![Ancestry {
                 segment,
                 node: node2,
+                num_overlaps: 1,
             }]);
             ancestry.push(vec![Ancestry {
                 segment,
                 node: node3,
+                num_overlaps: 1,
             }]);
             ancestry.push(vec![Ancestry {
                 segment,
                 node: node4,
+                num_overlaps: 1,
             }]);
             let edges = vec![
                 vec![
@@ -254,26 +261,32 @@ mod graph_fixtures {
             ancestry.push(vec![Ancestry {
                 segment,
                 node: node0,
+                num_overlaps: 2, // a previous ancestor
             }]);
             ancestry.push(vec![Ancestry {
                 segment,
                 node: node1,
+                num_overlaps: 1,
             }]);
             ancestry.push(vec![Ancestry {
                 segment,
                 node: node2,
+                num_overlaps: 1, // A death that will become an overlap
             }]);
             ancestry.push(vec![Ancestry {
                 segment,
                 node: node3,
+                num_overlaps: 1,
             }]);
             ancestry.push(vec![Ancestry {
                 segment,
                 node: node4,
+                num_overlaps: 1,
             }]);
             ancestry.push(vec![Ancestry {
                 segment,
                 node: node5,
+                num_overlaps: 1,
             }]);
             let edges = vec![
                 vec![
@@ -377,6 +390,7 @@ mod graph_fixtures {
                 ancestry.push(vec![Ancestry {
                     segment,
                     node: Node(i),
+                    num_overlaps: 1,
                 }]);
             }
             let lsegment = Segment { left: 0, right: 25 };
@@ -487,6 +501,7 @@ mod test_standard_case {
                             q.push(Ancestry {
                                 segment: Segment { left, right },
                                 node: ua.node,
+                                num_overlaps: 1, // DUMMY
                             });
                         }
                     } else {
@@ -498,6 +513,7 @@ mod test_standard_case {
                             q.push(Ancestry {
                                 segment: Segment { left, right },
                                 node: a.node,
+                                num_overlaps: 1, // DUMMY
                             });
                         }
                     }
@@ -1061,6 +1077,7 @@ fn test_queue(graph: &Graph, node: Node, children: &[usize]) -> Vec<Ancestry> {
                         q.push(Ancestry {
                             segment: Segment { left, right },
                             node: ua.node,
+                            num_overlaps: 1, // DUMMY
                         });
                     }
                 } else {
@@ -1072,6 +1089,7 @@ fn test_queue(graph: &Graph, node: Node, children: &[usize]) -> Vec<Ancestry> {
                         q.push(Ancestry {
                             segment: Segment { left, right },
                             node: a.node,
+                            num_overlaps: 1, // DUMMY
                         });
                     }
                 }
