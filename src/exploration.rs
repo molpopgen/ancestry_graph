@@ -1217,13 +1217,13 @@ fn test_queue2(
 
     for e in graph.edges[node.as_index()].iter() {
         for a in changes[e.child.as_index()].iter() {
-            println!("change is {a:?}, {}", a.mapped_node != e.child);
             if a.source_node == e.child
                 && a.segment.right > e.segment.left
                 && e.segment.right > a.segment.left
             {
                 let left = std::cmp::max(e.segment.left, a.segment.left);
                 let right = std::cmp::max(e.segment.right, a.segment.right);
+                println!("OVERLAP {e:?} => {a:?}");
                 q.push(AncestryChange2 {
                     segment: Segment { left, right },
                     ..*a
