@@ -184,6 +184,36 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
     queue.sort_unstable_by_key(|x| x.segment.left);
 }
 
+fn update_ancestry(
+    left: i64,
+    right: i64,
+    mapped_node: Node,
+    ancestry: &mut NodeAncestry,
+    head: Option<Index>,
+    prev: Option<Index>,
+) -> (Option<Index>, Option<Index>) {
+    let mut head = head;
+    let mut prev = prev;
+
+    (head, prev)
+}
+
+fn update_ancestry_design(
+    node: Node,
+    overlaps: &[(i64, i64, Node)],
+    ancestry: &mut NodeAncestry,
+    ancestry_head: &mut [Index],
+    ancestry_tail: &mut [Index],
+) {
+    assert_eq!(ancestry_head.len(), ancestry_tail.len());
+    let mut head: Option<Index> = None;
+    let mut prev: Option<Index> = None;
+    for o in overlaps {
+        let (left, right, mapped_node) = *o;
+        (head, prev) = update_ancestry(left, right, mapped_node, ancestry, head, prev);
+    }
+}
+
 // this is test3 from the python prototype
 #[test]
 fn test_list_updating() {
@@ -204,4 +234,16 @@ fn test_list_updating() {
     for i in [node0head, node1head, node2head] {
         ancestry_head.push(i);
     }
+    let mut ancestry_tail = ancestry_head.clone();
+
+    // (left, right, mapped_node)
+    // cribbed from manual calculation/the python prototype
+    let overlaps = [(0_i64, 1_i64, Node(2)), (1, 2, Node(1))];
+    update_ancestry_design(
+        Node(0),
+        &overlaps,
+        &mut ancestry,
+        &mut ancestry_head,
+        &mut ancestry_tail,
+    );
 }
