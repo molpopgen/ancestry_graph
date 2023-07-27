@@ -119,7 +119,7 @@ impl<T> CursorList<T> {
 
 type NodeAncestry = CursorList<AncestrySegment>;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Segment {
     left: i64,
     right: i64,
@@ -131,7 +131,7 @@ impl Segment {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct AncestrySegment {
     segment: Segment,
     mapped_node: Node,
@@ -227,6 +227,7 @@ fn update_ancestry(
             if anc_current_right != temp_right {
                 let current = ancestry.get_mut(current_ancestry_index);
                 current.segment.left = temp_right;
+                println!("boo boo {left}, {right}");
                 seg_right = Some(current_ancestry_index);
             } else {
                 seg_right = ancestry.next(current_ancestry_index);
@@ -241,16 +242,19 @@ fn update_ancestry(
                     ancestry.next[index.0] = Index::sentinel().0;
                 }
             } else {
+                println!("setting head here: A, {temp_left}, {temp_right}");
                 head = seg_right;
+                println!("the head is {:?}", ancestry.get(head.unwrap()));
             }
             current_ancestry_index = match seg_right {
                 Some(value) => value,
                 None => Index::sentinel(),
             };
-            break;
         } else {
             if prev.is_none() {
+                println!("setting head here: B, {left}, {right}");
                 head = Some(current_ancestry_index);
+                println!("the head is {:?}", ancestry.get(head.unwrap()));
             }
             prev = Some(current_ancestry_index);
             current_ancestry_index = ancestry.next_raw(current_ancestry_index);
@@ -342,7 +346,7 @@ fn test_list_updating() {
         h = ancestry.next_raw(h);
     }
     for i in &extracted {
-        assert!(overlaps.contains(i), "{i:?}, {extracted:?}");
+        assert!(overlaps.contains(i), "{i:?}, {overlaps:?}");
     }
     for o in &overlaps {
         assert!(extracted.contains(o), "{o:?}, {extracted:?}");
