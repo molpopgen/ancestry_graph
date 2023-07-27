@@ -54,6 +54,7 @@ impl<T> CursorList<T> {
             Index(index)
         } else {
             self.next.push(Index::sentinel().0);
+            self.data.push(datum);
             Index(self.data.len() - 1)
         }
     }
@@ -111,6 +112,8 @@ impl<T> CursorList<T> {
     //    self.free_list.push(at.0);
     //}
 }
+
+type NodeAncestry = CursorList<AncestrySegment>;
 
 struct Segment {
     left: i64,
@@ -179,4 +182,26 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
         current_edge = graph.edges.next(edge_index);
     }
     queue.sort_unstable_by_key(|x| x.segment.left);
+}
+
+// this is test3 from the python prototype
+#[test]
+fn test_list_updating() {
+    let mut ancestry_head = vec![];
+    let mut ancestry = NodeAncestry::with_capacity(1000);
+    let node0head = ancestry.new_index(AncestrySegment {
+        segment: Segment { left: 0, right: 2 },
+        mapped_node: Node(0),
+    });
+    let node1head = ancestry.new_index(AncestrySegment {
+        segment: Segment { left: 1, right: 2 },
+        mapped_node: Node(1),
+    });
+    let node2head = ancestry.new_index(AncestrySegment {
+        segment: Segment { left: 0, right: 1 },
+        mapped_node: Node(2),
+    });
+    for i in [node0head, node1head, node2head] {
+        ancestry_head.push(i);
+    }
 }
