@@ -247,7 +247,7 @@ fn update_ancestry(
                 Some(value) => value,
                 None => Index::sentinel(),
             };
-            break
+            break;
         } else {
             if prev.is_none() {
                 head = Some(current_ancestry_index);
@@ -343,5 +343,8 @@ fn test_list_updating() {
     }
     for i in &extracted {
         assert!(overlaps.contains(i), "{i:?}, {extracted:?}");
+    }
+    for o in &overlaps {
+        assert!(extracted.contains(o), "{o:?}, {extracted:?}");
     }
 }
