@@ -139,6 +139,16 @@ struct AncestryIntersection {
     edge_index: Index,
 }
 
+struct AncestryOverlapper {
+    queue: Vec<AncestryIntersection>,
+    num_overlaps: usize,
+    current_overlap: usize,
+    parent: Node,
+    left: i64,
+    right: i64,
+    overlaps: Vec<AncestryIntersection>,
+}
+
 struct Graph {
     birth_time: Vec<i64>,
     edges: CursorList<Edge>,
