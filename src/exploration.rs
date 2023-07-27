@@ -264,7 +264,7 @@ fn update_ancestry_design(
     let mut prev: Option<Index> = None;
     let mut ahead = ancestry_head[node.as_index()];
     for o in overlaps {
-        println!("FOO {o:?}");
+        println!("FOO {o:?} {head:?}, {prev:?}");
         while !ahead.is_sentinel() {
             let (anc_current_left, anc_current_right) = {
                 let current = ancestry.get(ahead);
@@ -272,16 +272,10 @@ fn update_ancestry_design(
             };
             let (left, right, mapped_node) = *o;
             if right > anc_current_left && anc_current_right > left {
-                (head, prev) = update_ancestry(
-                    left,
-                    right,
-                    mapped_node,
-                    ancestry_head[node.as_index()],
-                    ancestry,
-                    head,
-                    prev,
-                );
+                (head, prev) =
+                    update_ancestry(left, right, mapped_node, ahead, ancestry, head, prev);
             } else {
+                ahead = ancestry.next_raw(ahead);
             }
             ahead = ancestry.next_raw(ahead);
         }
@@ -345,7 +339,7 @@ fn test_list_updating() {
         h = ancestry.next_raw(h);
     }
     for i in &extracted {
-        assert!(overlaps.contains(i), "{i:?}, {overlaps:?}");
+        assert!(overlaps.contains(i), "{i:?}, {overlaps:?} != {extracted:?}");
     }
     for o in &overlaps {
         assert!(extracted.contains(o), "{o:?}, {extracted:?}");
