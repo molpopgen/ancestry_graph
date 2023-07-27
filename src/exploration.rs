@@ -48,6 +48,10 @@ impl<T> CursorList<T> {
         &self.data[at.0]
     }
 
+    pub fn get_mut(&mut self, at: Index) -> &mut T {
+        &mut self.data[at.0]
+    }
+
     pub fn new_index(&mut self, datum: T) -> Index {
         if let Some(index) = self.free_list.pop() {
             let _ = std::mem::replace(&mut self.data[index], datum);
@@ -115,6 +119,7 @@ impl<T> CursorList<T> {
 
 type NodeAncestry = CursorList<AncestrySegment>;
 
+#[derive(Clone, Copy)]
 struct Segment {
     left: i64,
     right: i64,
@@ -126,6 +131,7 @@ impl Segment {
     }
 }
 
+#[derive(Clone, Copy)]
 struct AncestrySegment {
     segment: Segment,
     mapped_node: Node,
@@ -188,12 +194,72 @@ fn update_ancestry(
     left: i64,
     right: i64,
     mapped_node: Node,
+    current_ancestry_index: Index,
     ancestry: &mut NodeAncestry,
     head: Option<Index>,
     prev: Option<Index>,
 ) -> (Option<Index>, Option<Index>) {
     let mut head = head;
     let mut prev = prev;
+    let mut current_ancestry_index = current_ancestry_index;
+    while !current_ancestry_index.is_sentinel() {
+        let (anc_current_left, anc_current_right) = {
+            let current = ancestry.get(current_ancestry_index);
+            (current.segment.left, current.segment.right)
+        };
+        if right > anc_current_left && anc_current_right > left {
+            let (temp_left, temp_right) = {
+                let current = ancestry.get(current_ancestry_index);
+                (
+                    std::cmp::max(left, current.segment.left),
+                    std::cmp::min(right, current.segment.right),
+                )
+            };
+
+            let mut seg_left: Option<Index> = None;
+            let mut seg_right: Option<Index> = None;
+
+            if anc_current_left != temp_left {
+                seg_left = Some(ancestry.new_index(AncestrySegment {
+                    segment: Segment {
+                        left: anc_current_left,
+                        right: temp_left,
+                    },
+                    mapped_node,
+                }));
+            }
+
+            if anc_current_right != temp_right {
+                let current = ancestry.get_mut(current_ancestry_index);
+                current.segment.left = temp_right;
+                seg_right = Some(current_ancestry_index);
+            } else {
+                seg_right = ancestry.next(current_ancestry_index);
+                // seg_right = current.next
+                // TODO: free current
+            }
+
+            if let Some(index) = prev {
+                if let Some(value) = seg_right {
+                    ancestry.next[index.0] = value.0;
+                } else {
+                    ancestry.next[index.0] = Index::sentinel().0;
+                }
+            } else {
+                head = seg_right;
+            }
+            current_ancestry_index = match seg_right {
+                Some(value) => value,
+                None => Index::sentinel(),
+            };
+        } else {
+            if prev.is_none() {
+                head = Some(current_ancestry_index);
+            }
+            prev = Some(current_ancestry_index);
+            current_ancestry_index = ancestry.next_raw(current_ancestry_index);
+        }
+    }
 
     (head, prev)
 }
@@ -210,7 +276,25 @@ fn update_ancestry_design(
     let mut prev: Option<Index> = None;
     for o in overlaps {
         let (left, right, mapped_node) = *o;
-        (head, prev) = update_ancestry(left, right, mapped_node, ancestry, head, prev);
+        (head, prev) = update_ancestry(
+            left,
+            right,
+            mapped_node,
+            ancestry_head[node.as_index()],
+            ancestry,
+            head,
+            prev,
+        );
+    }
+    if let Some(index) = head {
+        ancestry_head[node.as_index()] = index;
+    } else {
+        ancestry_head[node.as_index()] = Index::sentinel();
+    }
+    if let Some(index) = prev {
+        ancestry_tail[node.as_index()] = index;
+    } else {
+        ancestry_tail[node.as_index()] = Index::sentinel();
     }
 }
 
@@ -246,4 +330,15 @@ fn test_list_updating() {
         &mut ancestry_head,
         &mut ancestry_tail,
     );
+
+    let mut extracted = vec![];
+    let mut h = ancestry_head[0];
+    while !h.is_sentinel() {
+        let a = ancestry.get(h);
+        extracted.push((a.segment.left, a.segment.right, a.mapped_node));
+        h = ancestry.next_raw(h);
+    }
+    for i in &extracted {
+        assert!(overlaps.contains(i), "{i:?}, {extracted:?}");
+    }
 }
