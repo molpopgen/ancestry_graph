@@ -202,64 +202,52 @@ fn update_ancestry(
     let mut head = head;
     let mut prev = prev;
     let mut current_ancestry_index = current_ancestry_index;
-    while !current_ancestry_index.is_sentinel() {
-        let (anc_current_left, anc_current_right) = {
-            let current = ancestry.get(current_ancestry_index);
-            (current.segment.left, current.segment.right)
-        };
-        if right > anc_current_left && anc_current_right > left {
-            let temp_left = std::cmp::max(left, anc_current_left);
-            let temp_right = std::cmp::min(right, anc_current_right);
+    let (anc_current_left, anc_current_right) = {
+        let current = ancestry.get(current_ancestry_index);
+        (current.segment.left, current.segment.right)
+    };
+    let temp_left = std::cmp::max(left, anc_current_left);
+    let temp_right = std::cmp::min(right, anc_current_right);
 
-            let mut seg_left: Option<Index> = None;
-            let mut seg_right: Option<Index> = None;
+    let mut seg_left: Option<Index> = None;
+    let mut seg_right: Option<Index> = None;
 
-            if anc_current_left != temp_left {
-                seg_left = Some(ancestry.new_index(AncestrySegment {
-                    segment: Segment {
-                        left: anc_current_left,
-                        right: temp_left,
-                    },
-                    mapped_node,
-                }));
-            }
-
-            if anc_current_right != temp_right {
-                let current = ancestry.get_mut(current_ancestry_index);
-                current.segment.left = temp_right;
-                println!("boo boo {left}, {right}");
-                seg_right = Some(current_ancestry_index);
-            } else {
-                seg_right = ancestry.next(current_ancestry_index);
-                // seg_right = current.next
-                // TODO: free current
-            }
-
-            if let Some(index) = prev {
-                if let Some(value) = seg_right {
-                    ancestry.next[index.0] = value.0;
-                } else {
-                    ancestry.next[index.0] = Index::sentinel().0;
-                }
-            } else {
-                println!("setting head here: A, {temp_left}, {temp_right}");
-                head = seg_right;
-                println!("the head is {:?}", ancestry.get(head.unwrap()));
-            }
-            current_ancestry_index = match seg_right {
-                Some(value) => value,
-                None => Index::sentinel(),
-            };
-        } else {
-            if prev.is_none() {
-                println!("setting head here: B, {left}, {right}");
-                head = Some(current_ancestry_index);
-                println!("the head is {:?}", ancestry.get(head.unwrap()));
-            }
-            prev = Some(current_ancestry_index);
-            current_ancestry_index = ancestry.next_raw(current_ancestry_index);
-        }
+    if anc_current_left != temp_left {
+        seg_left = Some(ancestry.new_index(AncestrySegment {
+            segment: Segment {
+                left: anc_current_left,
+                right: temp_left,
+            },
+            mapped_node,
+        }));
     }
+
+    if anc_current_right != temp_right {
+        let current = ancestry.get_mut(current_ancestry_index);
+        current.segment.left = temp_right;
+        println!("boo boo {left}, {right}");
+        seg_right = Some(current_ancestry_index);
+    } else {
+        seg_right = ancestry.next(current_ancestry_index);
+        // seg_right = current.next
+        // TODO: free current
+    }
+
+    if let Some(index) = prev {
+        if let Some(value) = seg_right {
+            ancestry.next[index.0] = value.0;
+        } else {
+            ancestry.next[index.0] = Index::sentinel().0;
+        }
+    } else {
+        println!("setting head here: A, {temp_left}, {temp_right}");
+        head = seg_right;
+        println!("the head is {:?}", ancestry.get(head.unwrap()));
+    }
+    current_ancestry_index = match seg_right {
+        Some(value) => value,
+        None => Index::sentinel(),
+    };
 
     (head, prev)
 }
@@ -274,18 +262,29 @@ fn update_ancestry_design(
     assert_eq!(ancestry_head.len(), ancestry_tail.len());
     let mut head: Option<Index> = None;
     let mut prev: Option<Index> = None;
+    let mut ahead = ancestry_head[node.as_index()];
     for o in overlaps {
-        println!("{o:?}");
-        let (left, right, mapped_node) = *o;
-        (head, prev) = update_ancestry(
-            left,
-            right,
-            mapped_node,
-            ancestry_head[node.as_index()],
-            ancestry,
-            head,
-            prev,
-        );
+        println!("FOO {o:?}");
+        while !ahead.is_sentinel() {
+            let (anc_current_left, anc_current_right) = {
+                let current = ancestry.get(ahead);
+                (current.segment.left, current.segment.right)
+            };
+            let (left, right, mapped_node) = *o;
+            if right > anc_current_left && anc_current_right > left {
+                (head, prev) = update_ancestry(
+                    left,
+                    right,
+                    mapped_node,
+                    ancestry_head[node.as_index()],
+                    ancestry,
+                    head,
+                    prev,
+                );
+            } else {
+            }
+            ahead = ancestry.next_raw(ahead);
+        }
     }
     if let Some(index) = head {
         ancestry_head[node.as_index()] = index;
