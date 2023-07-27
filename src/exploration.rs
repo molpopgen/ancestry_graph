@@ -44,6 +44,10 @@ impl<T> CursorList<T> {
         }
     }
 
+    pub fn get(&self, at: Index) -> &T {
+        &self.data[at.0]
+    }
+
     pub fn new_index(&mut self, datum: T) -> Index {
         if let Some(index) = self.free_list.pop() {
             let _ = std::mem::replace(&mut self.data[index], datum);
@@ -113,6 +117,12 @@ struct Segment {
     right: i64,
 }
 
+impl Segment {
+    fn overlaps(&self, other: &Segment) -> bool {
+        self.right > other.left && other.right > self.left
+    }
+}
+
 struct AncestrySegment {
     segment: Segment,
     mapped_node: Node,
@@ -126,5 +136,37 @@ struct Edge {
 struct Overlap {
     segment: Segment,
     mapped_node: Node,
-    edge: Index,
+    edge_index: Index,
+}
+
+struct Graph {
+    birth_time: Vec<i64>,
+    edges: CursorList<Edge>,
+    edge_head: Vec<Index>,
+    ancestry: CursorList<AncestrySegment>,
+    ancestry_head: Vec<Index>,
+}
+
+fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<Overlap>) {
+    let mut current_edge = Some(graph.edge_head[node.as_index()]);
+    let mut current_ancestry = Some(graph.ancestry_head[node.as_index()]);
+
+    while let Some(edge_index) = current_edge {
+        while let Some(aseg) = current_ancestry {
+            let edge_ref = graph.edges.get(edge_index);
+            let anc_ref = graph.ancestry.get(aseg);
+            if anc_ref.segment.overlaps(&edge_ref.segment) {
+                let left = std::cmp::max(edge_ref.segment.left, anc_ref.segment.left);
+                let right = std::cmp::min(edge_ref.segment.right, anc_ref.segment.right);
+                queue.push(Overlap {
+                    segment: Segment { left, right },
+                    mapped_node: anc_ref.mapped_node,
+                    edge_index,
+                });
+            }
+            current_ancestry = graph.ancestry.next(aseg);
+        }
+        current_edge = graph.edges.next(edge_index);
+    }
+    queue.sort_unstable_by_key(|x| x.segment.left);
 }
