@@ -133,7 +133,7 @@ struct Edge {
     child: Node,
 }
 
-struct Overlap {
+struct AncestryIntersection {
     segment: Segment,
     mapped_node: Node,
     edge_index: Index,
@@ -147,7 +147,7 @@ struct Graph {
     ancestry_head: Vec<Index>,
 }
 
-fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<Overlap>) {
+fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryIntersection>) {
     let mut current_edge = Some(graph.edge_head[node.as_index()]);
     let mut current_ancestry = Some(graph.ancestry_head[node.as_index()]);
 
@@ -158,7 +158,7 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<Overlap>) {
             if anc_ref.segment.overlaps(&edge_ref.segment) {
                 let left = std::cmp::max(edge_ref.segment.left, anc_ref.segment.left);
                 let right = std::cmp::min(edge_ref.segment.right, anc_ref.segment.right);
-                queue.push(Overlap {
+                queue.push(AncestryIntersection {
                     segment: Segment { left, right },
                     mapped_node: anc_ref.mapped_node,
                     edge_index,
