@@ -247,6 +247,7 @@ fn update_ancestry(
                 Some(value) => value,
                 None => Index::sentinel(),
             };
+            break
         } else {
             if prev.is_none() {
                 head = Some(current_ancestry_index);
