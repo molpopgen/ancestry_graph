@@ -208,13 +208,8 @@ fn update_ancestry(
             (current.segment.left, current.segment.right)
         };
         if right > anc_current_left && anc_current_right > left {
-            let (temp_left, temp_right) = {
-                let current = ancestry.get(current_ancestry_index);
-                (
-                    std::cmp::max(left, current.segment.left),
-                    std::cmp::min(right, current.segment.right),
-                )
-            };
+            let temp_left = std::cmp::max(left, anc_current_left);
+            let temp_right = std::cmp::min(right, anc_current_right);
 
             let mut seg_left: Option<Index> = None;
             let mut seg_right: Option<Index> = None;
@@ -275,6 +270,7 @@ fn update_ancestry_design(
     let mut head: Option<Index> = None;
     let mut prev: Option<Index> = None;
     for o in overlaps {
+        println!("{o:?}");
         let (left, right, mapped_node) = *o;
         (head, prev) = update_ancestry(
             left,
@@ -296,6 +292,11 @@ fn update_ancestry_design(
     } else {
         ancestry_tail[node.as_index()] = Index::sentinel();
     }
+    println!(
+        "final {:?}, {:?}",
+        ancestry_head[node.as_index()],
+        ancestry_tail[node.as_index()]
+    );
 }
 
 // this is test3 from the python prototype
