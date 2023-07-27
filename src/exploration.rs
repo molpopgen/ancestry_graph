@@ -333,6 +333,7 @@ fn test_list_updating() {
 
     let mut extracted = vec![];
     let mut h = ancestry_head[0];
+    println!("{h:?}, {node0head:?}");
     while !h.is_sentinel() {
         let a = ancestry.get(h);
         extracted.push((a.segment.left, a.segment.right, a.mapped_node));
