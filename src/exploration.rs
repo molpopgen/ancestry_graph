@@ -316,7 +316,7 @@ fn update_ancestry_design(
         ancestry_head[node.as_index()] = index;
     } else {
         // This is WRONG.
-        // We need thttps://www.google.com/search?client=firefox-b-1-d&q=ecoevo+ucio TRAVERSE THE ENTIRE LIST AND FREE IT
+        // We need to TRAVERSE THE ENTIRE LIST AND FREE IT
         ancestry_head[node.as_index()] = Index::sentinel();
     }
     // THIS IS WRONG: we only do this work if we ARE NOT
