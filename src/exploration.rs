@@ -260,6 +260,9 @@ fn update_ancestry(
         //    ancestry.next[index.0] = Index::sentinel().0;
         //}
     } else {
+        // Here, it is likely that we want to free the ancestry
+        // segment. 
+        // Will need test coverage of that idea later.
         assert!(seg_right.is_some());
         head = Some(current_ancestry_index);
         ancestry.data[current_ancestry_index.0] = out_seg;
@@ -425,31 +428,14 @@ fn test_list_updating() {
 // this is test0 from the python prototype
 #[test]
 fn test_list_updating_2() {
-    let mut ancestry_head = vec![];
+    let input_ancestry = vec![
+        vec![(0_i64, 3_i64, Node(0))],
+        vec![(0_i64, 1_i64, Node(1)), (2_i64, 3_i64, Node(1))],
+        vec![(0_i64, 1_i64, Node(2))],
+    ];
     let mut ancestry = NodeAncestry::with_capacity(1000);
-    let node0head = ancestry.new_index(AncestrySegment {
-        segment: Segment { left: 0, right: 3 },
-        mapped_node: Node(0),
-    });
-    let node1head = ancestry.new_index(AncestrySegment {
-        segment: Segment { left: 0, right: 1 },
-        mapped_node: Node(1),
-    });
-    ancestry.insert_after(
-        node1head,
-        AncestrySegment {
-            segment: Segment { left: 2, right: 3 },
-            mapped_node: Node(1),
-        },
-    );
-    let node2head = ancestry.new_index(AncestrySegment {
-        segment: Segment { left: 0, right: 1 },
-        mapped_node: Node(2),
-    });
-    for i in [node0head, node1head, node2head] {
-        ancestry_head.push(i);
-    }
-    let mut ancestry_tail = ancestry_head.clone();
+    let (mut ancestry_head, mut ancestry_tail) =
+        test_utils::setup_ancestry(input_ancestry.as_slice(), &mut ancestry);
 
     // (left, right, mapped_node)
     // cribbed from manual calculation/the python prototype
