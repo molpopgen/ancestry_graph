@@ -349,7 +349,6 @@ fn test_list_updating() {
     // (left, right, mapped_node)
     // cribbed from manual calculation/the python prototype
     let overlaps = [(0_i64, 1_i64, Node(2)), (1, 2, Node(1))];
-    println!("{ancestry:?}");
     update_ancestry_design(
         Node(0),
         &overlaps,
@@ -357,6 +356,12 @@ fn test_list_updating() {
         &mut ancestry_head,
         &mut ancestry_tail,
     );
+    // The next assertions are about
+    // internal details.
+    // The specific will break once we start to
+    // "squash" output ancestry.
+    assert_eq!(ancestry.data.len(),4);
+    assert_eq!(ancestry.next.len(),4);
 
     let mut extracted = vec![];
     let mut h = ancestry_head[0];
