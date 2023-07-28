@@ -213,6 +213,7 @@ fn update_ancestry(
     let mut seg_right: Option<Index> = None;
 
     if anc_current_left != temp_left {
+        println!("LEFT");
         seg_left = Some(ancestry.new_index(AncestrySegment {
             segment: Segment {
                 left: anc_current_left,
@@ -223,6 +224,7 @@ fn update_ancestry(
     }
 
     if anc_current_right != temp_right {
+        println!("RIGHT");
         let current = ancestry.get_mut(current_ancestry_index);
         current.segment.left = temp_right;
         println!("boo boo {left}, {right}");
@@ -233,21 +235,34 @@ fn update_ancestry(
         // TODO: free current
     }
 
+    let out_seg = AncestrySegment {
+        segment: Segment { left, right },
+        mapped_node,
+    };
+
     if let Some(index) = prev {
-        if let Some(value) = seg_right {
-            ancestry.next[index.0] = value.0;
-        } else {
-            ancestry.next[index.0] = Index::sentinel().0;
-        }
+        let temp = ancestry.new_index(out_seg);
+        ancestry.next[index.0] = temp.0;
+        prev = Some(temp);
+
+        //if let Some(value) = seg_right {
+        //    ancestry.next[index.0] = value.0;
+        //} else {
+        //    ancestry.next[index.0] = Index::sentinel().0;
+        //}
     } else {
         println!("setting head here: A, {temp_left}, {temp_right}");
-        head = seg_right;
-        println!("the head is {:?}", ancestry.get(head.unwrap()));
+        assert!(seg_right.is_some());
+        head = Some(ancestry.new_index(out_seg));
+        //ancestry.next[prev.unwrap().0] = seg_right.unwrap().0;
+        prev = head;
     }
-    current_ancestry_index = match seg_right {
-        Some(value) => value,
-        None => Index::sentinel(),
-    };
+    println!("the head is {:?}", ancestry.get(head.unwrap()));
+    println!("the prev is {:?}", ancestry.get(prev.unwrap()));
+    //current_ancestry_index = match seg_right {
+    //    Some(value) => value,
+    //    None => Index::sentinel(),
+    //};
 
     (head, prev)
 }
@@ -272,6 +287,7 @@ fn update_ancestry_design(
             };
             let (left, right, mapped_node) = *o;
             if right > anc_current_left && anc_current_right > left {
+                println!("overlap...{anc_current_left}, {anc_current_right}");
                 (head, prev) =
                     update_ancestry(left, right, mapped_node, ahead, ancestry, head, prev);
             } else {
