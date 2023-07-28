@@ -290,8 +290,10 @@ fn update_ancestry_design(
                 println!("overlap...{anc_current_left}, {anc_current_right}");
                 (head, prev) =
                     update_ancestry(left, right, mapped_node, ahead, ancestry, head, prev);
+                break;
             } else {
                 ahead = ancestry.next_raw(ahead);
+                break;
             }
             ahead = ancestry.next_raw(ahead);
         }
