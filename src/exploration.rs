@@ -343,6 +343,7 @@ fn update_ancestry_design(
 mod test_utils {
     use super::*;
 
+    #[must_use]
     pub(super) fn setup_ancestry(
         input_ancestry: &[Vec<(i64, i64, Node)>],
         ancestry: &mut CursorList<AncestrySegment>,
@@ -379,6 +380,37 @@ mod test_utils {
 
         (ancestry_head, ancestry_tail)
     }
+
+    #[must_use]
+    pub(super) fn run_ancestry_tests(
+        input_ancestry: &[Vec<(i64, i64, Node)>],
+        overlaps: &[(i64, i64, Node)],
+    ) -> (NodeAncestry, Vec<Index>, Vec<Index>) {
+        let mut ancestry = NodeAncestry::with_capacity(1000);
+        let (mut ancestry_head, mut ancestry_tail) =
+            test_utils::setup_ancestry(input_ancestry, &mut ancestry);
+        update_ancestry_design(
+            Node(0),
+            overlaps,
+            &mut ancestry,
+            &mut ancestry_head,
+            &mut ancestry_tail,
+        );
+        let mut extracted = vec![];
+        let mut h = ancestry_head[0];
+        while !h.is_sentinel() {
+            let a = ancestry.get(h);
+            extracted.push((a.segment.left, a.segment.right, a.mapped_node));
+            h = ancestry.next_raw(h);
+        }
+        for i in &extracted {
+            assert!(overlaps.contains(i), "{i:?}, {overlaps:?} != {extracted:?}");
+        }
+        for o in overlaps {
+            assert!(extracted.contains(o), "{o:?}, {extracted:?}");
+        }
+        (ancestry, ancestry_head, ancestry_tail)
+    }
 }
 
 // this is test3 from the python prototype
@@ -387,42 +419,14 @@ fn test_list_updating() {
     let anc0 = vec![(0_i64, 2_i64, Node(0))];
     let anc1 = vec![(1_i64, 2_i64, Node(1))];
     let anc2 = vec![(0_i64, 1_i64, Node(2))];
-    let mut ancestry = NodeAncestry::with_capacity(1000);
     let input_ancestry = vec![anc0, anc1, anc2];
-    let (mut ancestry_head, mut ancestry_tail) =
-        test_utils::setup_ancestry(input_ancestry.as_slice(), &mut ancestry);
 
     // (left, right, mapped_node)
     // cribbed from manual calculation/the python prototype
     let overlaps = [(0_i64, 1_i64, Node(2)), (1, 2, Node(1))];
-    update_ancestry_design(
-        Node(0),
-        &overlaps,
-        &mut ancestry,
-        &mut ancestry_head,
-        &mut ancestry_tail,
-    );
-    // The next assertions are about
-    // internal details.
-    // The specific will break once we start to
-    // "squash" output ancestry.
+    let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
     assert_eq!(ancestry.data.len(), 4);
     assert_eq!(ancestry.next.len(), 4);
-
-    let mut extracted = vec![];
-    let mut h = ancestry_head[0];
-    while !h.is_sentinel() {
-        let a = ancestry.get(h);
-        extracted.push((a.segment.left, a.segment.right, a.mapped_node));
-        h = ancestry.next_raw(h);
-    }
-    for i in &extracted {
-        assert!(overlaps.contains(i), "{i:?}, {overlaps:?} != {extracted:?}");
-    }
-    for o in &overlaps {
-        assert!(extracted.contains(o), "{o:?}, {extracted:?}");
-    }
-    println!("{ancestry:?}");
 }
 
 // this is test0 from the python prototype
@@ -433,39 +437,11 @@ fn test_list_updating_2() {
         vec![(0_i64, 1_i64, Node(1)), (2_i64, 3_i64, Node(1))],
         vec![(0_i64, 1_i64, Node(2))],
     ];
-    let mut ancestry = NodeAncestry::with_capacity(1000);
-    let (mut ancestry_head, mut ancestry_tail) =
-        test_utils::setup_ancestry(input_ancestry.as_slice(), &mut ancestry);
 
     // (left, right, mapped_node)
     // cribbed from manual calculation/the python prototype
     let overlaps = [(0_i64, 1_i64, Node(0)), (2, 3, Node(1))];
-    update_ancestry_design(
-        Node(0),
-        &overlaps,
-        &mut ancestry,
-        &mut ancestry_head,
-        &mut ancestry_tail,
-    );
-    // The next assertions are about
-    // internal details.
-    // The specific will break once we start to
-    // "squash" output ancestry.
+    let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
     assert_eq!(ancestry.data.len(), 5);
     assert_eq!(ancestry.next.len(), 5);
-
-    let mut extracted = vec![];
-    let mut h = ancestry_head[0];
-    while !h.is_sentinel() {
-        let a = ancestry.get(h);
-        extracted.push((a.segment.left, a.segment.right, a.mapped_node));
-        h = ancestry.next_raw(h);
-    }
-    for i in &extracted {
-        assert!(overlaps.contains(i), "{i:?}, {overlaps:?} != {extracted:?}");
-    }
-    for o in &overlaps {
-        assert!(extracted.contains(o), "{o:?}, {extracted:?}");
-    }
-    println!("{ancestry:?}");
 }
