@@ -237,11 +237,12 @@ fn update_ancestry(
         segment: Segment { left, right },
         mapped_node,
     };
+    let out_seg_index = ancestry.new_index(out_seg);
+    println!("got new index {out_seg_index:?} with {out_seg:?}");
 
     if let Some(index) = prev {
-        let temp = ancestry.new_index(out_seg);
-        ancestry.next[index.0] = temp.0;
-        prev = Some(temp);
+        ancestry.next[index.0] = out_seg_index.0;
+        prev = Some(out_seg_index);
 
         //if let Some(value) = seg_right {
         //    ancestry.next[index.0] = value.0;
@@ -250,7 +251,7 @@ fn update_ancestry(
         //}
     } else {
         assert!(seg_right.is_some());
-        head = Some(ancestry.new_index(out_seg));
+        head = Some(out_seg_index);
         //ancestry.next[prev.unwrap().0] = seg_right.unwrap().0;
         prev = head;
     }
