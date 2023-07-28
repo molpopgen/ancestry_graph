@@ -270,12 +270,13 @@ fn update_ancestry_design(
     let mut prev: Option<Index> = None;
     let mut ahead = ancestry_head[node.as_index()];
     for o in overlaps {
-        println!("FOO {o:?} {head:?}, {prev:?}");
+        println!("ahead: {ahead:?}, out head: {head:?}, out tail {prev:?}");
         while !ahead.is_sentinel() {
             let (anc_current_left, anc_current_right) = {
                 let current = ancestry.get(ahead);
                 (current.segment.left, current.segment.right)
             };
+            println!("processing: {anc_current_left}, {anc_current_right}");
             let (left, right, mapped_node) = *o;
             if right > anc_current_left && anc_current_right > left {
                 (head, prev) =
