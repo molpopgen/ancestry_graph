@@ -213,6 +213,9 @@ fn update_ancestry(
     let mut seg_left: Option<Index> = None;
     let mut seg_right: Option<Index> = None;
 
+    // NOTE: we only need what is below
+    // when dealing with OUTPUTTING ancestry changes,
+    // which we will handle later.
     //if anc_current_left != temp_left {
     //    seg_left = Some(ancestry.new_index(AncestrySegment {
     //        segment: Segment {
