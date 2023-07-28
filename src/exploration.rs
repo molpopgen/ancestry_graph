@@ -213,7 +213,6 @@ fn update_ancestry(
     let mut seg_right: Option<Index> = None;
 
     if anc_current_left != temp_left {
-        println!("LEFT");
         seg_left = Some(ancestry.new_index(AncestrySegment {
             segment: Segment {
                 left: anc_current_left,
@@ -224,10 +223,8 @@ fn update_ancestry(
     }
 
     if anc_current_right != temp_right {
-        println!("RIGHT");
         let current = ancestry.get_mut(current_ancestry_index);
         current.segment.left = temp_right;
-        println!("boo boo {left}, {right}");
         seg_right = Some(current_ancestry_index);
     } else {
         seg_right = ancestry.next(current_ancestry_index);
@@ -251,18 +248,11 @@ fn update_ancestry(
         //    ancestry.next[index.0] = Index::sentinel().0;
         //}
     } else {
-        println!("setting head here: A, {temp_left}, {temp_right}");
         assert!(seg_right.is_some());
         head = Some(ancestry.new_index(out_seg));
         //ancestry.next[prev.unwrap().0] = seg_right.unwrap().0;
         prev = head;
     }
-    println!("the head is {:?}", ancestry.get(head.unwrap()));
-    println!("the prev is {:?}", ancestry.get(prev.unwrap()));
-    //current_ancestry_index = match seg_right {
-    //    Some(value) => value,
-    //    None => Index::sentinel(),
-    //};
 
     (head, prev)
 }
@@ -287,7 +277,6 @@ fn update_ancestry_design(
             };
             let (left, right, mapped_node) = *o;
             if right > anc_current_left && anc_current_right > left {
-                println!("overlap...{anc_current_left}, {anc_current_right}");
                 (head, prev) =
                     update_ancestry(left, right, mapped_node, ahead, ancestry, head, prev);
             } else {
@@ -348,7 +337,6 @@ fn test_list_updating() {
 
     let mut extracted = vec![];
     let mut h = ancestry_head[0];
-    println!("{h:?}, {node0head:?}");
     while !h.is_sentinel() {
         let a = ancestry.get(h);
         extracted.push((a.segment.left, a.segment.right, a.mapped_node));
