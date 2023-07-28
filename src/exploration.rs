@@ -401,7 +401,12 @@ mod test_utils {
         while !h.is_sentinel() {
             let a = ancestry.get(h);
             extracted.push((a.segment.left, a.segment.right, a.mapped_node));
-            h = ancestry.next_raw(h);
+            let next = ancestry.next_raw(h);
+            // Check that our tail is properly updated
+            if next.is_sentinel() {
+                assert_eq!(ancestry_tail[0], h);
+            }
+            h = next;
         }
         for i in &extracted {
             assert!(overlaps.contains(i), "{i:?}, {overlaps:?} != {extracted:?}");
@@ -409,6 +414,7 @@ mod test_utils {
         for o in overlaps {
             assert!(extracted.contains(o), "{o:?}, {extracted:?}");
         }
+
         (ancestry, ancestry_head, ancestry_tail)
     }
 }
