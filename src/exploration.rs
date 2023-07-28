@@ -360,8 +360,69 @@ fn test_list_updating() {
     // internal details.
     // The specific will break once we start to
     // "squash" output ancestry.
-    assert_eq!(ancestry.data.len(),4);
-    assert_eq!(ancestry.next.len(),4);
+    assert_eq!(ancestry.data.len(), 4);
+    assert_eq!(ancestry.next.len(), 4);
+
+    let mut extracted = vec![];
+    let mut h = ancestry_head[0];
+    while !h.is_sentinel() {
+        let a = ancestry.get(h);
+        extracted.push((a.segment.left, a.segment.right, a.mapped_node));
+        h = ancestry.next_raw(h);
+    }
+    for i in &extracted {
+        assert!(overlaps.contains(i), "{i:?}, {overlaps:?} != {extracted:?}");
+    }
+    for o in &overlaps {
+        assert!(extracted.contains(o), "{o:?}, {extracted:?}");
+    }
+    println!("{ancestry:?}");
+}
+
+#[test]
+fn test_list_updating_2() {
+    let mut ancestry_head = vec![];
+    let mut ancestry = NodeAncestry::with_capacity(1000);
+    let node0head = ancestry.new_index(AncestrySegment {
+        segment: Segment { left: 0, right: 3 },
+        mapped_node: Node(0),
+    });
+    let node1head = ancestry.new_index(AncestrySegment {
+        segment: Segment { left: 0, right: 1 },
+        mapped_node: Node(1),
+    });
+    ancestry.insert_after(
+        node1head,
+        AncestrySegment {
+            segment: Segment { left: 2, right: 3 },
+            mapped_node: Node(1),
+        },
+    );
+    let node2head = ancestry.new_index(AncestrySegment {
+        segment: Segment { left: 0, right: 1 },
+        mapped_node: Node(2),
+    });
+    for i in [node0head, node1head, node2head] {
+        ancestry_head.push(i);
+    }
+    let mut ancestry_tail = ancestry_head.clone();
+
+    // (left, right, mapped_node)
+    // cribbed from manual calculation/the python prototype
+    let overlaps = [(0_i64, 1_i64, Node(0)), (2, 3, Node(1))];
+    update_ancestry_design(
+        Node(0),
+        &overlaps,
+        &mut ancestry,
+        &mut ancestry_head,
+        &mut ancestry_tail,
+    );
+    // The next assertions are about
+    // internal details.
+    // The specific will break once we start to
+    // "squash" output ancestry.
+    assert_eq!(ancestry.data.len(), 5);
+    assert_eq!(ancestry.next.len(), 5);
 
     let mut extracted = vec![];
     let mut h = ancestry_head[0];
