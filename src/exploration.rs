@@ -340,8 +340,8 @@ fn update_ancestry_design(
 mod test_utils {
     use super::*;
 
-    pub(self) fn setup_ancestry(
-        input_ancestry: &[&[(i64, i64, Node)]],
+    pub(super) fn setup_ancestry(
+        input_ancestry: &[Vec<(i64, i64, Node)>],
         ancestry: &mut CursorList<AncestrySegment>,
     ) -> (Vec<Index>, Vec<Index>) {
         let mut ancestry_head = vec![];
@@ -381,24 +381,13 @@ mod test_utils {
 // this is test3 from the python prototype
 #[test]
 fn test_list_updating() {
-    let mut ancestry_head = vec![];
+    let anc0 = vec![(0_i64, 2_i64, Node(0))];
+    let anc1 = vec![(1_i64, 2_i64, Node(1))];
+    let anc2 = vec![(0_i64, 1_i64, Node(2))];
     let mut ancestry = NodeAncestry::with_capacity(1000);
-    let node0head = ancestry.new_index(AncestrySegment {
-        segment: Segment { left: 0, right: 2 },
-        mapped_node: Node(0),
-    });
-    let node1head = ancestry.new_index(AncestrySegment {
-        segment: Segment { left: 1, right: 2 },
-        mapped_node: Node(1),
-    });
-    let node2head = ancestry.new_index(AncestrySegment {
-        segment: Segment { left: 0, right: 1 },
-        mapped_node: Node(2),
-    });
-    for i in [node0head, node1head, node2head] {
-        ancestry_head.push(i);
-    }
-    let mut ancestry_tail = ancestry_head.clone();
+    let input_ancestry = vec![anc0, anc1, anc2];
+    let (mut ancestry_head, mut ancestry_tail) =
+        test_utils::setup_ancestry(input_ancestry.as_slice(), &mut ancestry);
 
     // (left, right, mapped_node)
     // cribbed from manual calculation/the python prototype
