@@ -300,6 +300,7 @@ fn update_ancestry_design(
                 };
                 (head, prev) =
                     update_ancestry(left, right, mapped_node, ahead, ancestry, head, prev);
+                break;
             } else {
                 // Here, it is likely that we want to free the ancestry
                 // segment.
@@ -307,7 +308,6 @@ fn update_ancestry_design(
                 ahead = ancestry.next_raw(ahead);
                 last_anc_segment = None;
             }
-            break;
         }
     }
     // WARNING: everything below is very fragile and
