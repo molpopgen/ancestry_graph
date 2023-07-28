@@ -29,6 +29,7 @@ impl Index {
 
 // TODO: this should be in another module
 // and made pub for internal use
+#[derive(Debug)]
 struct CursorList<T> {
     data: Vec<T>,
     next: Vec<usize>,
@@ -348,4 +349,5 @@ fn test_list_updating() {
     for o in &overlaps {
         assert!(extracted.contains(o), "{o:?}, {extracted:?}");
     }
+    println!("{ancestry:?}");
 }
