@@ -159,7 +159,7 @@ struct AncestryOverlapper {
     overlaps: Vec<AncestryIntersection>,
 }
 
-struct Graph {
+pub struct Graph {
     birth_time: Vec<i64>,
     edges: CursorList<Edge>,
     edge_head: Vec<Index>,
@@ -313,13 +313,13 @@ fn update_ancestry_design(
         ancestry_head[node.as_index()] = index;
     } else {
         // This is WRONG.
-        // We need to TRAVERSE THE ENTIRE LIST AND FREE IT
+        // We need thttps://www.google.com/search?client=firefox-b-1-d&q=ecoevo+ucio TRAVERSE THE ENTIRE LIST AND FREE IT
         ancestry_head[node.as_index()] = Index::sentinel();
     }
     // THIS IS WRONG: we only do this work if we ARE NOT
     // trashing the entire list. (See above...)
     // The inner logic is also WRONG.
-    // If we are changing the tail, then we need to 
+    // If we are changing the tail, then we need to
     // make sure that we TRUNCATE THE LIST FROM THE
     // CURRENT TAIL ONWARDS, BUT WE MAY HAVE TO WORRY
     // ABOUT SOME SUBTLE ISSUES THERE THAT I AM NOT
@@ -334,6 +334,48 @@ fn update_ancestry_design(
         ancestry_head[node.as_index()],
         ancestry_tail[node.as_index()]
     );
+}
+
+#[cfg(test)]
+mod test_utils {
+    use super::*;
+
+    pub(self) fn setup_ancestry(
+        input_ancestry: &[&[(i64, i64, Node)]],
+        ancestry: &mut CursorList<AncestrySegment>,
+    ) -> (Vec<Index>, Vec<Index>) {
+        let mut ancestry_head = vec![];
+        let mut ancestry_tail = vec![];
+
+        for inner in input_ancestry {
+            if !inner.is_empty() {
+                let head = ancestry.new_index(AncestrySegment {
+                    segment: Segment {
+                        left: inner[0].0,
+                        right: inner[0].1,
+                    },
+                    mapped_node: inner[0].2,
+                });
+                ancestry_head.push(head);
+                let mut last = head;
+                for (left, right, mapped_node) in inner.iter().skip(1) {
+                    last = ancestry.insert_after(
+                        last,
+                        AncestrySegment {
+                            segment: Segment {
+                                left: *left,
+                                right: *right,
+                            },
+                            mapped_node: *mapped_node,
+                        },
+                    );
+                }
+                ancestry_tail.push(last);
+            }
+        }
+
+        (ancestry_head, ancestry_tail)
+    }
 }
 
 // this is test3 from the python prototype
