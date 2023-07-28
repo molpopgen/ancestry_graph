@@ -307,11 +307,23 @@ fn update_ancestry_design(
             break;
         }
     }
+    // WARNING: everything below is very fragile and
+    // needs testing
     if let Some(index) = head {
         ancestry_head[node.as_index()] = index;
     } else {
+        // This is WRONG.
+        // We need to TRAVERSE THE ENTIRE LIST AND FREE IT
         ancestry_head[node.as_index()] = Index::sentinel();
     }
+    // THIS IS WRONG: we only do this work if we ARE NOT
+    // trashing the entire list. (See above...)
+    // The inner logic is also WRONG.
+    // If we are changing the tail, then we need to 
+    // make sure that we TRUNCATE THE LIST FROM THE
+    // CURRENT TAIL ONWARDS, BUT WE MAY HAVE TO WORRY
+    // ABOUT SOME SUBTLE ISSUES THERE THAT I AM NOT
+    // ABLE TO ARTICULATE YET.
     if let Some(index) = prev {
         ancestry_tail[node.as_index()] = index;
     } else {
