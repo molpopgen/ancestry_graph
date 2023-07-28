@@ -260,9 +260,6 @@ fn update_ancestry(
         //    ancestry.next[index.0] = Index::sentinel().0;
         //}
     } else {
-        // Here, it is likely that we want to free the ancestry
-        // segment. 
-        // Will need test coverage of that idea later.
         assert!(seg_right.is_some());
         head = Some(current_ancestry_index);
         ancestry.data[current_ancestry_index.0] = out_seg;
@@ -304,6 +301,9 @@ fn update_ancestry_design(
                 (head, prev) =
                     update_ancestry(left, right, mapped_node, ahead, ancestry, head, prev);
             } else {
+                // Here, it is likely that we want to free the ancestry
+                // segment.
+                // Will need test coverage of that idea later.
                 ahead = ancestry.next_raw(ahead);
                 last_anc_segment = None;
             }
