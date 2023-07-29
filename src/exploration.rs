@@ -284,6 +284,7 @@ fn update_ancestry_design(
     let mut last_anc_segment: Option<AncestrySegment> = None;
     for o in overlaps {
         println!("ahead: {ahead:?}, out head: {head:?}, out tail {prev:?}");
+        todo!("revisit this after we add more tests to our Py prototype to hit more code paths");
         while !ahead.is_sentinel() {
             let (anc_current_left, anc_current_right) = if let Some(aseg) = last_anc_segment {
                 (aseg.segment.left, aseg.segment.right)
