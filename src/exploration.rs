@@ -200,6 +200,7 @@ fn update_ancestry(
     head: Option<Index>,
     prev: Option<Index>,
 ) -> (Option<Index>, Option<Index>, Index) {
+    println!("current_ancestry_index = {current_ancestry_index:?}");
     let mut head = head;
     let mut prev = prev;
     let mut current_ancestry_index = current_ancestry_index;
@@ -228,6 +229,7 @@ fn update_ancestry(
     //}
 
     if anc_current_right != temp_right {
+        println!("edit left in place");
         let current = ancestry.get_mut(current_ancestry_index);
         current.segment.left = temp_right;
         seg_right = current_ancestry_index;
@@ -262,7 +264,12 @@ fn update_ancestry(
     } else {
         assert!(!seg_right.is_sentinel());
         head = Some(current_ancestry_index);
+        println!(
+            "replacing {:?} with {out_seg:?} at {current_ancestry_index:?}",
+            ancestry.get(current_ancestry_index),
+        );
         ancestry.data[current_ancestry_index.0] = out_seg;
+        println!("the next is: {:?}", ancestry.next(current_ancestry_index));
         //ancestry.next[prev.unwrap().0] = seg_right.unwrap().0;
         prev = head;
     }
@@ -285,7 +292,10 @@ fn update_ancestry_design(
     let mut current_overlap = 0_usize;
     let mut seg_right = Index::sentinel();
     while !ahead.is_sentinel() && current_overlap < overlaps.len() {
-        println!("ahead: {ahead:?}, out head: {head:?}, out tail {prev:?}");
+        println!(
+            "ahead: {ahead:?} = {:?}, out head: {head:?}, out tail {prev:?}",
+            ancestry.get(ahead)
+        );
         // todo!("revisit this after we add more tests to our Py prototype to hit more code paths");
         let (anc_current_left, anc_current_right) = if let Some(aseg) = last_anc_segment {
             (aseg.segment.left, aseg.segment.right)
@@ -293,18 +303,30 @@ fn update_ancestry_design(
             let current = ancestry.get(ahead);
             (current.segment.left, current.segment.right)
         };
-        println!("processing: {anc_current_left}, {anc_current_right}");
+        println!("processing: {anc_current_left}, {anc_current_right} and {ahead:?}");
         let (left, right, mapped_node) = overlaps[current_overlap];
-        if right > anc_current_left && anc_current_right > left {
+        if right > ancestry.get(ahead).segment.left && ancestry.get(ahead).segment.right > left {
+            println!(
+                "yes {left}, {right}, {:?}, {:?}",
+                ancestry.get(ahead).segment.left,
+                ancestry.get(ahead).segment.right
+            );
             last_anc_segment = {
                 let current = ancestry.get(ahead);
                 Some(*current)
             };
             (head, prev, seg_right) =
                 update_ancestry(left, right, mapped_node, ahead, ancestry, head, prev);
+            // println!("seg_right = {:?}", ancestry.get(seg_right));
             ahead = seg_right;
             current_overlap += 1;
         } else {
+            println!(
+                "no {left}, {right}, {:?} | {anc_current_left}, {anc_current_right} vs {}, {}",
+                ancestry.next(ahead),
+                ancestry.get(ahead).segment.left,
+                ancestry.get(ahead).segment.right,
+            );
             // Here, it is likely that we want to free the ancestry
             // segment.
             // Will need test coverage of that idea later.
@@ -402,6 +424,7 @@ mod test_utils {
         let mut h = ancestry_head[0];
         while !h.is_sentinel() {
             let a = ancestry.get(h);
+            println!("extracted {a:?}");
             extracted.push((a.segment.left, a.segment.right, a.mapped_node));
             let next = ancestry.next_raw(h);
             // Check that our tail is properly updated
@@ -414,7 +437,7 @@ mod test_utils {
             assert!(overlaps.contains(i), "{i:?}, {overlaps:?} != {extracted:?}");
         }
         for o in overlaps {
-            assert!(extracted.contains(o), "{o:?}, {extracted:?}");
+            assert!(extracted.contains(o), "{o:?}, {extracted:?} != {overlaps:?}");
         }
 
         (ancestry, ancestry_head, ancestry_tail)
@@ -423,7 +446,7 @@ mod test_utils {
 
 // this is test3 from the python prototype
 #[test]
-fn test_list_updating() {
+fn test_list_updating_1() {
     let anc0 = vec![(0_i64, 2_i64, Node(0))];
     let anc1 = vec![(1_i64, 2_i64, Node(1))];
     let anc2 = vec![(0_i64, 1_i64, Node(2))];
