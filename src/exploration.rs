@@ -369,9 +369,11 @@ fn update_ancestry_design(
         ancestry_tail[node.as_index()] = Index::sentinel();
     }
     println!(
-        "final {:?}, {:?}",
+        "final {:?}, {:?} = {:?}, {:?}",
         ancestry_head[node.as_index()],
-        ancestry_tail[node.as_index()]
+        ancestry_tail[node.as_index()],
+        ancestry.get(ancestry_head[node.as_index()]),
+        ancestry.get(ancestry_tail[node.as_index()])
     );
 }
 
