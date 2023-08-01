@@ -370,6 +370,7 @@ fn update_ancestry_design(
     } else {
         ancestry_tail[node.as_index()] = Index::sentinel();
     }
+    assert_eq!(ancestry.next[ancestry_tail[node.as_index()].0], usize::MAX);
     println!(
         "final {:?}, {:?} = {:?}, {:?}",
         ancestry_head[node.as_index()],
