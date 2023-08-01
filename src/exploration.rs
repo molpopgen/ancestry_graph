@@ -284,7 +284,7 @@ fn update_ancestry_design(
     let mut last_anc_segment: Option<AncestrySegment> = None;
     for o in overlaps {
         println!("ahead: {ahead:?}, out head: {head:?}, out tail {prev:?}");
-        todo!("revisit this after we add more tests to our Py prototype to hit more code paths");
+        // todo!("revisit this after we add more tests to our Py prototype to hit more code paths");
         while !ahead.is_sentinel() {
             let (anc_current_left, anc_current_right) = if let Some(aseg) = last_anc_segment {
                 (aseg.segment.left, aseg.segment.right)
@@ -451,4 +451,21 @@ fn test_list_updating_2() {
     let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
     assert_eq!(ancestry.data.len(), 5);
     assert_eq!(ancestry.next.len(), 5);
+}
+
+// This is test5b_b_less_contrived from python prototype
+#[test]
+fn test_list_updating_3() {
+    let input_ancestry = vec![
+        vec![
+            (0_i64, 1_i64, Node(1)),
+            (1_i64, 8_i64, Node(0)),
+            (8, 16, Node(1)),
+        ],
+        vec![(2, 8, Node(1)), (12, 14, Node(1))],
+        vec![],
+        vec![],
+    ];
+    let overlaps = vec![(2_i64, 8_i64, Node(1)), (12, 14, Node(1))];
+    let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
 }
