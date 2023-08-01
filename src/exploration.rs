@@ -199,7 +199,7 @@ fn update_ancestry(
     ancestry: &mut NodeAncestry,
     head: Option<Index>,
     prev: Option<Index>,
-) -> (Option<Index>, Option<Index>) {
+) -> (Option<Index>, Option<Index>, Index) {
     let mut head = head;
     let mut prev = prev;
     let mut current_ancestry_index = current_ancestry_index;
@@ -211,7 +211,7 @@ fn update_ancestry(
     let temp_right = std::cmp::min(right, anc_current_right);
 
     let mut seg_left: Option<Index> = None;
-    let mut seg_right: Option<Index> = None;
+    let mut seg_right = Index::sentinel();
 
     // NOTE: we only need what is below
     // when dealing with OUTPUTTING ancestry changes,
@@ -230,9 +230,9 @@ fn update_ancestry(
     if anc_current_right != temp_right {
         let current = ancestry.get_mut(current_ancestry_index);
         current.segment.left = temp_right;
-        seg_right = Some(current_ancestry_index);
+        seg_right = current_ancestry_index;
     } else {
-        seg_right = ancestry.next(current_ancestry_index);
+        seg_right = ancestry.next_raw(current_ancestry_index);
         println!("need to free {current_ancestry_index:?}");
         // seg_right = current.next
         // TODO: free current
@@ -260,14 +260,14 @@ fn update_ancestry(
         //    ancestry.next[index.0] = Index::sentinel().0;
         //}
     } else {
-        assert!(seg_right.is_some());
+        assert!(!seg_right.is_sentinel());
         head = Some(current_ancestry_index);
         ancestry.data[current_ancestry_index.0] = out_seg;
         //ancestry.next[prev.unwrap().0] = seg_right.unwrap().0;
         prev = head;
     }
 
-    (head, prev)
+    (head, prev, seg_right)
 }
 
 fn update_ancestry_design(
@@ -282,33 +282,34 @@ fn update_ancestry_design(
     let mut prev: Option<Index> = None;
     let mut ahead = ancestry_head[node.as_index()];
     let mut last_anc_segment: Option<AncestrySegment> = None;
-    for o in overlaps {
+    let mut current_overlap = 0_usize;
+    let mut seg_right = Index::sentinel();
+    while !ahead.is_sentinel() && current_overlap < overlaps.len() {
         println!("ahead: {ahead:?}, out head: {head:?}, out tail {prev:?}");
         // todo!("revisit this after we add more tests to our Py prototype to hit more code paths");
-        while !ahead.is_sentinel() {
-            let (anc_current_left, anc_current_right) = if let Some(aseg) = last_anc_segment {
-                (aseg.segment.left, aseg.segment.right)
-            } else {
+        let (anc_current_left, anc_current_right) = if let Some(aseg) = last_anc_segment {
+            (aseg.segment.left, aseg.segment.right)
+        } else {
+            let current = ancestry.get(ahead);
+            (current.segment.left, current.segment.right)
+        };
+        println!("processing: {anc_current_left}, {anc_current_right}");
+        let (left, right, mapped_node) = overlaps[current_overlap];
+        if right > anc_current_left && anc_current_right > left {
+            last_anc_segment = {
                 let current = ancestry.get(ahead);
-                (current.segment.left, current.segment.right)
+                Some(*current)
             };
-            println!("processing: {anc_current_left}, {anc_current_right}");
-            let (left, right, mapped_node) = *o;
-            if right > anc_current_left && anc_current_right > left {
-                last_anc_segment = {
-                    let current = ancestry.get(ahead);
-                    Some(*current)
-                };
-                (head, prev) =
-                    update_ancestry(left, right, mapped_node, ahead, ancestry, head, prev);
-                break;
-            } else {
-                // Here, it is likely that we want to free the ancestry
-                // segment.
-                // Will need test coverage of that idea later.
-                ahead = ancestry.next_raw(ahead);
-                last_anc_segment = None;
-            }
+            (head, prev, seg_right) =
+                update_ancestry(left, right, mapped_node, ahead, ancestry, head, prev);
+            ahead = seg_right;
+            current_overlap += 1;
+        } else {
+            // Here, it is likely that we want to free the ancestry
+            // segment.
+            // Will need test coverage of that idea later.
+            ahead = ancestry.next_raw(ahead);
+            last_anc_segment = None;
         }
     }
     // WARNING: everything below is very fragile and
