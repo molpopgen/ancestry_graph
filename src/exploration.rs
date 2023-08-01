@@ -429,6 +429,9 @@ mod test_utils {
         let mut ancestry = NodeAncestry::with_capacity(1000);
         let (mut ancestry_head, mut ancestry_tail) =
             test_utils::setup_ancestry(input_ancestry, &mut ancestry);
+        for i in 0..ancestry.data.len() {
+            println!("{i}: {:?} => {:?}", ancestry.data[i], ancestry.next[i])
+        }
         update_ancestry_design(
             Node(0),
             overlaps,
@@ -515,4 +518,8 @@ fn test_list_updating_3() {
     ];
     let overlaps = vec![(2_i64, 8_i64, Node(1)), (12, 14, Node(1))];
     let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    todo!("this doesn't look right");
+    for i in 0..ancestry.data.len() {
+        println!("{i}: {:?} => {:?}", ancestry.data[i], ancestry.next[i])
+    }
 }
