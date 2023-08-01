@@ -261,7 +261,9 @@ fn update_ancestry(
         let out_seg_index = if ancestry.next[index.0] == usize::MAX {
             ancestry.new_index(out_seg)
         } else {
-            Index(ancestry.next[index.0])
+            let temp = ancestry.next[index.0];
+            ancestry.data[temp] = out_seg;
+            Index(temp)
         };
         println!("got new index {out_seg_index:?} with {out_seg:?}");
         ancestry.next[index.0] = out_seg_index.0;
