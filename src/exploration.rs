@@ -228,8 +228,15 @@ fn update_ancestry(
     //    println!("took new index at {seg_left:?}");
     //}
 
+    // NOTE: there is a nasty issue here:
+    // seg_right needs to be new, but also not really
+    // part of the output. It should inherit the "next"
+    // from our current guy, and we need to repeat this process
+    // over and over until we are done.
+    // There will be many calls to "free", etc..
     if anc_current_right != temp_right {
         println!("edit left in place");
+        todo!("this may suck -- see NOTE above");
         let current = ancestry.get_mut(current_ancestry_index);
         current.segment.left = temp_right;
         seg_right = current_ancestry_index;
@@ -244,6 +251,7 @@ fn update_ancestry(
         segment: Segment { left, right },
         mapped_node,
     };
+    println!("out_seg = {out_seg:?}");
 
     if let Some(index) = prev {
         //let out_seg_index = ancestry.new_index(out_seg);
@@ -318,6 +326,7 @@ fn update_ancestry_design(
             (head, prev, seg_right) =
                 update_ancestry(left, right, mapped_node, ahead, ancestry, head, prev);
             // println!("seg_right = {:?}", ancestry.get(seg_right));
+            println!("returned {head:?}, {prev:?}, {seg_right:?}");
             ahead = seg_right;
             current_overlap += 1;
         } else {
@@ -437,7 +446,10 @@ mod test_utils {
             assert!(overlaps.contains(i), "{i:?}, {overlaps:?} != {extracted:?}");
         }
         for o in overlaps {
-            assert!(extracted.contains(o), "{o:?}, {extracted:?} != {overlaps:?}");
+            assert!(
+                extracted.contains(o),
+                "{o:?}, {extracted:?} != {overlaps:?}"
+            );
         }
 
         (ancestry, ancestry_head, ancestry_tail)
