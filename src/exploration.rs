@@ -56,6 +56,7 @@ impl<T> CursorList<T> {
     pub fn new_index(&mut self, datum: T) -> Index {
         if let Some(index) = self.free_list.pop() {
             let _ = std::mem::replace(&mut self.data[index], datum);
+            println!("recycling {index}");
             Index(index)
         } else {
             self.next.push(Index::sentinel().0);
@@ -344,7 +345,12 @@ fn update_ancestry_design(
             // Here, it is likely that we want to free the ancestry
             // segment.
             // Will need test coverage of that idea later.
-            ahead = ancestry.next_raw(ahead);
+            let temp = ancestry.next_raw(ahead);
+            // Remove the node.
+            // Fragile if ahead is a previous entry's next item.
+            ancestry.next[ahead.0] = usize::MAX;
+            ancestry.free_list.push(ahead.0);
+            ahead = temp;
             last_anc_segment = None;
         }
     }
@@ -519,7 +525,6 @@ fn test_list_updating_3() {
     ];
     let overlaps = vec![(2_i64, 8_i64, Node(1)), (12, 14, Node(1))];
     let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
-    todo!("this doesn't look right");
     for i in 0..ancestry.data.len() {
         println!("{i}: {:?} => {:?}", ancestry.data[i], ancestry.next[i])
     }
