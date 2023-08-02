@@ -302,9 +302,9 @@ fn update_ancestry_design(
     let mut head: Option<Index> = None;
     let mut prev: Option<Index> = None;
     let mut ahead = ancestry_head[node.as_index()];
-    let mut last_anc_segment: Option<AncestrySegment> = None;
+    // let mut last_anc_segment: Option<AncestrySegment> = None;
     let mut current_overlap = 0_usize;
-    let mut seg_right = Index::sentinel();
+    let mut seg_right;
     while !ahead.is_sentinel() && current_overlap < overlaps.len() {
         println!(
             "ahead: {ahead:?} = {:?}, out head: {head:?}, out tail {prev:?}",
@@ -325,10 +325,10 @@ fn update_ancestry_design(
                 ancestry.get(ahead).segment.left,
                 ancestry.get(ahead).segment.right
             );
-            last_anc_segment = {
-                let current = ancestry.get(ahead);
-                Some(*current)
-            };
+            //last_anc_segment = {
+            //    let current = ancestry.get(ahead);
+            //    Some(*current)
+            //};
             (head, prev, seg_right) =
                 update_ancestry(left, right, mapped_node, ahead, ancestry, head, prev);
             // println!("seg_right = {:?}", ancestry.get(seg_right));
@@ -351,7 +351,7 @@ fn update_ancestry_design(
             ancestry.next[ahead.0] = usize::MAX;
             ancestry.free_list.push(ahead.0);
             ahead = temp;
-            last_anc_segment = None;
+            //last_anc_segment = None;
         }
     }
     // WARNING: everything below is very fragile and
