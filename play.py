@@ -18,7 +18,8 @@ def update_overlap(a, left, right, node, anc):
     if ai.left != tleft:
         # This is a segment loss,
         # and we need to register it somehow??
-        raise NotImplementedError(f"lefts: {ai.left} != {tleft}, {ai}")
+        print(f"we have a left dangle loss on {ai.left}, {tleft} != {ai} ")
+        #raise NotImplementedError(f"lefts: {ai.left} != {tleft}, {ai}")
     if ai.right != tright:
         segright = Segment(tright, ai.right, ai.node)
         ai.left = tright
@@ -83,7 +84,7 @@ def update(anc, overlaps):
         anc[:] = anc[:a]
 
 
-print("test 1")
+print("TEST 1")
 
 anc = [Segment(0, 2, 0)]
 overlaps = [Segment(0, 1, 2), Segment(1, 2, 1)]
@@ -92,7 +93,7 @@ update(anc, overlaps)
 assert sorted(anc, key=lambda x: x.left) == [
     Segment(0, 1, 2), Segment(1, 2, 1)], f"{anc}"
 
-print("test 2")
+print("TEST 2")
 
 anc = [Segment(0, 3, 0)]
 overlaps = [Segment(0, 1, 0), Segment(2, 3, 1)]
@@ -100,7 +101,7 @@ overlaps = [Segment(0, 1, 0), Segment(2, 3, 1)]
 update(anc, overlaps)
 assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
 
-print("test 3")
+print("TEST 3")
 
 anc = [Segment(0, 5, 0)]
 overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
@@ -108,7 +109,7 @@ overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
 update(anc, overlaps)
 assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
 
-print("test 3")
+print("TEST 3")
 
 anc = [Segment(0, 1, 17), Segment(1, 5, 0)]
 overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
