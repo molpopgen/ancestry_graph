@@ -16,7 +16,9 @@ def update_overlap(a, left, right, node, anc):
     rv = a + 1
     print(a, tleft, tright)
     if ai.left != tleft:
-        raise NotImplementedError(f"lefts: {ai.left} != {tleft}")
+        # This is a segment loss,
+        # and we need to register it somehow??
+        raise NotImplementedError(f"lefts: {ai.left} != {tleft}, {ai}")
     if ai.right != tright:
         segright = Segment(tright, ai.right, ai.node)
         ai.left = tright
