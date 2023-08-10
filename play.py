@@ -15,6 +15,8 @@ def update_overlap(a, left, right, node, anc):
     segright = None
     rv = a + 1
     print(a, tleft, tright)
+    if ai.left != tleft:
+        raise NotImplementedError(f"lefts: {ai.left} != {tleft}")
     if ai.right != tright:
         segright = Segment(tright, ai.right, ai.node)
         ai.left = tright
@@ -26,6 +28,10 @@ def update_overlap(a, left, right, node, anc):
         ai.node = out.node
     else:
         print("insert out")
+        # NOTE: this means that we need to cache
+        # the previous index in our rust version,
+        # so that we can insert out before it and
+        # update all the list-y stuff.
         anc.insert(a, out)
         rv = a+1
         # rv -= 1
@@ -74,6 +80,8 @@ def update(anc, overlaps):
         print(f"truncating to: {anc[:a]}")
         anc[:] = anc[:a]
 
+
+print("test 1")
 
 anc = [Segment(0, 2, 0)]
 overlaps = [Segment(0, 1, 2), Segment(1, 2, 1)]
