@@ -12,13 +12,12 @@ def update_overlap(a, left, right, node, anc):
     ai = anc[a]
     tleft = max(ai.left, left)
     tright = min(ai.right, right)
-    rv = 0
     segright = None
+    rv = a + 1
     print(a, tleft, tright)
     if ai.right != tright:
         segright = Segment(tright, ai.right, ai.node)
         ai.left = tright
-        rv = 1
     # if segright is not None:
     out = Segment(left, right, node)
     print(f"out={out}, ai = {ai}")
@@ -28,16 +27,19 @@ def update_overlap(a, left, right, node, anc):
     else:
         print("insert out")
         anc.insert(a, out)
-        #rv -= 1
+        rv = a+1
+        # rv -= 1
     if segright is not None:
         print(f"segright = {segright}")
         if segright.left == ai.left and segright.right == ai.right:
             print("updating node")
             ai.node = segright.node
+            rv = a + 1
         else:
             print(f"not equal to {ai.left == segright.left}")
             anc.insert(a+1, segright)
-        #rv += 1
+            rv = a+1
+        # rv += 1
 
     # if left == ai.left and right == ai.right:
     #     ai.node = node
@@ -46,9 +48,7 @@ def update_overlap(a, left, right, node, anc):
     #     print(f"out = {out}")
     #     anc.insert(a, out)
     # rv += 1
-
-    rv = max(rv, 0)
-    print(f"returning {rv} ({a} + {rv} = {a+rv})=> {anc}")
+    print(f"returning {a} => {rv}")
     return rv
 
 
@@ -60,7 +60,7 @@ def update(anc, overlaps):
         oi = overlaps[o]
         ai = anc[a]
         if oi.right > ai.left and ai.right > oi.left:
-            a += update_overlap(a, oi.left, oi.right, oi.node, anc)
+            a = update_overlap(a, oi.left, oi.right, oi.node, anc)
             o += 1
         else:
             raise NotImplementedError
@@ -68,9 +68,9 @@ def update(anc, overlaps):
 
     print(f"done: {a} {len(anc)}")
 
-    if len(anc) > a:
-        print(f"truncating to: {anc[:a+1]}")
-        anc[:] = anc[:a + 1]
+    if len(anc) >= a:
+        print(f"truncating to: {anc[:a]}")
+        anc[:] = anc[:a]
 
 
 anc = [Segment(0, 2, 0)]
