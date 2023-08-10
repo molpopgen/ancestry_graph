@@ -63,8 +63,10 @@ def update(anc, overlaps):
             a = update_overlap(a, oi.left, oi.right, oi.node, anc)
             o += 1
         else:
-            raise NotImplementedError
-            a += 1
+            # Delete the input segment
+            anc.pop(a)
+            # raise NotImplementedError
+            # a += 1
 
     print(f"done: {a} {len(anc)}")
 
@@ -91,6 +93,14 @@ assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
 print("test 3")
 
 anc = [Segment(0, 5, 0)]
+overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
+
+update(anc, overlaps)
+assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
+
+print("test 3")
+
+anc = [Segment(0, 1, 17), Segment(1, 5, 0)]
 overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
 
 update(anc, overlaps)
