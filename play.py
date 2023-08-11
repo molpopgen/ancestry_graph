@@ -27,7 +27,7 @@ def update_overlap(a, left, right, node, anc):
     out = Segment(left, right, node)
     print(f"out={out}, ai = {ai}")
     if out.left == ai.left and out.right == ai.right:
-        print("update mapping")
+        print(f"update mapping from {ai.node} to {out.node}")
         ai.node = out.node
     else:
         print("insert out")
@@ -41,7 +41,7 @@ def update_overlap(a, left, right, node, anc):
     if segright is not None:
         print(f"segright = {segright}")
         if segright.left == ai.left and segright.right == ai.right:
-            print("updating node")
+            print(f"updating node from {ai.node} to {segright.node}")
             ai.node = segright.node
             rv = a + 1
         else:
@@ -57,7 +57,7 @@ def update_overlap(a, left, right, node, anc):
     #     print(f"out = {out}")
     #     anc.insert(a, out)
     # rv += 1
-    print(f"returning {a} => {rv}")
+    print(f"returning {a} => {rv} | {anc}")
     return rv
 
 

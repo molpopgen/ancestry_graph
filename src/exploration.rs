@@ -202,17 +202,20 @@ fn update_ancestry(
     head: Option<Index>,
     prev: Option<Index>,
 ) -> Index {
-    println!("current_ancestry_index = {current_ancestry_index:?}");
     let mut head = head;
     let mut prev = prev;
     let mut seg_right = None;
     let mut current_ancestry_index = current_ancestry_index;
-    let (current_left, current_right) = {
+    let (mut current_left, current_right) = {
         let current = ancestry.get(current_ancestry_index);
         (current.segment.left, current.segment.right)
     };
     let temp_left = std::cmp::max(current_left, left);
     let temp_right = std::cmp::min(current_right, right);
+    println!(
+        "{:?} {temp_left} {temp_right}",
+        current_ancestry_index
+    );
     let mut rv = ancestry.next_raw(current_ancestry_index);
     if current_left != temp_left {
         todo!()
@@ -221,29 +224,36 @@ fn update_ancestry(
         {
             let current = ancestry.get_mut(current_ancestry_index);
             current.segment.left = temp_right;
+            current_left = temp_right;
         }
         seg_right = Some(AncestrySegment {
             segment: Segment {
                 left: temp_right,
                 right: current_right,
             },
-            mapped_node,
+            mapped_node: ancestry.get(current_ancestry_index).mapped_node,
         });
     }
+    let out_seg = AncestrySegment {
+        segment: Segment { left, right },
+        mapped_node,
+    };
+    println!("out = {out_seg:?}");
     if left == current_left && right == current_right {
         // perfect overlap, all we need to do is update
         // the mapped node...
         let current = ancestry.get_mut(current_ancestry_index);
-        current.mapped_node = mapped_node;
+        println!(
+            "update mapping from {:?} to {:?}",
+            current.mapped_node, out_seg.mapped_node
+        );
+        current.mapped_node = out_seg.mapped_node;
         // ... but if the mapping has changed, then this
         // segment is possibly a CHANGE TO UNARY that we
         // must record
     } else {
+        println!("insert out");
         // We insert out_seg at current_ancestry_index
-        let out_seg = AncestrySegment {
-            segment: Segment { left, right },
-            mapped_node,
-        };
         if current_ancestry_index == last_ancestry_index {
             // replace current with out_seg and insert the
             // current value next
@@ -266,11 +276,18 @@ fn update_ancestry(
     }
 
     if let Some(right_seg) = seg_right {
+        println!("seg_right = {right_seg:?}");
         if right_seg.segment.left == current_left && right_seg.segment.right == current_right {
             let current = ancestry.get_mut(current_ancestry_index);
+            println!(
+                "updating node from {:?} to {:?}",
+                current.mapped_node, right_seg.mapped_node
+            );
             // Could be an ancestry change!
-            current.mapped_node = mapped_node;
+            current.mapped_node = right_seg.mapped_node;
+            rv = ancestry.next_raw(current_ancestry_index);
         } else {
+            println!("inserting seg_right");
             let next = ancestry.next_raw(current_ancestry_index);
             let new_index = ancestry.new_index(right_seg);
             ancestry.next[current_ancestry_index.0] = new_index.0;
