@@ -19,7 +19,7 @@ def update_overlap(a, left, right, node, anc):
         # This is a segment loss,
         # and we need to register it somehow??
         print(f"we have a left dangle loss on {ai.left}, {tleft} != {ai} ")
-        #raise NotImplementedError(f"lefts: {ai.left} != {tleft}, {ai}")
+        # raise NotImplementedError(f"lefts: {ai.left} != {tleft}, {ai}")
     if ai.right != tright:
         segright = Segment(tright, ai.right, ai.node)
         ai.left = tright
@@ -36,7 +36,7 @@ def update_overlap(a, left, right, node, anc):
         # so that we can insert out before it and
         # update all the list-y stuff.
         anc.insert(a, out)
-        rv = a+1
+        rv = a + 1
         # rv -= 1
     if segright is not None:
         print(f"segright = {segright}")
@@ -46,8 +46,8 @@ def update_overlap(a, left, right, node, anc):
             rv = a + 1
         else:
             print(f"not equal to {ai.left == segright.left}")
-            anc.insert(a+1, segright)
-            rv = a+1
+            anc.insert(a + 1, segright)
+            rv = a + 1
         # rv += 1
 
     # if left == ai.left and right == ai.right:
@@ -80,7 +80,7 @@ def update(anc, overlaps):
     print(f"done: {a} {len(anc)}")
 
     if len(anc) >= a:
-        print(f"truncating to: {anc[:a]}")
+        print(f"truncating from {anc} to: {anc[:a]}")
         anc[:] = anc[:a]
 
 
@@ -91,7 +91,9 @@ overlaps = [Segment(0, 1, 2), Segment(1, 2, 1)]
 
 update(anc, overlaps)
 assert sorted(anc, key=lambda x: x.left) == [
-    Segment(0, 1, 2), Segment(1, 2, 1)], f"{anc}"
+    Segment(0, 1, 2),
+    Segment(1, 2, 1),
+], f"{anc}"
 
 print("TEST 2")
 
