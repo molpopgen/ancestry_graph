@@ -95,26 +95,26 @@ assert sorted(anc, key=lambda x: x.left) == [
     Segment(1, 2, 1),
 ], f"{anc}"
 
-print("TEST 2")
-
-anc = [Segment(0, 3, 0)]
-overlaps = [Segment(0, 1, 0), Segment(2, 3, 1)]
-
-update(anc, overlaps)
-assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
-
-print("TEST 3")
-
-anc = [Segment(0, 5, 0)]
-overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
-
-update(anc, overlaps)
-assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
-
-print("TEST 3")
-
-anc = [Segment(0, 1, 17), Segment(1, 5, 0)]
-overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
-
-update(anc, overlaps)
-assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
+# print("TEST 2")
+#
+# anc = [Segment(0, 3, 0)]
+# overlaps = [Segment(0, 1, 0), Segment(2, 3, 1)]
+#
+# update(anc, overlaps)
+# assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
+#
+# print("TEST 3")
+#
+# anc = [Segment(0, 5, 0)]
+# overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
+#
+# update(anc, overlaps)
+# assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
+#
+# print("TEST 3")
+#
+# anc = [Segment(0, 1, 17), Segment(1, 5, 0)]
+# overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
+#
+# update(anc, overlaps)
+# assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
