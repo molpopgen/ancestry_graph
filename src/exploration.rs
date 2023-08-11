@@ -434,12 +434,13 @@ fn update_ancestry_design(
     println!("done: {:?} {:?}", last_ancestry_index, ahead);
     // WARNING: EPIC HACK ALERT
     if !ahead.is_sentinel() {
-        println!(
-            "HACK: {:?} => {:?}",
-            last_ancestry_index,
-            ancestry.next(last_ancestry_index)
-        );
-        ancestry.next[last_ancestry_index.0] = usize::MAX
+        let mut z = ancestry.next(last_ancestry_index);
+        while let Some(index) = z {
+            z = ancestry.next(index);
+            ancestry.next[index.0] = usize::MAX;
+            ancestry.free_list.push(index.0);
+        }
+        ancestry.next[last_ancestry_index.0] = usize::MAX;
     }
     // WARNING: everything below is very fragile and
     // needs testing
