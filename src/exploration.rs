@@ -307,6 +307,7 @@ fn update_ancestry_design(
     let mut ahead = ancestry_head[node.as_index()];
     let mut last_ancestry_index = ahead;
     let mut current_overlap = 0_usize;
+    let mut last_right = 0;
     while !ahead.is_sentinel() && current_overlap < overlaps.len() {
         let (left, right, mapped_node) = overlaps[current_overlap];
         if right > ancestry.get(ahead).segment.left && ancestry.get(ahead).segment.right > left {
@@ -326,6 +327,7 @@ fn update_ancestry_design(
             );
             println!("updated to {ahead:?}");
             current_overlap += 1;
+            last_right = right;
         } else {
             println!(
                 "no for {ahead:?}: {left}, {right}, {:?} | vs {}, {}",
@@ -354,7 +356,11 @@ fn update_ancestry_design(
             }
         }
     }
-    println!("done: {:?} {:?}", last_ancestry_index, ahead);
+    println!(
+        "done: {:?} {:?} | {last_right}",
+        last_ancestry_index,
+        last_ancestry_index == ancestry_tail[node.as_index()]
+    );
     // WARNING: EPIC HACK ALERT
     if !ahead.is_sentinel() {
         let mut z = ancestry.next(last_ancestry_index);
@@ -545,13 +551,8 @@ fn test_list_updating_3() {
 
 #[test]
 fn test_list_updating_3b() {
-    todo!("detect the right dangle on 14, 16");
     let input_ancestry = vec![
-        vec![
-            (1_i64, 8_i64, Node(0)),
-            (8, 14, Node(1)),
-            (14, 16, Node(1)),
-        ],
+        vec![(1_i64, 8_i64, Node(0)), (8, 14, Node(1)), (14, 16, Node(1))],
         vec![(2, 8, Node(1)), (12, 14, Node(1))],
         vec![],
         vec![],
