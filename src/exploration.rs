@@ -364,6 +364,11 @@ fn update_ancestry_design(
             // as it was upon input
             if last_ancestry_index == ahead {
                 println!("gotta shift left");
+                let mut z = ahead;
+                while !z.is_sentinel() {
+                    println!("pre-shift state = {:?}", ancestry.get(z));
+                    z = ancestry.next_raw(z)
+                }
                 let next = ancestry.next_raw(ahead);
                 if !next.is_sentinel() {
                     println!("{:?} {:?}", ancestry.data[ahead.0], ancestry.data[next.0]);
@@ -374,9 +379,41 @@ fn update_ancestry_design(
                     println!("{:?} {:?}", ancestry.data[ahead.0], ancestry.data[next.0]);
                     println!("{:?}", ancestry.next[ahead.0]);
                 }
-                ahead = ancestry.next_raw(ahead);
+                last_ancestry_index = ahead;
+                //ahead = ancestry.next_raw(ahead);
+                let mut z = ahead;
+                while !z.is_sentinel() {
+                    println!("post-shift state = {:?}", ancestry.get(z));
+                    z = ancestry.next_raw(z)
+                }
             } else {
-                todo!("gotta excise");
+                println!("gotta excise the current thing");
+                let mut z = ahead;
+                while !z.is_sentinel() {
+                    println!("current state = {:?}", ancestry.get(z));
+                    z = ancestry.next_raw(z)
+                }
+                println!(
+                    "{:?} {:?}",
+                    ancestry.data[last_ancestry_index.0], ancestry.data[ahead.0]
+                );
+                let next = ancestry.next_raw(ahead);
+                ancestry.next[last_ancestry_index.0] = next.0;
+                ancestry.free_list.push(ahead.0);
+                ahead = next;
+                println!("ending {last_ancestry_index:?}, {ahead:?}");
+                //let next = ancestry.next_raw(ahead);
+                //if !next.is_sentinel() {
+                //    println!("{:?} {:?}", ancestry.data[ahead.0], ancestry.data[next.0]);
+                //    println!("{:?}", ancestry.next[ahead.0]);
+                //    ancestry.data.swap(ahead.0, next.0);
+                //    ancestry.next[ahead.0] = ancestry.next[next.0];
+                //    ancestry.free_list.push(next.0);
+                //    println!("{:?} {:?}", ancestry.data[ahead.0], ancestry.data[next.0]);
+                //    println!("{:?}", ancestry.next[ahead.0]);
+                //}
+                //ahead = ancestry.next_raw(ahead);
+                //todo!("gotta excise");
             }
             // Here, it is likely that we want to free the ancestry
             // segment.
