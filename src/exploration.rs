@@ -310,6 +310,7 @@ fn update_ancestry_design(
     let mut last_right = 0;
     while !ahead.is_sentinel() && current_overlap < overlaps.len() {
         let (left, right, mapped_node) = overlaps[current_overlap];
+        println!("current input segment = {:?}", ancestry.get(ahead));
         if right > ancestry.get(ahead).segment.left && ancestry.get(ahead).segment.right > left {
             println!(
                 "yes {left}, {right}, {:?}, {:?}",
@@ -325,7 +326,7 @@ fn update_ancestry_design(
                 ahead,
                 ancestry,
             );
-            println!("updated to {ahead:?}");
+            println!("updated to {ahead:?} (overlap)");
             current_overlap += 1;
             last_right = right;
         } else {
@@ -354,13 +355,10 @@ fn update_ancestry_design(
                 ancestry.free_list.push(ahead.0);
                 ahead = next;
             }
+            println!("updated to {ahead:?} (non overlap)");
         }
     }
-    println!(
-        "done: {:?} {:?} | {last_right}",
-        last_ancestry_index,
-        last_ancestry_index == ancestry_tail[node.as_index()]
-    );
+    println!("done: {:?} {:?} | {last_right}", last_ancestry_index, ahead,);
     // WARNING: EPIC HACK ALERT
     if !ahead.is_sentinel() {
         let mut z = ancestry.next(last_ancestry_index);
