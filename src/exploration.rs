@@ -355,7 +355,7 @@ fn update_ancestry_design(
             current_overlap += 1;
         } else {
             println!(
-                "no {left}, {right}, {:?} | vs {}, {}",
+                "no for {ahead:?}: {left}, {right}, {:?} | vs {}, {}",
                 ancestry.next(ahead),
                 ancestry.get(ahead).segment.left,
                 ancestry.get(ahead).segment.right,
