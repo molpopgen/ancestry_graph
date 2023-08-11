@@ -430,6 +430,7 @@ fn update_ancestry_design(
         }
         ancestry.next[last_ancestry_index.0] = usize::MAX;
     }
+    ancestry_tail[node.0] = last_ancestry_index;
     // WARNING: everything below is very fragile and
     // needs testing
     //if let Some(index) = head {
@@ -530,9 +531,9 @@ mod test_utils {
             extracted.push((a.segment.left, a.segment.right, a.mapped_node));
             let next = ancestry.next_raw(h);
             // Check that our tail is properly updated
-            //if next.is_sentinel() {
-            //    assert_eq!(ancestry_tail[0], h);
-            //}
+            if next.is_sentinel() {
+                assert_eq!(ancestry_tail[0], h);
+            }
             h = next;
         }
         for i in &extracted {
@@ -609,12 +610,7 @@ fn test_list_updating_3() {
 
 #[test]
 fn test_list_updating_4() {
-    let input_ancestry = vec![
-        vec![(0_i64, 5_i64, Node(0))],
-        vec![],
-        vec![],
-        vec![],
-    ];
+    let input_ancestry = vec![vec![(0_i64, 5_i64, Node(0))], vec![], vec![], vec![]];
     let overlaps = vec![(1_i64, 2_i64, Node(0)), (3, 4, Node(1))];
     let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
     for i in 0..ancestry.data.len() {
