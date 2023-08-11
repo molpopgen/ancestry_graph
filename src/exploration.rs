@@ -365,7 +365,7 @@ fn update_ancestry_design(
     println!("done: {:?} {:?} | {last_right}", last_ancestry_index, ahead,);
     if !ahead.is_sentinel() {
         let mut z = ancestry.next(last_ancestry_index);
-        // TODO: each of these is a right overhang 
+        // TODO: each of these is a right overhang
         // that we need to reckon with.
         while let Some(index) = z {
             println!("removing trailing segment {:?}", ancestry.get(index));
@@ -376,36 +376,6 @@ fn update_ancestry_design(
         ancestry.next[last_ancestry_index.0] = usize::MAX;
     }
     ancestry_tail[node.0] = last_ancestry_index;
-    // WARNING: everything below is very fragile and
-    // needs testing
-    //if let Some(index) = head {
-    //    ancestry_head[node.as_index()] = index;
-    //} else {
-    //    // This is WRONG.
-    //    // We need to TRAVERSE THE ENTIRE LIST AND FREE IT
-    //    ancestry_head[node.as_index()] = Index::sentinel();
-    //}
-    //// THIS IS WRONG: we only do this work if we ARE NOT
-    //// trashing the entire list. (See above...)
-    //// The inner logic is also WRONG.
-    //// If we are changing the tail, then we need to
-    //// make sure that we TRUNCATE THE LIST FROM THE
-    //// CURRENT TAIL ONWARDS, BUT WE MAY HAVE TO WORRY
-    //// ABOUT SOME SUBTLE ISSUES THERE THAT I AM NOT
-    //// ABLE TO ARTICULATE YET.
-    //if let Some(index) = prev {
-    //    ancestry_tail[node.as_index()] = index;
-    //} else {
-    //    ancestry_tail[node.as_index()] = Index::sentinel();
-    //}
-    //assert_eq!(ancestry.next[ancestry_tail[node.as_index()].0], usize::MAX);
-    //println!(
-    //    "final {:?}, {:?} = {:?}, {:?}",
-    //    ancestry_head[node.as_index()],
-    //    ancestry_tail[node.as_index()],
-    //    ancestry.get(ancestry_head[node.as_index()]),
-    //    ancestry.get(ancestry_tail[node.as_index()])
-    //);
 }
 
 #[cfg(test)]
