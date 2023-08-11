@@ -282,7 +282,6 @@ fn update_ancestry(
             );
             // Could be an ancestry change!
             current.mapped_node = right_seg.mapped_node;
-            //rv = ancestry.next_raw(current_ancestry_index);
         } else {
             println!("inserting seg_right");
             let next = ancestry.next_raw(current_ancestry_index);
@@ -306,17 +305,8 @@ fn update_ancestry_design(
     assert_eq!(ancestry_head.len(), ancestry_tail.len());
     let mut ahead = ancestry_head[node.as_index()];
     let mut last_ancestry_index = ahead;
-    // let mut last_anc_segment: Option<AncestrySegment> = None;
     let mut current_overlap = 0_usize;
     while !ahead.is_sentinel() && current_overlap < overlaps.len() {
-        // todo!("revisit this after we add more tests to our Py prototype to hit more code paths");
-        //let (anc_current_left, anc_current_right) = if let Some(aseg) = last_anc_segment {
-        //    (aseg.segment.left, aseg.segment.right)
-        //} else {
-        //    let current = ancestry.get(ahead);
-        //    (current.segment.left, current.segment.right)
-        //};
-        //println!("processing: {anc_current_left}, {anc_current_right} and {ahead:?}");
         let (left, right, mapped_node) = overlaps[current_overlap];
         if right > ancestry.get(ahead).segment.left && ancestry.get(ahead).segment.right > left {
             println!(
@@ -324,10 +314,6 @@ fn update_ancestry_design(
                 ancestry.get(ahead).segment.left,
                 ancestry.get(ahead).segment.right
             );
-            //last_anc_segment = {
-            //    let current = ancestry.get(ahead);
-            //    Some(*current)
-            //};
             last_ancestry_index = ahead;
             ahead = update_ancestry(
                 left,
@@ -338,9 +324,6 @@ fn update_ancestry_design(
                 ancestry,
             );
             println!("updated to {ahead:?}");
-            // println!("seg_right = {:?}", ancestry.get(seg_right));
-            //println!("returned {head:?}, {prev:?}, {seg_right:?}");
-            //ahead = seg_right;
             current_overlap += 1;
         } else {
             println!(
@@ -353,70 +336,21 @@ fn update_ancestry_design(
             // as it was upon input
             if last_ancestry_index == ahead {
                 println!("gotta shift left");
-                let mut z = ahead;
-                while !z.is_sentinel() {
-                    println!("pre-shift state = {:?}", ancestry.get(z));
-                    z = ancestry.next_raw(z)
-                }
                 let next = ancestry.next_raw(ahead);
                 if !next.is_sentinel() {
-                    println!("{:?} {:?}", ancestry.data[ahead.0], ancestry.data[next.0]);
-                    println!("{:?}", ancestry.next[ahead.0]);
                     ancestry.data.swap(ahead.0, next.0);
                     ancestry.next[ahead.0] = ancestry.next[next.0];
                     ancestry.free_list.push(next.0);
-                    println!("{:?} {:?}", ancestry.data[ahead.0], ancestry.data[next.0]);
-                    println!("{:?}", ancestry.next[ahead.0]);
                 }
                 last_ancestry_index = ahead;
-                //ahead = ancestry.next_raw(ahead);
-                let mut z = ahead;
-                while !z.is_sentinel() {
-                    println!("post-shift state = {:?}", ancestry.get(z));
-                    z = ancestry.next_raw(z)
-                }
                 println!("free list = {:?}", ancestry.free_list);
             } else {
                 println!("gotta excise the current thing");
-                let mut z = ahead;
-                while !z.is_sentinel() {
-                    println!("current state = {:?}", ancestry.get(z));
-                    z = ancestry.next_raw(z)
-                }
-                println!(
-                    "{:?} {:?}",
-                    ancestry.data[last_ancestry_index.0], ancestry.data[ahead.0]
-                );
                 let next = ancestry.next_raw(ahead);
                 ancestry.next[last_ancestry_index.0] = next.0;
                 ancestry.free_list.push(ahead.0);
                 ahead = next;
-                println!("ending {last_ancestry_index:?}, {ahead:?}");
-                //let next = ancestry.next_raw(ahead);
-                //if !next.is_sentinel() {
-                //    println!("{:?} {:?}", ancestry.data[ahead.0], ancestry.data[next.0]);
-                //    println!("{:?}", ancestry.next[ahead.0]);
-                //    ancestry.data.swap(ahead.0, next.0);
-                //    ancestry.next[ahead.0] = ancestry.next[next.0];
-                //    ancestry.free_list.push(next.0);
-                //    println!("{:?} {:?}", ancestry.data[ahead.0], ancestry.data[next.0]);
-                //    println!("{:?}", ancestry.next[ahead.0]);
-                //}
-                //ahead = ancestry.next_raw(ahead);
-                //todo!("gotta excise");
-                println!("free list = {:?}", ancestry.free_list);
             }
-            // Here, it is likely that we want to free the ancestry
-            // segment.
-            // Will need test coverage of that idea later.
-            // last_ancestry_index = ahead;
-            // let temp = ancestry.next_raw(ahead);
-            // // Remove the node.
-            // // Fragile if ahead is a previous entry's next item.
-            // ancestry.next[ahead.0] = usize::MAX;
-            // ancestry.free_list.push(ahead.0);
-            // ahead = temp;
-            //last_anc_segment = None;
         }
     }
     println!("done: {:?} {:?}", last_ancestry_index, ahead);
