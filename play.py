@@ -118,3 +118,9 @@ overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
 
 update(anc, overlaps)
 assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
+
+print("TEST 4")
+anc = [Segment(1, 8, 0), Segment(8, 14, 1), Segment(14, 16, 1)]
+overlaps = [Segment(2, 8, 1), Segment(12, 14, 1)]
+update(anc, overlaps)
+assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
