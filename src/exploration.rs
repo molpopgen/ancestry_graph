@@ -291,6 +291,7 @@ fn update_ancestry(
             println!("inserting seg_right");
             let next = ancestry.next_raw(current_ancestry_index);
             let new_index = ancestry.new_index(right_seg);
+            println!("new_index = {new_index:?}");
             ancestry.next[current_ancestry_index.0] = new_index.0;
             ancestry.next[new_index.0] = next.0;
             rv = new_index;
@@ -386,6 +387,7 @@ fn update_ancestry_design(
                     println!("post-shift state = {:?}", ancestry.get(z));
                     z = ancestry.next_raw(z)
                 }
+                println!("free list = {:?}", ancestry.free_list);
             } else {
                 println!("gotta excise the current thing");
                 let mut z = ahead;
@@ -414,6 +416,7 @@ fn update_ancestry_design(
                 //}
                 //ahead = ancestry.next_raw(ahead);
                 //todo!("gotta excise");
+                println!("free list = {:?}", ancestry.free_list);
             }
             // Here, it is likely that we want to free the ancestry
             // segment.
@@ -431,6 +434,11 @@ fn update_ancestry_design(
     println!("done: {:?} {:?}", last_ancestry_index, ahead);
     // WARNING: EPIC HACK ALERT
     if !ahead.is_sentinel() {
+        println!(
+            "HACK: {:?} => {:?}",
+            last_ancestry_index,
+            ancestry.next(last_ancestry_index)
+        );
         ancestry.next[last_ancestry_index.0] = usize::MAX
     }
     // WARNING: everything below is very fragile and
@@ -607,4 +615,5 @@ fn test_list_updating_3() {
     for i in 0..ancestry.data.len() {
         println!("{i}: {:?} => {:?}", ancestry.data[i], ancestry.next[i])
     }
+    println!("{:?}", ancestry.free_list)
 }
