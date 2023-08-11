@@ -364,9 +364,10 @@ fn update_ancestry_design(
         }
     }
     println!("done: {:?} {:?} | {last_right}", last_ancestry_index, ahead,);
-    // WARNING: EPIC HACK ALERT
     if !ahead.is_sentinel() {
         let mut z = ancestry.next(last_ancestry_index);
+        // TODO: each of these is a right overhang 
+        // that we need to reckon with.
         while let Some(index) = z {
             println!("removing trailing segment {:?}", ancestry.get(index));
             z = ancestry.next(index);
