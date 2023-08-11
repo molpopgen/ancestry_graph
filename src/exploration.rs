@@ -360,16 +360,34 @@ fn update_ancestry_design(
                 ancestry.get(ahead).segment.left,
                 ancestry.get(ahead).segment.right,
             );
+            // Goal here is to keep the output head the same.
+            // as it was upon input
+            if last_ancestry_index == ahead {
+                println!("gotta shift left");
+                let next = ancestry.next_raw(ahead);
+                if !next.is_sentinel() {
+                    println!("{:?} {:?}", ancestry.data[ahead.0], ancestry.data[next.0]);
+                    println!("{:?}", ancestry.next[ahead.0]);
+                    ancestry.data.swap(ahead.0, next.0);
+                    ancestry.next[ahead.0] = ancestry.next[next.0];
+                    ancestry.free_list.push(next.0);
+                    println!("{:?} {:?}", ancestry.data[ahead.0], ancestry.data[next.0]);
+                    println!("{:?}", ancestry.next[ahead.0]);
+                }
+                ahead = ancestry.next_raw(ahead);
+            } else {
+                todo!("gotta excise");
+            }
             // Here, it is likely that we want to free the ancestry
             // segment.
             // Will need test coverage of that idea later.
-            last_ancestry_index = ahead;
-            let temp = ancestry.next_raw(ahead);
-            // Remove the node.
-            // Fragile if ahead is a previous entry's next item.
-            ancestry.next[ahead.0] = usize::MAX;
-            ancestry.free_list.push(ahead.0);
-            ahead = temp;
+            // last_ancestry_index = ahead;
+            // let temp = ancestry.next_raw(ahead);
+            // // Remove the node.
+            // // Fragile if ahead is a previous entry's next item.
+            // ancestry.next[ahead.0] = usize::MAX;
+            // ancestry.free_list.push(ahead.0);
+            // ahead = temp;
             //last_anc_segment = None;
         }
     }
