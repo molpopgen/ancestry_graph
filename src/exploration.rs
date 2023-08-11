@@ -618,3 +618,19 @@ fn test_list_updating_3() {
     }
     println!("{:?}", ancestry.free_list)
 }
+
+#[test]
+fn test_list_updating_4() {
+    let input_ancestry = vec![
+        vec![(0_i64, 5_i64, Node(0))],
+        vec![],
+        vec![],
+        vec![],
+    ];
+    let overlaps = vec![(1_i64, 2_i64, Node(0)), (3, 4, Node(1))];
+    let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    for i in 0..ancestry.data.len() {
+        println!("{i}: {:?} => {:?}", ancestry.data[i], ancestry.next[i])
+    }
+    println!("{:?}", ancestry.free_list)
+}
