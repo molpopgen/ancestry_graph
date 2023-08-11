@@ -214,6 +214,7 @@ fn update_ancestry(
         println!("we have a left dangle on {current_left}, {temp_left}");
     }
     if current_right != temp_right {
+        println!("right dangle: {current_right:?}, {temp_right}");
         {
             let current = ancestry.get_mut(current_ancestry_index);
             current.segment.left = temp_right;
@@ -529,6 +530,27 @@ fn test_list_updating_3() {
             (0_i64, 1_i64, Node(1)),
             (1_i64, 8_i64, Node(0)),
             (8, 16, Node(1)),
+        ],
+        vec![(2, 8, Node(1)), (12, 14, Node(1))],
+        vec![],
+        vec![],
+    ];
+    let overlaps = vec![(2_i64, 8_i64, Node(1)), (12, 14, Node(1))];
+    let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    for i in 0..ancestry.data.len() {
+        println!("{i}: {:?} => {:?}", ancestry.data[i], ancestry.next[i])
+    }
+    println!("{:?}", ancestry.free_list)
+}
+
+#[test]
+fn test_list_updating_3b() {
+    todo!("detect the right dangle on 14, 16");
+    let input_ancestry = vec![
+        vec![
+            (1_i64, 8_i64, Node(0)),
+            (8, 14, Node(1)),
+            (14, 16, Node(1)),
         ],
         vec![(2, 8, Node(1)), (12, 14, Node(1))],
         vec![],
