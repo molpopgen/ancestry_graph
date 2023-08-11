@@ -233,47 +233,48 @@ fn update_ancestry(
         mapped_node,
     };
     println!("out = {out_seg:?}");
-    if left == current_left && right == current_right {
-        // perfect overlap, all we need to do is update
-        // the mapped node...
-        let current = ancestry.get_mut(current_ancestry_index);
-        println!(
-            "update mapping from {:?} to {:?}",
-            current.mapped_node, out_seg.mapped_node
-        );
-        current.mapped_node = out_seg.mapped_node;
-        // ... but if the mapping has changed, then this
-        // segment is possibly a CHANGE TO UNARY that we
-        // must record
-    } else {
-        *ancestry.get_mut(current_ancestry_index) = out_seg;
-        // rv = ancestry.next_raw(current_ancestry_index);
-        //println!("insert out");
-        //// We insert out_seg at current_ancestry_index
-        //if current_ancestry_index == last_ancestry_index {
-        //    println!("case A");
-        //    // replace current with out_seg and insert the
-        //    // current value next
-        //    let current = *ancestry.get(current_ancestry_index);
-        //    let next = ancestry.next_raw(current_ancestry_index);
-        //    let new_index = ancestry.new_index(current);
-        //    println!("new_index = {new_index:?}");
-        //    ancestry.next[new_index.0] = next.0;
-        //    let _ = std::mem::replace(&mut ancestry.data[current_ancestry_index.0], out_seg);
-        //    ancestry.next[current_ancestry_index.0] = new_index.0;
-        //    // Needed for handling right_seg below
-        //    current_ancestry_index = new_index;
-        //    rv = current_ancestry_index;
-        //    println!("rv = {rv:?}");
-        //} else {
-        //    println!("case B");
-        //    let next = ancestry.next_raw(last_ancestry_index);
-        //    let new_index = ancestry.new_index(out_seg);
-        //    ancestry.next[last_ancestry_index.0] = new_index.0;
-        //    ancestry.next[new_index.0] = next.0;
-        //    rv = new_index;
-        //}
-    }
+    *ancestry.get_mut(current_ancestry_index) = out_seg;
+    //if left == current_left && right == current_right {
+    //    // perfect overlap, all we need to do is update
+    //    // the mapped node...
+    //    let current = ancestry.get_mut(current_ancestry_index);
+    //    println!(
+    //        "update mapping from {:?} to {:?}",
+    //        current.mapped_node, out_seg.mapped_node
+    //    );
+    //    current.mapped_node = out_seg.mapped_node;
+    //    // ... but if the mapping has changed, then this
+    //    // segment is possibly a CHANGE TO UNARY that we
+    //    // must record
+    //} else {
+    //    *ancestry.get_mut(current_ancestry_index) = out_seg;
+    //    // rv = ancestry.next_raw(current_ancestry_index);
+    //    //println!("insert out");
+    //    //// We insert out_seg at current_ancestry_index
+    //    //if current_ancestry_index == last_ancestry_index {
+    //    //    println!("case A");
+    //    //    // replace current with out_seg and insert the
+    //    //    // current value next
+    //    //    let current = *ancestry.get(current_ancestry_index);
+    //    //    let next = ancestry.next_raw(current_ancestry_index);
+    //    //    let new_index = ancestry.new_index(current);
+    //    //    println!("new_index = {new_index:?}");
+    //    //    ancestry.next[new_index.0] = next.0;
+    //    //    let _ = std::mem::replace(&mut ancestry.data[current_ancestry_index.0], out_seg);
+    //    //    ancestry.next[current_ancestry_index.0] = new_index.0;
+    //    //    // Needed for handling right_seg below
+    //    //    current_ancestry_index = new_index;
+    //    //    rv = current_ancestry_index;
+    //    //    println!("rv = {rv:?}");
+    //    //} else {
+    //    //    println!("case B");
+    //    //    let next = ancestry.next_raw(last_ancestry_index);
+    //    //    let new_index = ancestry.new_index(out_seg);
+    //    //    ancestry.next[last_ancestry_index.0] = new_index.0;
+    //    //    ancestry.next[new_index.0] = next.0;
+    //    //    rv = new_index;
+    //    //}
+    //}
 
     if let Some(right_seg) = seg_right {
         println!("seg_right = {right_seg:?}");
