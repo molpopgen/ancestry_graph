@@ -35,7 +35,10 @@ def update_overlap(a, left, right, node, anc):
         # the previous index in our rust version,
         # so that we can insert out before it and
         # update all the list-y stuff.
-        anc.insert(a, out)
+        ai.left = out.left
+        ai.right = out.right
+        ai.node = out.node
+        # anc.insert(a, out)
         rv = a + 1
         # rv -= 1
     if segright is not None:
@@ -85,40 +88,40 @@ def update(anc, overlaps):
         anc[:] = anc[:a]
 
 
-# print("TEST 1")
-#
-# anc = [Segment(0, 2, 0)]
-# overlaps = [Segment(0, 1, 2), Segment(1, 2, 1)]
-#
-# update(anc, overlaps)
-# assert sorted(anc, key=lambda x: x.left) == [
-#     Segment(0, 1, 2),
-#     Segment(1, 2, 1),
-# ], f"{anc}"
-#
-# print("TEST 2")
-#
-# anc = [Segment(0, 3, 0)]
-# overlaps = [Segment(0, 1, 0), Segment(2, 3, 1)]
-#
-# update(anc, overlaps)
-# assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
-#
-# print("TEST 3")
-#
-# anc = [Segment(0, 5, 0)]
-# overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
-#
-# update(anc, overlaps)
-# assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
-#
-# print("TEST 3")
-#
-# anc = [Segment(0, 1, 17), Segment(1, 5, 0)]
-# overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
-#
-# update(anc, overlaps)
-# assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
+print("TEST 1")
+
+anc = [Segment(0, 2, 0)]
+overlaps = [Segment(0, 1, 2), Segment(1, 2, 1)]
+
+update(anc, overlaps)
+assert sorted(anc, key=lambda x: x.left) == [
+    Segment(0, 1, 2),
+    Segment(1, 2, 1),
+], f"{anc}"
+
+print("TEST 2")
+
+anc = [Segment(0, 3, 0)]
+overlaps = [Segment(0, 1, 0), Segment(2, 3, 1)]
+
+update(anc, overlaps)
+assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
+
+print("TEST 3")
+
+anc = [Segment(0, 5, 0)]
+overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
+
+update(anc, overlaps)
+assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
+
+print("TEST 3")
+
+anc = [Segment(0, 1, 17), Segment(1, 5, 0)]
+overlaps = [Segment(1, 2, 0), Segment(3, 4, 1)]
+
+update(anc, overlaps)
+assert sorted(anc, key=lambda x: x.left) == overlaps, f"{anc}"
 
 print("TEST 4")
 anc = [Segment(1, 8, 0), Segment(8, 14, 1), Segment(14, 16, 1)]
