@@ -199,11 +199,7 @@ fn update_ancestry(
     last_ancestry_index: Index,
     current_ancestry_index: Index,
     ancestry: &mut NodeAncestry,
-    head: Option<Index>,
-    prev: Option<Index>,
 ) -> Index {
-    let mut head = head;
-    let mut prev = prev;
     let mut seg_right = None;
     let mut current_ancestry_index = current_ancestry_index;
     let (mut current_left, current_right) = {
@@ -308,17 +304,11 @@ fn update_ancestry_design(
     ancestry_tail: &mut [Index],
 ) {
     assert_eq!(ancestry_head.len(), ancestry_tail.len());
-    let mut head: Option<Index> = None;
-    let mut prev: Option<Index> = None;
     let mut ahead = ancestry_head[node.as_index()];
     let mut last_ancestry_index = ahead;
     // let mut last_anc_segment: Option<AncestrySegment> = None;
     let mut current_overlap = 0_usize;
     while !ahead.is_sentinel() && current_overlap < overlaps.len() {
-        println!(
-            "ahead: {ahead:?} = {:?}, out head: {head:?}, out tail {prev:?}",
-            ancestry.get(ahead)
-        );
         // todo!("revisit this after we add more tests to our Py prototype to hit more code paths");
         //let (anc_current_left, anc_current_right) = if let Some(aseg) = last_anc_segment {
         //    (aseg.segment.left, aseg.segment.right)
@@ -346,8 +336,6 @@ fn update_ancestry_design(
                 last_ancestry_index,
                 ahead,
                 ancestry,
-                head,
-                prev,
             );
             println!("updated to {ahead:?}");
             // println!("seg_right = {:?}", ancestry.get(seg_right));
