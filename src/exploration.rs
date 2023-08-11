@@ -233,6 +233,7 @@ fn update_ancestry(
         mapped_node,
     };
     println!("out = {out_seg:?}");
+    // TODO: API fn to replace.
     *ancestry.get_mut(current_ancestry_index) = out_seg;
     //if left == current_left && right == current_right {
     //    // perfect overlap, all we need to do is update
