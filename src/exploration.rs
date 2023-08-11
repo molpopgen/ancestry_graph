@@ -215,7 +215,7 @@ fn update_ancestry(
     println!("{:?} {temp_left} {temp_right}", current_ancestry_index);
     let mut rv = ancestry.next_raw(current_ancestry_index);
     if current_left != temp_left {
-        todo!()
+        println!("we have a left dangle on {current_left}, {temp_left}");
     }
     if current_right != temp_right {
         {
@@ -373,7 +373,11 @@ fn update_ancestry_design(
             //last_anc_segment = None;
         }
     }
-    println!("done: {:?}", ahead);
+    println!("done: {:?} {:?}", last_ancestry_index, ahead);
+    // WARNING: EPIC HACK ALERT
+    if !ahead.is_sentinel() {
+        ancestry.next[last_ancestry_index.0] = usize::MAX
+    }
     // WARNING: everything below is very fragile and
     // needs testing
     //if let Some(index) = head {
