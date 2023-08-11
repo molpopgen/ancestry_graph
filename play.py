@@ -65,7 +65,8 @@ def update(anc, overlaps):
     a = 0
     o = 0
 
-    while a < len(anc) and o < len(overlaps):
+    # while a < len(anc) and o < len(overlaps):
+    while o < len(overlaps):
         oi = overlaps[o]
         ai = anc[a]
         if oi.right > ai.left and ai.right > oi.left:

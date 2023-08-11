@@ -308,7 +308,8 @@ fn update_ancestry_design(
     let mut last_ancestry_index = ahead;
     let mut current_overlap = 0_usize;
     let mut last_right = 0;
-    while !ahead.is_sentinel() && current_overlap < overlaps.len() {
+    //while !ahead.is_sentinel() && current_overlap < overlaps.len() {
+    while current_overlap < overlaps.len() {
         let (left, right, mapped_node) = overlaps[current_overlap];
         println!("current input segment = {:?}", ancestry.get(ahead));
         if right > ancestry.get(ahead).segment.left && ancestry.get(ahead).segment.right > left {
