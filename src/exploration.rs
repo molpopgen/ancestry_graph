@@ -549,3 +549,30 @@ fn test_list_updating_4() {
     }
     println!("{:?}", ancestry.free_list)
 }
+
+#[cfg(test)]
+mod design_property_tests {
+    use super::*;
+    use proptest::prelude::*;
+    use rand::Rng;
+    use rand::SeedableRng;
+
+    proptest! {
+        #[test]
+        fn test_continguous_parent(seed in 0..u64::MAX) {
+            let input_ancestry = vec![vec![(0_i64, 500_i64, Node(0))]];
+            let next_distance = rand::distributions::Uniform::new(1_i64, 25);
+            let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+            let mut last = rng.sample(next_distance);
+            let mut overlaps = vec![];
+            while last < 500 {
+                let next = rng.sample(next_distance);
+                if last + next < 500 {
+                    overlaps.push((last, last + next, Node(1)));
+                    last = last + next + rng.sample(next_distance);
+                } else { break }
+            }
+            let (_, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+        }
+    }
+}
