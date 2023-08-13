@@ -218,7 +218,6 @@ fn update_ancestry(
         {
             let current = ancestry.get_mut(current_ancestry_index);
             current.segment.left = temp_right;
-            current_left = temp_right;
         }
         seg_right = Some(AncestrySegment {
             segment: Segment {
