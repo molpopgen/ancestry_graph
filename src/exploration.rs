@@ -6,6 +6,19 @@ use crate::Node;
 #[derive(Clone, Copy, Debug, Hash, PartialEq, PartialOrd, Ord, Eq)]
 pub struct Index(usize);
 
+trait GenomicInterval {
+    fn left(&self) -> i64;
+    fn right(&self) -> i64;
+
+    fn range(&self) -> (i64, i64) {
+        (self.left(), self.right())
+    }
+
+    fn overlaps<T: GenomicInterval>(&self, other: &T) -> bool {
+        self.right() > other.left() && other.right() > self.left()
+    }
+}
+
 impl Index {
     #[inline(always)]
     fn sentinel() -> Self {
@@ -127,6 +140,15 @@ struct Segment {
     right: i64,
 }
 
+impl GenomicInterval for Segment {
+    fn left(&self) -> i64 {
+        self.left
+    }
+    fn right(&self) -> i64 {
+        self.right
+    }
+}
+
 impl Segment {
     fn overlaps(&self, other: &Segment) -> bool {
         self.right > other.left && other.right > self.left
@@ -139,9 +161,27 @@ struct AncestrySegment {
     mapped_node: Node,
 }
 
+impl GenomicInterval for AncestrySegment {
+    fn left(&self) -> i64 {
+        self.segment.left()
+    }
+    fn right(&self) -> i64 {
+        self.segment.right()
+    }
+}
+
 struct Edge {
     segment: Segment,
     child: Node,
+}
+
+impl GenomicInterval for Edge {
+    fn left(&self) -> i64 {
+        self.segment.left()
+    }
+    fn right(&self) -> i64 {
+        self.segment.right()
+    }
 }
 
 struct AncestryIntersection {
@@ -176,7 +216,7 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
         while let Some(aseg) = current_ancestry {
             let edge_ref = graph.edges.get(edge_index);
             let anc_ref = graph.ancestry.get(aseg);
-            if anc_ref.segment.overlaps(&edge_ref.segment) {
+            if anc_ref.overlaps(edge_ref) {
                 let left = std::cmp::max(edge_ref.segment.left, anc_ref.segment.left);
                 let right = std::cmp::min(edge_ref.segment.right, anc_ref.segment.right);
                 queue.push(AncestryIntersection {
@@ -211,7 +251,7 @@ fn update_ancestry(
     println!("{:?} {temp_left} {temp_right}", current_ancestry_index);
     let mut rv = ancestry.next_raw(current_ancestry_index);
     if current_left != temp_left {
-        assert!(current_left<temp_left);
+        assert!(current_left < temp_left);
         println!("we have a left dangle on {current_left}, {temp_left}");
     }
     if current_right != temp_right {
