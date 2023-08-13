@@ -201,8 +201,8 @@ fn update_ancestry(
     ancestry: &mut NodeAncestry,
 ) -> Index {
     let mut seg_right = None;
-    let mut current_ancestry_index = current_ancestry_index;
-    let (mut current_left, current_right) = {
+    let current_ancestry_index = current_ancestry_index;
+    let (current_left, current_right) = {
         let current = ancestry.get(current_ancestry_index);
         (current.segment.left, current.segment.right)
     };
