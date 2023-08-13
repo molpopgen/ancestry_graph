@@ -211,6 +211,7 @@ fn update_ancestry(
     println!("{:?} {temp_left} {temp_right}", current_ancestry_index);
     let mut rv = ancestry.next_raw(current_ancestry_index);
     if current_left != temp_left {
+        assert!(current_left<temp_left);
         println!("we have a left dangle on {current_left}, {temp_left}");
     }
     if current_right != temp_right {
