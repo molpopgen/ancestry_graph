@@ -1,4 +1,5 @@
 use crate::Node;
+use crate::NodeStatus;
 
 // TODO: this should be in another module
 // and made pub for internal use
@@ -206,6 +207,7 @@ pub struct Graph {
     current_time: i64,
     genome_length: i64,
     birth_time: Vec<i64>,
+    node_status: Vec<NodeStatus>,
     free_nodes: Vec<usize>,
 
     // "Tables"
@@ -225,6 +227,7 @@ impl Graph {
         }
         let current_time = 0;
         let birth_time = vec![];
+        let node_status = vec![];
         let free_nodes = vec![];
         let edge_head = vec![];
         let edge_tail = vec![];
@@ -237,6 +240,7 @@ impl Graph {
             current_time,
             genome_length,
             birth_time,
+            node_status,
             free_nodes,
             edges,
             edge_head,
@@ -245,6 +249,11 @@ impl Graph {
             ancestry_head,
             ancestry_tail,
         })
+    }
+
+    fn with_initial_nodes(num_nodes: usize, genome_length: i64) -> Option<(Self, Vec<Node>)> {
+        todo!();
+        let mut graph = Self::new(genome_length)?;
     }
 }
 
