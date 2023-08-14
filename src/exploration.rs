@@ -200,14 +200,52 @@ struct AncestryOverlapper {
     overlaps: Vec<AncestryIntersection>,
 }
 
+// Some definitions:
+// * A node w/no edges is extinct if its birth_time != current_time.
 pub struct Graph {
+    current_time: i64,
+    genome_length: i64,
     birth_time: Vec<i64>,
+    free_nodes: Vec<usize>,
+
+    // "Tables"
+    // Arguably, these could be better encapsulated.
     edges: CursorList<Edge>,
     edge_head: Vec<Index>,
     edge_tail: Vec<Index>,
     ancestry: CursorList<AncestrySegment>,
     ancestry_head: Vec<Index>,
     ancestry_tail: Vec<Index>,
+}
+
+impl Graph {
+    fn new(genome_length: i64) -> Option<Self> {
+        if genome_length < 1 {
+            return None;
+        }
+        let current_time = 0;
+        let birth_time = vec![];
+        let free_nodes = vec![];
+        let edge_head = vec![];
+        let edge_tail = vec![];
+        let ancestry_head = vec![];
+        let ancestry_tail = vec![];
+        let edges = CursorList::<Edge>::with_capacity(1000);
+        let ancestry = CursorList::<AncestrySegment>::with_capacity(1000);
+
+        Some(Self {
+            current_time,
+            genome_length,
+            birth_time,
+            free_nodes,
+            edges,
+            edge_head,
+            edge_tail,
+            ancestry,
+            ancestry_head,
+            ancestry_tail,
+        })
+    }
 }
 
 fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryIntersection>) {
