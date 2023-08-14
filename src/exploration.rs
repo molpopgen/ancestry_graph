@@ -204,8 +204,10 @@ pub struct Graph {
     birth_time: Vec<i64>,
     edges: CursorList<Edge>,
     edge_head: Vec<Index>,
+    edge_tail: Vec<Index>,
     ancestry: CursorList<AncestrySegment>,
     ancestry_head: Vec<Index>,
+    ancestry_tail: Vec<Index>,
 }
 
 fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryIntersection>) {
