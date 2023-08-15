@@ -299,6 +299,16 @@ impl Graph {
             None
         }
     }
+
+    fn record_transmission(
+        &mut self,
+        left: i64,
+        right: i64,
+        parent: Node,
+        child: Node,
+    ) -> Result<(), ()> {
+        Ok(())
+    }
 }
 
 fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryIntersection>) {
@@ -734,5 +744,32 @@ mod graph_tests {
         assert_eq!(g.ancestry_tail.len(), 11);
         assert_eq!(g.birth_time.len(), 11);
         assert_eq!(g.node_status.len(), 11);
+    }
+
+    #[test]
+    fn record_transmission() {
+        let mut g = Graph::with_initial_nodes(10, 10).unwrap().0;
+        g.advance_time().unwrap();
+        let birth = g.add_birth(1).unwrap();
+        assert!(g.record_transmission(0, 5, Node(0), birth).is_ok());
+        assert!(g.record_transmission(5, 10, Node(0), birth).is_ok());
+    }
+
+    #[test]
+    fn record_invalid_transmission_with_gap() {
+        let mut g = Graph::with_initial_nodes(10, 10).unwrap().0;
+        g.advance_time().unwrap();
+        let birth = g.add_birth(1).unwrap();
+        assert!(g.record_transmission(0, 5, Node(0), birth).is_ok());
+        assert!(g.record_transmission(6, 10, Node(0), birth).is_err());
+    }
+
+    #[test]
+    fn record_invalid_transmission_with_overlap() {
+        let mut g = Graph::with_initial_nodes(10, 10).unwrap().0;
+        g.advance_time().unwrap();
+        let birth = g.add_birth(1).unwrap();
+        assert!(g.record_transmission(0, 5, Node(0), birth).is_ok());
+        assert!(g.record_transmission(4, 10, Node(0), birth).is_err());
     }
 }
