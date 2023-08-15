@@ -173,6 +173,7 @@ impl GenomicInterval for AncestrySegment {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 struct Edge {
     left: i64,
     right: i64,
@@ -184,7 +185,7 @@ impl GenomicInterval for Edge {
         self.left
     }
     fn right(&self) -> i64 {
-        self.left
+        self.right
     }
 }
 
@@ -396,7 +397,6 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
 
     while let Some(edge_index) = current_edge {
         while let Some(aseg) = current_ancestry {
-            println!("{edge_index:?}, {aseg:?}");
             let edge_ref = graph.edges.get(edge_index);
             let anc_ref = graph.ancestry.get(aseg);
             if anc_ref.overlaps(edge_ref) {
