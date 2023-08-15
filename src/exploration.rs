@@ -882,8 +882,10 @@ mod graph_tests {
         let birth = g.add_birth(1).unwrap();
         assert!(g.record_transmission(0, 5, Node(0), birth).is_ok());
         assert!(g.record_transmission(5, 10, Node(1), birth).is_ok());
-        let mut queue = vec![];
-        ancestry_intersection(Node(0), &g, &mut queue);
-        assert_eq!(queue.len(), 1);
+        for n in [0, 1] {
+            let mut queue = vec![];
+            ancestry_intersection(Node(n), &g, &mut queue);
+            assert_eq!(queue.len(), 1);
+        }
     }
 }
