@@ -136,6 +136,24 @@ impl<T> CursorList<T> {
     //}
 }
 
+fn update_cursor_list<T>(
+    at: usize,
+    datum: T,
+    head: &mut [Index],
+    tail: &mut [Index],
+    list: &mut CursorList<T>,
+) {
+    let current_tail = tail[at];
+    if current_tail.is_sentinel() {
+        let new_head = list.new_index(datum);
+        head[at] = new_head;
+        tail[at] = new_head;
+    } else {
+        let new_tail = list.insert_after(current_tail, datum);
+        tail[at] = new_tail;
+    }
+}
+
 type NodeAncestry = CursorList<AncestrySegment>;
 
 #[derive(Clone, Copy, Debug)]
@@ -330,44 +348,31 @@ impl Graph {
     ) -> Result<(), ()> {
         assert!(left < right);
         self.validate_parent_child_birth_time(parent, child)?;
-        let parent_edge_tail = self.edge_tail[parent.0];
-        if parent_edge_tail.is_sentinel() {
-            let head = self.edges.new_index(Edge { left, right, child });
-            self.edge_head[parent.0] = head;
-            self.edge_tail[parent.0] = head;
-        } else {
-            let tail = self
-                .edges
-                .insert_after(parent_edge_tail, Edge { left, right, child });
-            self.edge_tail[parent.0] = tail;
-        }
         let child_ancestry_tail = self.ancestry_tail[child.0];
-        if child_ancestry_tail.is_sentinel() {
-            let head = self.ancestry.new_index(AncestrySegment {
+        if !child_ancestry_tail.is_sentinel() {
+            if self.ancestry.get(child_ancestry_tail).right != left {
+                return Err(());
+            }
+        }
+        update_cursor_list(
+            parent.0,
+            Edge { left, right, child },
+            &mut self.edge_head,
+            &mut self.edge_tail,
+            &mut self.edges,
+        );
+        update_cursor_list(
+            child.0,
+            AncestrySegment {
                 left,
                 right,
                 parent,
                 mapped_node: child,
-            });
-            self.ancestry_head[child.0] = head;
-            self.ancestry_tail[child.0] = head;
-        } else {
-            // Ancestry for a birth must be contiguous, filled in
-            // by this function
-            if self.ancestry.get(child_ancestry_tail).right != left {
-                return Err(());
-            }
-            let tail = self.ancestry.insert_after(
-                child_ancestry_tail,
-                AncestrySegment {
-                    left,
-                    right,
-                    parent,
-                    mapped_node: child,
-                },
-            );
-            self.ancestry_tail[child.0] = tail;
-        }
+            },
+            &mut self.ancestry_head,
+            &mut self.ancestry_tail,
+            &mut self.ancestry,
+        );
         self.parents.insert(parent);
         Ok(())
     }
