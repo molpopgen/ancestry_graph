@@ -762,7 +762,7 @@ mod test_utils {
                     rv.push(AncestryIntersection {
                         left,
                         right,
-                        mapped_node: edge.child,
+                        mapped_node: a.mapped_node,
                         edge_index,
                     });
                 }
