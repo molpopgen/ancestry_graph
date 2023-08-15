@@ -139,6 +139,7 @@ type NodeAncestry = CursorList<AncestrySegment>;
 struct AncestrySegment {
     left: i64,
     right: i64,
+    parent: Node,
     mapped_node: Node,
 }
 
@@ -307,6 +308,43 @@ impl Graph {
         parent: Node,
         child: Node,
     ) -> Result<(), ()> {
+        assert!(left < right);
+        let parent_edge_tail = self.edge_tail[parent.0];
+        if parent_edge_tail.is_sentinel() {
+            let head = self.edges.new_index(Edge { left, right, child });
+            self.edge_head[parent.0] = head;
+            self.edge_tail[parent.0] = head;
+        } else {
+            let tail = self
+                .edges
+                .insert_after(parent_edge_tail, Edge { left, right, child });
+            self.edge_tail[parent.0] = tail;
+        }
+        let child_ancestry_tail = self.ancestry_tail[child.0];
+        if child_ancestry_tail.is_sentinel() {
+            let head = self.ancestry.new_index(AncestrySegment {
+                left,
+                right,
+                parent,
+                mapped_node: child,
+            });
+            self.ancestry_head[child.0] = head;
+            self.ancestry_tail[child.0] = head;
+        } else {
+            if self.ancestry.get(child_ancestry_tail).right != left {
+                return Err(());
+            }
+            let tail = self.ancestry.insert_after(
+                child_ancestry_tail,
+                AncestrySegment {
+                    left,
+                    right,
+                    parent,
+                    mapped_node: child,
+                },
+            );
+            self.ancestry_tail[child.0] = tail;
+        }
         Ok(())
     }
 }
@@ -367,12 +405,14 @@ fn update_ancestry(
         seg_right = Some(AncestrySegment {
             left: temp_right,
             right: current_right,
+            parent: Node(10), // FIXME
             mapped_node: ancestry.get(current_ancestry_index).mapped_node,
         });
     }
     let out_seg = AncestrySegment {
         left,
         right,
+        parent: Node(10), // FIXME
         mapped_node,
     };
     println!("out = {out_seg:?}");
@@ -538,6 +578,7 @@ mod test_utils {
                 let head = ancestry.new_index(AncestrySegment {
                     left: inner[0].0,
                     right: inner[0].1,
+                    parent: Node(10), // FIXME
                     mapped_node: inner[0].2,
                 });
                 ancestry_head.push(head);
@@ -548,6 +589,7 @@ mod test_utils {
                         AncestrySegment {
                             left: *left,
                             right: *right,
+                            parent: Node(10), // FIXME
                             mapped_node: *mapped_node,
                         },
                     );
