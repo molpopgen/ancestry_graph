@@ -189,6 +189,7 @@ impl GenomicInterval for Edge {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct AncestryIntersection {
     left: i64,
     right: i64,
@@ -392,6 +393,7 @@ impl Graph {
 }
 
 fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryIntersection>) {
+    assert!(!graph.edge_head[node.as_index()].is_sentinel());
     let mut current_edge = Some(graph.edge_head[node.as_index()]);
     //let mut current_ancestry = Some(graph.ancestry_head[node.as_index()]);
 
@@ -701,6 +703,74 @@ mod test_utils {
 
         (ancestry, ancestry_head, ancestry_tail)
     }
+
+    fn extract<T>(
+        at: usize,
+        head: &[Index],
+        tail: &[Index],
+        list: &CursorList<T>,
+    ) -> Vec<(T, Index)>
+    where
+        T: Copy,
+    {
+        let mut rv = vec![];
+        let mut cursor = {
+            let h = head[at];
+            if h.is_sentinel() {
+                None
+            } else {
+                Some(h)
+            }
+        };
+        while let Some(index) = cursor {
+            rv.push((*list.get(index), index));
+            cursor = list.next(index);
+            if cursor.is_none() {
+                assert_eq!(tail[at], index);
+            }
+        }
+
+        rv
+    }
+
+    pub(super) fn naive_ancestry_intersection(
+        parent: Node,
+        graph: &Graph,
+    ) -> Vec<AncestryIntersection> {
+        let mut rv = vec![];
+        let edges = extract(
+            parent.as_index(),
+            &graph.edge_head,
+            &graph.edge_tail,
+            &graph.edges,
+        );
+
+        for (edge, edge_index) in edges {
+            let child_ancestry = extract(
+                edge.child.as_index(),
+                &graph.ancestry_head,
+                &graph.ancestry_tail,
+                &graph.ancestry,
+            )
+            .into_iter()
+            .map(|(a, _)| a)
+            .collect::<Vec<_>>();
+            for a in child_ancestry {
+                if a.right > edge.left && edge.right > a.left {
+                    let left = std::cmp::max(a.left, edge.left);
+                    let right = std::cmp::min(a.right, edge.right);
+                    rv.push(AncestryIntersection {
+                        left,
+                        right,
+                        mapped_node: edge.child,
+                        edge_index,
+                    });
+                }
+            }
+        }
+        rv.sort_unstable_by_key(|f| f.left);
+        rv
+    }
 }
 
 // this is test3 from the python prototype
@@ -886,6 +956,7 @@ mod graph_tests {
             let mut queue = vec![];
             ancestry_intersection(Node(n), &g, &mut queue);
             assert_eq!(queue.len(), 1);
+            assert_eq!(queue, test_utils::naive_ancestry_intersection(Node(n), &g));
         }
     }
 }
