@@ -200,6 +200,10 @@ pub struct Graph {
     // This effectively is just a place to hold
     // new births
     cached_extant_nodes: Vec<Node>,
+    // NOTE: this is redundant
+    // with what we will do during propagation,
+    // we the graph should contain information
+    // about the queue.
     parents: crate::NodeHash,
 
     // "Tables"
@@ -307,6 +311,16 @@ impl Graph {
         }
     }
 
+    fn validate_parent_child_birth_time(&self, parent: Node, child: Node) -> Result<(), ()> {
+        let ptime = self.birth_time.get(parent.as_index()).ok_or(())?;
+        let ctime = self.birth_time.get(child.as_index()).ok_or(())?;
+        if ctime > ptime {
+            Ok(())
+        } else {
+            Err(())
+        }
+    }
+
     fn record_transmission(
         &mut self,
         left: i64,
@@ -315,6 +329,7 @@ impl Graph {
         child: Node,
     ) -> Result<(), ()> {
         assert!(left < right);
+        self.validate_parent_child_birth_time(parent, child)?;
         let parent_edge_tail = self.edge_tail[parent.0];
         if parent_edge_tail.is_sentinel() {
             let head = self.edges.new_index(Edge { left, right, child });
