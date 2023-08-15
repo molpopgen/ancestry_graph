@@ -293,13 +293,8 @@ impl Graph {
 
     fn advance_time_by(&mut self, time_delta: i64) -> Option<i64> {
         if time_delta > 0 {
-            match self.current_time.checked_add(time_delta) {
-                Some(time) => {
-                    self.current_time = time;
-                    Some(time)
-                }
-                None => None,
-            }
+            self.current_time = self.current_time.checked_add(time_delta)?;
+            Some(self.current_time)
         } else {
             None
         }
