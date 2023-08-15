@@ -349,10 +349,10 @@ impl Graph {
         assert!(left < right);
         self.validate_parent_child_birth_time(parent, child)?;
         let child_ancestry_tail = self.ancestry_tail[child.0];
-        if !child_ancestry_tail.is_sentinel() {
-            if self.ancestry.get(child_ancestry_tail).right != left {
-                return Err(());
-            }
+        if !child_ancestry_tail.is_sentinel()
+            && self.ancestry.get(child_ancestry_tail).right != left
+        {
+            return Err(());
         }
         update_cursor_list(
             parent.0,
@@ -845,5 +845,17 @@ mod graph_tests {
         assert!(g.record_transmission(0, 5, Node(0), birth).is_ok());
         assert!(g.record_transmission(4, 10, Node(1), birth).is_err());
         assert_eq!(g.parents.len(), 1);
+    }
+
+    #[test]
+    fn ancestry_intersection_test0() {
+        let mut g = Graph::with_initial_nodes(10, 10).unwrap().0;
+        g.advance_time().unwrap();
+        let birth = g.add_birth(1).unwrap();
+        assert!(g.record_transmission(0, 5, Node(0), birth).is_ok());
+        assert!(g.record_transmission(5, 10, Node(1), birth).is_ok());
+        let mut queue = vec![];
+        ancestry_intersection(Node(0), &g, &mut queue);
+        assert_eq!(queue.len(), 1);
     }
 }
