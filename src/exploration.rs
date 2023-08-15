@@ -136,12 +136,13 @@ impl<T> CursorList<T> {
 type NodeAncestry = CursorList<AncestrySegment>;
 
 #[derive(Clone, Copy, Debug)]
-struct Segment {
+struct AncestrySegment {
     left: i64,
     right: i64,
+    mapped_node: Node,
 }
 
-impl GenomicInterval for Segment {
+impl GenomicInterval for AncestrySegment {
     fn left(&self) -> i64 {
         self.left
     }
@@ -150,43 +151,24 @@ impl GenomicInterval for Segment {
     }
 }
 
-impl Segment {
-    fn overlaps(&self, other: &Segment) -> bool {
-        self.right > other.left && other.right > self.left
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-struct AncestrySegment {
-    segment: Segment,
-    mapped_node: Node,
-}
-
-impl GenomicInterval for AncestrySegment {
-    fn left(&self) -> i64 {
-        self.segment.left()
-    }
-    fn right(&self) -> i64 {
-        self.segment.right()
-    }
-}
-
 struct Edge {
-    segment: Segment,
+    left: i64,
+    right: i64,
     child: Node,
 }
 
 impl GenomicInterval for Edge {
     fn left(&self) -> i64 {
-        self.segment.left()
+        self.left
     }
     fn right(&self) -> i64 {
-        self.segment.right()
+        self.left
     }
 }
 
 struct AncestryIntersection {
-    segment: Segment,
+    left: i64,
+    right: i64,
     mapped_node: Node,
     edge_index: Index,
 }
@@ -266,10 +248,11 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
             let edge_ref = graph.edges.get(edge_index);
             let anc_ref = graph.ancestry.get(aseg);
             if anc_ref.overlaps(edge_ref) {
-                let left = std::cmp::max(edge_ref.segment.left, anc_ref.segment.left);
-                let right = std::cmp::min(edge_ref.segment.right, anc_ref.segment.right);
+                let left = std::cmp::max(edge_ref.left, anc_ref.left);
+                let right = std::cmp::min(edge_ref.right, anc_ref.right);
                 queue.push(AncestryIntersection {
-                    segment: Segment { left, right },
+                    left,
+                    right,
                     mapped_node: anc_ref.mapped_node,
                     edge_index,
                 });
@@ -278,7 +261,7 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
         }
         current_edge = graph.edges.next(edge_index);
     }
-    queue.sort_unstable_by_key(|x| x.segment.left);
+    queue.sort_unstable_by_key(|x| x.left);
 }
 
 fn update_ancestry(
@@ -293,7 +276,7 @@ fn update_ancestry(
     let current_ancestry_index = current_ancestry_index;
     let (current_left, current_right) = {
         let current = ancestry.get(current_ancestry_index);
-        (current.segment.left, current.segment.right)
+        (current.left, current.right)
     };
     let temp_left = std::cmp::max(current_left, left);
     let temp_right = std::cmp::min(current_right, right);
@@ -307,18 +290,17 @@ fn update_ancestry(
         println!("right dangle: {current_right:?}, {temp_right}");
         {
             let current = ancestry.get_mut(current_ancestry_index);
-            current.segment.left = temp_right;
+            current.left = temp_right;
         }
         seg_right = Some(AncestrySegment {
-            segment: Segment {
-                left: temp_right,
-                right: current_right,
-            },
+            left: temp_right,
+            right: current_right,
             mapped_node: ancestry.get(current_ancestry_index).mapped_node,
         });
     }
     let out_seg = AncestrySegment {
-        segment: Segment { left, right },
+        left,
+        right,
         mapped_node,
     };
     println!("out = {out_seg:?}");
@@ -368,7 +350,7 @@ fn update_ancestry(
 
     if let Some(right_seg) = seg_right {
         println!("seg_right = {right_seg:?}");
-        //if right_seg.segment.left == current_left && right_seg.segment.right == current_right {
+        //if right_seg.left == current_left && right_seg.right == current_right {
         //    let current = ancestry.get_mut(current_ancestry_index);
         //    println!(
         //        "updating node from {:?} to {:?}",
@@ -404,11 +386,11 @@ fn update_ancestry_design(
     while !ahead.is_sentinel() && current_overlap < overlaps.len() {
         let (left, right, mapped_node) = overlaps[current_overlap];
         println!("current input segment = {:?}", ancestry.get(ahead));
-        if right > ancestry.get(ahead).segment.left && ancestry.get(ahead).segment.right > left {
+        if right > ancestry.get(ahead).left && ancestry.get(ahead).right > left {
             println!(
                 "yes {left}, {right}, {:?}, {:?}",
-                ancestry.get(ahead).segment.left,
-                ancestry.get(ahead).segment.right
+                ancestry.get(ahead).left,
+                ancestry.get(ahead).right
             );
             last_ancestry_index = ahead;
             ahead = update_ancestry(
@@ -426,8 +408,8 @@ fn update_ancestry_design(
             println!(
                 "no for {ahead:?}: {left}, {right}, {:?} | vs {}, {}",
                 ancestry.next(ahead),
-                ancestry.get(ahead).segment.left,
-                ancestry.get(ahead).segment.right,
+                ancestry.get(ahead).left,
+                ancestry.get(ahead).right,
             );
             // Goal here is to keep the output head the same.
             // as it was upon input
@@ -482,10 +464,8 @@ mod test_utils {
         for inner in input_ancestry {
             if !inner.is_empty() {
                 let head = ancestry.new_index(AncestrySegment {
-                    segment: Segment {
-                        left: inner[0].0,
-                        right: inner[0].1,
-                    },
+                    left: inner[0].0,
+                    right: inner[0].1,
                     mapped_node: inner[0].2,
                 });
                 ancestry_head.push(head);
@@ -494,10 +474,8 @@ mod test_utils {
                     last = ancestry.insert_after(
                         last,
                         AncestrySegment {
-                            segment: Segment {
-                                left: *left,
-                                right: *right,
-                            },
+                            left: *left,
+                            right: *right,
                             mapped_node: *mapped_node,
                         },
                     );
@@ -532,7 +510,7 @@ mod test_utils {
         while !h.is_sentinel() {
             let a = ancestry.get(h);
             println!("extracted {a:?}");
-            extracted.push((a.segment.left, a.segment.right, a.mapped_node));
+            extracted.push((a.left, a.right, a.mapped_node));
             let next = ancestry.next_raw(h);
             // Check that our tail is properly updated
             if next.is_sentinel() {
