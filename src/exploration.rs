@@ -160,7 +160,7 @@ type NodeAncestry = CursorList<AncestrySegment>;
 struct AncestrySegment {
     left: i64,
     right: i64,
-    parent: Node,
+    parent: Option<Node>,
     mapped_node: Node,
 }
 
@@ -276,6 +276,18 @@ impl Graph {
         let mut extant_nodes = vec![];
         for _ in 0..num_nodes {
             let n = graph.add_node(NodeStatus::Ancestor, 0);
+            update_cursor_list(
+                n.0,
+                AncestrySegment {
+                    left: 0,
+                    right: genome_length,
+                    mapped_node: n,
+                    parent: None,
+                },
+                &mut graph.ancestry_head,
+                &mut graph.ancestry_tail,
+                &mut graph.ancestry,
+            );
             extant_nodes.push(n);
         }
         Some((graph, extant_nodes))
@@ -366,7 +378,7 @@ impl Graph {
             AncestrySegment {
                 left,
                 right,
-                parent,
+                parent: Some(parent),
                 mapped_node: child,
             },
             &mut self.ancestry_head,
@@ -384,6 +396,7 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
 
     while let Some(edge_index) = current_edge {
         while let Some(aseg) = current_ancestry {
+            println!("{edge_index:?}, {aseg:?}");
             let edge_ref = graph.edges.get(edge_index);
             let anc_ref = graph.ancestry.get(aseg);
             if anc_ref.overlaps(edge_ref) {
@@ -434,14 +447,14 @@ fn update_ancestry(
         seg_right = Some(AncestrySegment {
             left: temp_right,
             right: current_right,
-            parent: Node(10), // FIXME
+            parent: None, // FIXME
             mapped_node: ancestry.get(current_ancestry_index).mapped_node,
         });
     }
     let out_seg = AncestrySegment {
         left,
         right,
-        parent: Node(10), // FIXME
+        parent: None, // FIXME
         mapped_node,
     };
     println!("out = {out_seg:?}");
@@ -607,7 +620,7 @@ mod test_utils {
                 let head = ancestry.new_index(AncestrySegment {
                     left: inner[0].0,
                     right: inner[0].1,
-                    parent: Node(10), // FIXME
+                    parent: None, // FIXME
                     mapped_node: inner[0].2,
                 });
                 ancestry_head.push(head);
@@ -618,7 +631,7 @@ mod test_utils {
                         AncestrySegment {
                             left: *left,
                             right: *right,
-                            parent: Node(10), // FIXME
+                            parent: None, // FIXME
                             mapped_node: *mapped_node,
                         },
                     );
