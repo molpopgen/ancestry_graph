@@ -192,6 +192,11 @@ pub struct Graph {
     node_status: Vec<NodeStatus>,
     free_nodes: Vec<usize>,
 
+    num_births: usize,
+    // This effectively is just a place to hold
+    // new births
+    cached_extant_nodes: Vec<Node>,
+
     // "Tables"
     // Arguably, these could be better encapsulated.
     edges: CursorList<Edge>,
@@ -208,6 +213,8 @@ impl Graph {
             return None;
         }
         let current_time = 0;
+        let num_births = 0;
+        let cached_extant_nodes = vec![];
         let birth_time = vec![];
         let node_status = vec![];
         let free_nodes = vec![];
@@ -224,6 +231,8 @@ impl Graph {
             birth_time,
             node_status,
             free_nodes,
+            num_births,
+            cached_extant_nodes,
             edges,
             edge_head,
             edge_tail,
@@ -234,8 +243,66 @@ impl Graph {
     }
 
     fn with_initial_nodes(num_nodes: usize, genome_length: i64) -> Option<(Self, Vec<Node>)> {
-        todo!();
         let mut graph = Self::new(genome_length)?;
+        let mut extant_nodes = vec![];
+        for _ in 0..num_nodes {
+            let n = graph.add_node(NodeStatus::Ancestor, 0);
+            extant_nodes.push(n);
+        }
+        Some((graph, extant_nodes))
+    }
+
+    fn add_node(&mut self, status: NodeStatus, birth_time: i64) -> Node {
+        match self.free_nodes.pop() {
+            Some(index) => {
+                assert!(self.ancestry_head[index].is_sentinel());
+                assert!(self.ancestry_tail[index].is_sentinel());
+                assert!(self.edge_head[index].is_sentinel());
+                assert!(self.edge_tail[index].is_sentinel());
+                self.birth_time[index] = birth_time;
+                self.node_status[index] = status;
+                Node(index)
+            }
+            None => {
+                self.birth_time.push(birth_time);
+                self.node_status.push(status);
+                self.ancestry_head.push(Index::sentinel());
+                self.ancestry_tail.push(Index::sentinel());
+                self.edge_head.push(Index::sentinel());
+                self.edge_tail.push(Index::sentinel());
+                let index = self.birth_time.len() - 1;
+                Node(index)
+            }
+        }
+    }
+
+    pub fn add_birth(&mut self, birth_time: i64) -> Result<Node, ()> {
+        if birth_time != self.current_time {
+            return Err(());
+        }
+        let rv = self.add_node(NodeStatus::Birth, birth_time);
+        debug_assert_eq!(self.birth_time[rv.as_index()], birth_time);
+        self.num_births += 1;
+        self.cached_extant_nodes.push(rv);
+        Ok(rv)
+    }
+
+    pub fn advance_time(&mut self) -> Option<i64> {
+        self.advance_time_by(1)
+    }
+
+    fn advance_time_by(&mut self, time_delta: i64) -> Option<i64> {
+        if time_delta > 0 {
+            match self.current_time.checked_add(time_delta) {
+                Some(time) => {
+                    self.current_time = time;
+                    Some(time)
+                }
+                None => None,
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -641,5 +708,36 @@ mod design_property_tests {
             }
             let (_, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
         }
+    }
+}
+
+#[cfg(test)]
+mod graph_tests {
+    use super::*;
+
+    #[test]
+    fn with_initial_nodes() {
+        let g = Graph::with_initial_nodes(10, 10).unwrap().0;
+        assert_eq!(g.edge_head.len(), 10);
+        assert_eq!(g.edge_tail.len(), 10);
+        assert_eq!(g.ancestry_head.len(), 10);
+        assert_eq!(g.ancestry_tail.len(), 10);
+        assert_eq!(g.birth_time.len(), 10);
+        assert_eq!(g.node_status.len(), 10);
+    }
+
+    #[test]
+    fn add_birth() {
+        let mut g = Graph::with_initial_nodes(10, 10).unwrap().0;
+        assert_eq!(g.ancestry_head.len(), 10);
+        assert_eq!(g.ancestry_tail.len(), 10);
+        assert_eq!(g.birth_time.len(), 10);
+        assert_eq!(g.node_status.len(), 10);
+        g.advance_time().unwrap();
+        let _ = g.add_birth(1).unwrap();
+        assert_eq!(g.ancestry_head.len(), 11);
+        assert_eq!(g.ancestry_tail.len(), 11);
+        assert_eq!(g.birth_time.len(), 11);
+        assert_eq!(g.node_status.len(), 11);
     }
 }
