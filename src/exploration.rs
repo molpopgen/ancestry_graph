@@ -393,13 +393,28 @@ impl Graph {
 
 fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryIntersection>) {
     let mut current_edge = Some(graph.edge_head[node.as_index()]);
-    let mut current_ancestry = Some(graph.ancestry_head[node.as_index()]);
+    //let mut current_ancestry = Some(graph.ancestry_head[node.as_index()]);
 
     while let Some(edge_index) = current_edge {
-        while let Some(aseg) = current_ancestry {
-            let edge_ref = graph.edges.get(edge_index);
-            let anc_ref = graph.ancestry.get(aseg);
-            if anc_ref.overlaps(edge_ref) {
+        let edge_ref = graph.edges.get(edge_index);
+        // while let Some(aseg) = current_ancestry {
+        //     let anc_ref = graph.ancestry.get(aseg);
+        //     if anc_ref.overlaps(edge_ref) {
+        //         break;
+        //     }
+        //     current_ancestry = graph.ancestry.next(aseg);
+        // }
+        let mut child_ancestry = {
+            let a = graph.ancestry_head[edge_ref.child.as_index()];
+            if a.is_sentinel() {
+                None
+            } else {
+                Some(a)
+            }
+        };
+        while let Some(child_ancestry_index) = child_ancestry {
+            let anc_ref = graph.ancestry.get(child_ancestry_index);
+            if edge_ref.overlaps(anc_ref) {
                 let left = std::cmp::max(edge_ref.left, anc_ref.left);
                 let right = std::cmp::min(edge_ref.right, anc_ref.right);
                 queue.push(AncestryIntersection {
@@ -409,7 +424,7 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
                     edge_index,
                 });
             }
-            current_ancestry = graph.ancestry.next(aseg);
+            child_ancestry = graph.ancestry.next(child_ancestry_index);
         }
         current_edge = graph.edges.next(edge_index);
     }
