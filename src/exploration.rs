@@ -1,4 +1,7 @@
+use nohash::BuildNoHashHasher;
+
 use crate::Node;
+use crate::NodeHash;
 use crate::NodeStatus;
 
 // TODO: this should be in another module
@@ -197,6 +200,7 @@ pub struct Graph {
     // This effectively is just a place to hold
     // new births
     cached_extant_nodes: Vec<Node>,
+    parents: crate::NodeHash,
 
     // "Tables"
     // Arguably, these could be better encapsulated.
@@ -225,6 +229,7 @@ impl Graph {
         let ancestry_tail = vec![];
         let edges = CursorList::<Edge>::with_capacity(1000);
         let ancestry = CursorList::<AncestrySegment>::with_capacity(1000);
+        let parents = NodeHash::with_hasher(BuildNoHashHasher::default());
 
         Some(Self {
             current_time,
@@ -240,6 +245,7 @@ impl Graph {
             ancestry,
             ancestry_head,
             ancestry_tail,
+            parents,
         })
     }
 
@@ -347,6 +353,7 @@ impl Graph {
             );
             self.ancestry_tail[child.0] = tail;
         }
+        self.parents.insert(parent);
         Ok(())
     }
 }
@@ -796,7 +803,8 @@ mod graph_tests {
         g.advance_time().unwrap();
         let birth = g.add_birth(1).unwrap();
         assert!(g.record_transmission(0, 5, Node(0), birth).is_ok());
-        assert!(g.record_transmission(5, 10, Node(0), birth).is_ok());
+        assert!(g.record_transmission(5, 10, Node(1), birth).is_ok());
+        assert_eq!(g.parents.len(), 2);
     }
 
     #[test]
@@ -806,6 +814,7 @@ mod graph_tests {
         let birth = g.add_birth(1).unwrap();
         assert!(g.record_transmission(0, 5, Node(0), birth).is_ok());
         assert!(g.record_transmission(6, 10, Node(0), birth).is_err());
+        assert_eq!(g.parents.len(), 1);
     }
 
     #[test]
@@ -814,6 +823,7 @@ mod graph_tests {
         g.advance_time().unwrap();
         let birth = g.add_birth(1).unwrap();
         assert!(g.record_transmission(0, 5, Node(0), birth).is_ok());
-        assert!(g.record_transmission(4, 10, Node(0), birth).is_err());
+        assert!(g.record_transmission(4, 10, Node(1), birth).is_err());
+        assert_eq!(g.parents.len(), 1);
     }
 }
