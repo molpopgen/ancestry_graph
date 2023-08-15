@@ -331,6 +331,8 @@ impl Graph {
             self.ancestry_head[child.0] = head;
             self.ancestry_tail[child.0] = head;
         } else {
+            // Ancestry for a birth must be contiguous, filled in
+            // by this function
             if self.ancestry.get(child_ancestry_tail).right != left {
                 return Err(());
             }
