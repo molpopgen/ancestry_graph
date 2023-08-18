@@ -424,6 +424,7 @@ impl Graph {
 }
 
 fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryIntersection>) {
+    queue.clear();
     assert!(!graph.edge_head[node.as_index()].is_sentinel());
     let mut current_edge = Some(graph.edge_head[node.as_index()]);
     //let mut current_ancestry = Some(graph.ancestry_head[node.as_index()]);
@@ -659,6 +660,7 @@ fn process_queued_node(
     queue: &mut Vec<AncestryIntersection>,
 ) {
     ancestry_intersection(queued_parent, graph, queue);
+    println!("{queued_parent:?} => {queue:?}");
     todo!();
 }
 
