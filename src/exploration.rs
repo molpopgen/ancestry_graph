@@ -1001,6 +1001,9 @@ mod propagation_tests {
 
     #[test]
     fn propagation_test0() {
-        todo!()
+        let mut graph = Graph::with_initial_nodes(10, 10).unwrap().0;
+        graph.advance_time().unwrap();
+        let birth = graph.add_birth(1).unwrap();
+        let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
     }
 }
