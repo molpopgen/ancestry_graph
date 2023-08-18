@@ -651,6 +651,15 @@ fn update_ancestry_design(
     ancestry_tail[node.0] = last_ancestry_index;
 }
 
+fn process_queued_node(
+    options: PropagationOptions,
+    queued_parent: Node,
+    parent_status: NodeStatus,
+    graph: &mut Graph,
+) {
+    todo!()
+}
+
 fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) -> Option<Node> {
     // 1. Need to build our queue
 
@@ -680,7 +689,12 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     }
 
     while let Some(queued_node) = node_queue.pop() {
-        todo!();
+        process_queued_node(
+            options,
+            queued_node.node,
+            graph.node_status[queued_node.node.as_index()],
+            graph,
+        )
     }
 
     // TODO: should be a "cleanup" fn.
