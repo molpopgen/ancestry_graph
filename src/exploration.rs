@@ -4,6 +4,7 @@ use crate::Node;
 use crate::NodeHash;
 use crate::NodeStatus;
 use crate::PropagationOptions;
+use crate::QueuedNode;
 
 // TODO: this should be in another module
 // and made pub for internal use
@@ -651,6 +652,32 @@ fn update_ancestry_design(
 }
 
 fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) -> Option<Node> {
+    // 1. Need to build our queue
+
+    // We need some encapsulation here:
+    let mut queued_nodes: NodeHash = NodeHash::with_hasher(BuildNoHashHasher::default());
+    let mut node_queue: std::collections::BinaryHeap<QueuedNode> =
+        std::collections::BinaryHeap::new();
+    for node in graph.parents.iter() {
+        if !queued_nodes.contains(node) {
+            node_queue.push(QueuedNode {
+                node: *node,
+                birth_time: graph.birth_time[node.as_index()],
+            });
+            queued_nodes.insert(*node);
+        }
+    }
+    // Repetition here shows why our Graph has the comments
+    // about redundant data structures
+    for node in graph.deaths.iter() {
+        if !queued_nodes.contains(node) {
+            node_queue.push(QueuedNode {
+                node: *node,
+                birth_time: graph.birth_time[node.as_index()],
+            });
+            queued_nodes.insert(*node);
+        }
+    }
     todo!()
 }
 
