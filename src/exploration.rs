@@ -353,8 +353,8 @@ impl Graph {
         }
     }
 
-    fn record_transmission(
-        &mut self,
+    fn validate_record_transmission_input(
+        &self,
         left: i64,
         right: i64,
         parent: Node,
@@ -368,6 +368,17 @@ impl Graph {
         {
             return Err(());
         }
+        Ok(())
+    }
+
+    fn record_transmission(
+        &mut self,
+        left: i64,
+        right: i64,
+        parent: Node,
+        child: Node,
+    ) -> Result<(), ()> {
+        self.validate_record_transmission_input(left, right, parent, child)?;
         update_cursor_list(
             parent.0,
             Edge { left, right, child },
