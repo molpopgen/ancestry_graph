@@ -678,11 +678,16 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
             queued_nodes.insert(*node);
         }
     }
-    todo!();
+
+    while let Some(queued_node) = node_queue.pop() {
+        todo!();
+    }
 
     // TODO: should be a "cleanup" fn.
     graph.parents.clear();
     graph.deaths.clear();
+
+    todo!()
 }
 
 #[cfg(test)]
