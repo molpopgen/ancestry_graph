@@ -1004,6 +1004,8 @@ mod propagation_tests {
         let mut graph = Graph::with_initial_nodes(10, 10).unwrap().0;
         graph.advance_time().unwrap();
         let birth = graph.add_birth(1).unwrap();
+        graph.record_transmission(0, 5, Node(0), birth).unwrap();
+        graph.record_transmission(5, 10, Node(1), birth).unwrap();
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
     }
 }
