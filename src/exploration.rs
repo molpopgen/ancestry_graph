@@ -3,6 +3,7 @@ use nohash::BuildNoHashHasher;
 use crate::Node;
 use crate::NodeHash;
 use crate::NodeStatus;
+use crate::PropagationOptions;
 
 // TODO: this should be in another module
 // and made pub for internal use
@@ -647,6 +648,10 @@ fn update_ancestry_design(
         ancestry.next[last_ancestry_index.0] = usize::MAX;
     }
     ancestry_tail[node.0] = last_ancestry_index;
+}
+
+fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) -> Option<Node> {
+    todo!()
 }
 
 #[cfg(test)]
