@@ -656,8 +656,10 @@ fn process_queued_node(
     queued_parent: Node,
     parent_status: NodeStatus,
     graph: &mut Graph,
+    queue: &mut Vec<AncestryIntersection>,
 ) {
-    todo!()
+    ancestry_intersection(queued_parent, graph, queue);
+    todo!();
 }
 
 fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) -> Option<Node> {
@@ -688,12 +690,14 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
         }
     }
 
+    let mut queue = vec![];
     while let Some(queued_node) = node_queue.pop() {
         process_queued_node(
             options,
             queued_node.node,
             graph.node_status[queued_node.node.as_index()],
             graph,
+            &mut queue,
         )
     }
 
