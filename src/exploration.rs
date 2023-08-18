@@ -225,6 +225,9 @@ pub struct Graph {
     // we the graph should contain information
     // about the queue.
     parents: crate::NodeHash,
+    // NOTE: this is redundant with what we
+    // need to accomplish.
+    deaths: Vec<Node>,
 
     // "Tables"
     // Arguably, these could be better encapsulated.
@@ -254,6 +257,7 @@ impl Graph {
         let edges = CursorList::<Edge>::with_capacity(1000);
         let ancestry = CursorList::<AncestrySegment>::with_capacity(1000);
         let parents = NodeHash::with_hasher(BuildNoHashHasher::default());
+        let deaths = vec![];
 
         Some(Self {
             current_time,
@@ -270,6 +274,7 @@ impl Graph {
             ancestry_head,
             ancestry_tail,
             parents,
+            deaths,
         })
     }
 
@@ -408,6 +413,11 @@ impl Graph {
         );
         self.parents.insert(parent);
         Ok(())
+    }
+
+    pub fn mark_node_death(&mut self, node: Node) {
+        self.node_status[node.as_index()] = NodeStatus::Death;
+        self.deaths.push(node);
     }
 }
 
