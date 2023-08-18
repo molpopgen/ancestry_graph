@@ -360,7 +360,15 @@ impl Graph {
         parent: Node,
         child: Node,
     ) -> Result<(), ()> {
-        assert!(left < right);
+        if right <= left {
+            return Err(());
+        }
+        if right <= 0 {
+            return Err(());
+        }
+        if left < 0 {
+            return Err(());
+        }
         self.validate_parent_child_birth_time(parent, child)?;
         let child_ancestry_tail = self.ancestry_tail[child.0];
         if !child_ancestry_tail.is_sentinel()
