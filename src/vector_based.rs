@@ -41,6 +41,10 @@ pub struct Graph {
     birth_ancestry: BirthAncestry,
 }
 
+fn validate_birth_order(parent: Node, child: Node, birth_time: &[i64]) -> bool {
+    birth_time[parent.as_index()] < birth_time[child.as_index()]
+}
+
 fn update_birth_ancestry(
     left: i64,
     right: i64,
@@ -127,7 +131,7 @@ impl Graph {
         parent: Node,
         child: Node,
     ) -> Result<(), ()> {
-        assert!(self.birth_time[child.as_index()] > self.birth_time[parent.as_index()]);
+        assert!(validate_birth_order(parent, child, &self.birth_time));
         update_birth_ancestry(left, right, parent, child, &mut self.birth_ancestry);
         add_parent_edge(left, right, parent, child, &mut self.new_parent_edges);
         Ok(())
