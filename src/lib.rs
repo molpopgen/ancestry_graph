@@ -6,6 +6,8 @@ use std::collections::HashSet;
 mod overlapper_experiments;
 // NOTE: for design purposes -- delete later.
 mod exploration;
+// NOTE: for design purposes -- delete later.
+mod vector_based;
 
 mod flags;
 

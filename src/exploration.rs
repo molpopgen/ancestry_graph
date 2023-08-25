@@ -12,7 +12,7 @@ use crate::QueuedNode;
 #[derive(Clone, Copy, Debug, Hash, PartialEq, PartialOrd, Ord, Eq)]
 pub struct Index(usize);
 
-trait GenomicInterval {
+pub trait GenomicInterval {
     fn left(&self) -> i64;
     fn right(&self) -> i64;
 
@@ -159,11 +159,11 @@ fn update_cursor_list<T>(
 type NodeAncestry = CursorList<AncestrySegment>;
 
 #[derive(Clone, Copy, Debug)]
-struct AncestrySegment {
-    left: i64,
-    right: i64,
-    parent: Option<Node>,
-    mapped_node: Node,
+pub struct AncestrySegment {
+    pub left: i64,
+    pub right: i64,
+    pub parent: Option<Node>,
+    pub mapped_node: Node,
 }
 
 impl GenomicInterval for AncestrySegment {
@@ -176,10 +176,10 @@ impl GenomicInterval for AncestrySegment {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct Edge {
-    left: i64,
-    right: i64,
-    child: Node,
+pub struct Edge {
+    pub left: i64,
+    pub right: i64,
+    pub child: Node,
 }
 
 impl GenomicInterval for Edge {
