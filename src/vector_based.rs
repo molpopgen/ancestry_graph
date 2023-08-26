@@ -15,10 +15,28 @@ struct Ancestry {
     ranges: Vec<(usize, usize)>,
 }
 
+impl Ancestry {
+    fn with_initial_nodes(num_nodes: usize) -> Self {
+        Self {
+            ranges: vec![(0, 0); num_nodes],
+            ..Default::default()
+        }
+    }
+}
+
 #[derive(Default)]
 struct Edges {
     edges: Vec<Edge>,
     ranges: Vec<(usize, usize)>,
+}
+
+impl Edges {
+    fn with_initial_nodes(num_nodes: usize) -> Self {
+        Self {
+            ranges: vec![(0, 0); num_nodes],
+            ..Default::default()
+        }
+    }
 }
 
 type NewParentEdges = HashMap<Node, Vec<Edge>, BuildNoHashHasher<usize>>;
@@ -54,6 +72,8 @@ impl Graph {
             genome_length,
             birth_time: vec![0; num_nodes],
             node_status: vec![NodeStatus::Ancestor; num_nodes],
+            edges: Edges::with_initial_nodes(num_nodes),
+            ancestry: Ancestry::with_initial_nodes(num_nodes),
             ..Default::default()
         }
     }
@@ -181,4 +201,6 @@ fn test_with_initial_nodes() {
     let g = Graph::with_initial_nodes(10, 20);
     assert_eq!(g.birth_time.len(), 10);
     assert_eq!(g.node_status.len(), 10);
+    assert_eq!(g.edges.ranges.len(), 10);
+    assert_eq!(g.ancestry.ranges.len(), 10);
 }
