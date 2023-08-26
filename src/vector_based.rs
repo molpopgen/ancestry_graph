@@ -128,6 +128,22 @@ struct AncestryIntersection {
     //edge_index: Index,
 }
 
+struct AncestryOverlapper<'q> {
+    queue: &'q [AncestryIntersection],
+    num_overlaps: usize,
+    current_overlap: usize,
+    parent: Node,
+    left: i64,
+    right: i64,
+    overlaps: Vec<AncestryIntersection>,
+}
+
+impl<'q> AncestryOverlapper<'q> {
+    fn new(parent: Node, queue: &'q [AncestryIntersection]) -> Self {
+        todo!("q needs sentinel")
+    }
+}
+
 fn update_ancestry_intersection(
     edge: &Edge,
     ancestry: &[AncestrySegment],
