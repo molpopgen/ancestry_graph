@@ -140,7 +140,22 @@ struct AncestryOverlapper<'q> {
 
 impl<'q> AncestryOverlapper<'q> {
     fn new(parent: Node, queue: &'q [AncestryIntersection]) -> Self {
-        todo!("q needs sentinel")
+        let num_overlaps = if queue.is_empty() { 0 } else { queue.len() - 1 };
+        let right = if num_overlaps > 0 {
+            queue[0].right
+        } else {
+            i64::MAX
+        };
+        let left = i64::MAX;
+        Self {
+            queue,
+            num_overlaps,
+            parent,
+            left,
+            right,
+            current_overlap: 0,
+            overlaps: vec![],
+        }
     }
 }
 
@@ -182,8 +197,16 @@ fn ancestry_intersection(
     }
 }
 
-fn sort_ancestry_intersection(queue: &mut [AncestryIntersection]) {
+fn finalize_ancestry_intersection(queue: &mut Vec<AncestryIntersection>) {
     queue.sort_unstable_by_key(|x| x.left);
+    // Sentinel
+    if !queue.is_empty() {
+        queue.push(AncestryIntersection {
+            left: i64::MAX,
+            right: i64::MAX,
+            mapped_node: Node(usize::MAX),
+        })
+    }
 }
 
 fn validate_birth_order(parent: Node, child: Node, birth_time: &[i64]) -> bool {
