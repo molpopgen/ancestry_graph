@@ -8,6 +8,7 @@ use crate::exploration::GenomicInterval;
 use crate::Node;
 use crate::NodeHash;
 use crate::NodeStatus;
+use crate::PropagationOptions;
 
 #[derive(Default, Clone, Copy)]
 struct Range {
@@ -157,6 +158,28 @@ impl<'q> AncestryOverlapper<'q> {
             overlaps: vec![],
         }
     }
+
+    fn calculate_next_overlap_set(&mut self) -> Option<Overlaps<'_>> {
+        // NOTE: this if statement hides from the compiler
+        // that current_overlap is always < queue.len().
+        // We should be able to check current_overlap + 1 <
+        // queue.len() and have the later bounds check optimmized out.
+        if self.current_overlap < self.num_overlaps {
+            self.overlaps.retain(|o| o.right > self.left);
+            if self.overlaps.is_empty() {
+                self.left = self.queue[self.current_overlap].left;
+            }
+            todo!()
+        } else {
+            todo!()
+        }
+    }
+}
+
+struct Overlaps<'overlapper> {
+    left: i64,
+    right: i64,
+    overlaps: &'overlapper [AncestryIntersection],
 }
 
 fn update_ancestry_intersection(
@@ -252,6 +275,16 @@ fn add_parent_edge(
     }
 }
 
+fn process_node(
+    node: Node,
+    node_input_ancestry: &[AncestrySegment],
+    queue: &mut [AncestryIntersection],
+    temp_edges: &mut Vec<Edge>,
+    output_ancestry: &mut Ancestry,
+) {
+    todo!()
+}
+
 #[test]
 fn test_with_initial_nodes() {
     let g = Graph::with_initial_nodes(10, 20);
@@ -259,4 +292,11 @@ fn test_with_initial_nodes() {
     assert_eq!(g.node_status.len(), 10);
     assert_eq!(g.edges.ranges.len(), 10);
     assert_eq!(g.ancestry.ranges.len(), 10);
+}
+
+#[test]
+fn test_lifetime() {
+    let q = vec![];
+    let mut ao = AncestryOverlapper::new(Node(0), &q);
+    while let Some(_) = ao.calculate_next_overlap_set() {}
 }
