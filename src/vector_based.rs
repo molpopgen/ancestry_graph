@@ -123,6 +123,24 @@ struct AncestryIntersection {
     //edge_index: Index,
 }
 
+fn update_ancestry_intersection(
+    edge: &Edge,
+    ancestry: &[AncestrySegment],
+    queue: &mut Vec<AncestryIntersection>,
+) {
+    for aseg in ancestry {
+        if edge.overlaps(aseg) {
+            let left = std::cmp::max(edge.left(), aseg.left());
+            let right = std::cmp::min(edge.right(), aseg.right());
+            queue.push(AncestryIntersection {
+                left,
+                right,
+                mapped_node: aseg.mapped_node,
+            });
+        }
+    }
+}
+
 fn ancestry_intersection(
     node: Node,
     edges: &Edges,
@@ -139,18 +157,12 @@ fn ancestry_intersection(
             let range = ancestry.ranges[edge.child.as_index()];
             &ancestry.ancestry[range.0..range.1]
         };
-        for aseg in child_ancestry {
-            if edge.overlaps(aseg) {
-                let left = std::cmp::max(edge.left(), aseg.left());
-                let right = std::cmp::min(edge.right(), aseg.right());
-                queue.push(AncestryIntersection {
-                    left,
-                    right,
-                    mapped_node: aseg.mapped_node,
-                });
-            }
-        }
+        update_ancestry_intersection(edge, child_ancestry, queue);
     }
+}
+
+fn sort_ancestry_intersection(queue: &mut [AncestryIntersection]) {
+    queue.sort_unstable_by_key(|x| x.left);
 }
 
 fn validate_birth_order(parent: Node, child: Node, birth_time: &[i64]) -> bool {
