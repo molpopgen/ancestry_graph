@@ -9,16 +9,22 @@ use crate::Node;
 use crate::NodeHash;
 use crate::NodeStatus;
 
+#[derive(Default, Clone, Copy)]
+struct Range {
+    start: usize,
+    stop: usize,
+}
+
 #[derive(Default)]
 struct Ancestry {
     ancestry: Vec<AncestrySegment>,
-    ranges: Vec<(usize, usize)>,
+    ranges: Vec<Range>,
 }
 
 impl Ancestry {
     fn with_initial_nodes(num_nodes: usize) -> Self {
         Self {
-            ranges: vec![(0, 0); num_nodes],
+            ranges: vec![Range::default(); num_nodes],
             ..Default::default()
         }
     }
@@ -27,13 +33,13 @@ impl Ancestry {
 #[derive(Default)]
 struct Edges {
     edges: Vec<Edge>,
-    ranges: Vec<(usize, usize)>,
+    ranges: Vec<Range>,
 }
 
 impl Edges {
     fn with_initial_nodes(num_nodes: usize) -> Self {
         Self {
-            ranges: vec![(0, 0); num_nodes],
+            ranges: vec![Range::default(); num_nodes],
             ..Default::default()
         }
     }
@@ -149,13 +155,13 @@ fn ancestry_intersection(
 ) {
     let parent_edges = {
         let range = edges.ranges[node.as_index()];
-        &edges.edges[range.0..range.1]
+        &edges.edges[range.start..range.stop]
     };
 
     for edge in parent_edges {
         let child_ancestry = {
             let range = ancestry.ranges[edge.child.as_index()];
-            &ancestry.ancestry[range.0..range.1]
+            &ancestry.ancestry[range.start..range.stop]
         };
         update_ancestry_intersection(edge, child_ancestry, queue);
     }
