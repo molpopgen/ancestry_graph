@@ -106,7 +106,6 @@ impl Graph {
         }
     }
 
-    // NOTE: could be 3 different fns
     fn record_transmission(
         &mut self,
         left: i64,
