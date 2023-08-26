@@ -17,7 +17,7 @@ struct Ancestry {
 
 #[derive(Default)]
 struct Edges {
-    ancestry: Vec<Edge>,
+    edges: Vec<Edge>,
     ranges: Vec<(usize, usize)>,
 }
 
@@ -95,6 +95,44 @@ impl Graph {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct AncestryIntersection {
+    left: i64,
+    right: i64,
+    mapped_node: Node,
+    //edge_index: Index,
+}
+
+fn ancestry_intersection(
+    node: Node,
+    edges: &Edges,
+    ancestry: &Ancestry,
+    queue: &mut Vec<AncestryIntersection>,
+) {
+    let parent_edges = {
+        let range = edges.ranges[node.as_index()];
+        &edges.edges[range.0..range.1]
+    };
+
+    for edge in parent_edges {
+        let child_ancestry = {
+            let range = ancestry.ranges[edge.child.as_index()];
+            &ancestry.ancestry[range.0..range.1]
+        };
+        for aseg in child_ancestry {
+            if edge.overlaps(aseg) {
+                let left = std::cmp::max(edge.left(), aseg.left());
+                let right = std::cmp::min(edge.right(), aseg.right());
+                queue.push(AncestryIntersection {
+                    left,
+                    right,
+                    mapped_node: aseg.mapped_node,
+                });
+            }
+        }
+    }
+}
+
 fn validate_birth_order(parent: Node, child: Node, birth_time: &[i64]) -> bool {
     birth_time[parent.as_index()] < birth_time[child.as_index()]
 }
@@ -137,7 +175,6 @@ fn add_parent_edge(
         new_parent_edges.insert(parent, vec![new_edge]);
     }
 }
-
 
 #[test]
 fn test_with_initial_nodes() {
