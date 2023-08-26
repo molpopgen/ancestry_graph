@@ -41,49 +41,6 @@ pub struct Graph {
     birth_ancestry: BirthAncestry,
 }
 
-fn validate_birth_order(parent: Node, child: Node, birth_time: &[i64]) -> bool {
-    birth_time[parent.as_index()] < birth_time[child.as_index()]
-}
-
-fn update_birth_ancestry(
-    left: i64,
-    right: i64,
-    parent: Node,
-    child: Node,
-    birth_ancestry: &mut BirthAncestry,
-) {
-    if let Some(ancestry) = birth_ancestry.get_mut(&child) {
-        if let Some(last) = ancestry.last() {
-            if left != last.right() {
-                panic!("transmitted segments not contiguous");
-            }
-            ancestry.push(AncestrySegment {
-                left,
-                right,
-                parent: Some(parent),
-                mapped_node: child,
-            });
-        }
-    } else {
-        panic!("individual is not a birth");
-    }
-}
-
-fn add_parent_edge(
-    left: i64,
-    right: i64,
-    parent: Node,
-    child: Node,
-    new_parent_edges: &mut NewParentEdges,
-) {
-    let new_edge = Edge { left, right, child };
-    if let Some(edges) = new_parent_edges.get_mut(&parent) {
-        edges.push(new_edge);
-    } else {
-        new_parent_edges.insert(parent, vec![new_edge]);
-    }
-}
-
 impl Graph {
     pub fn new(genome_length: i64) -> Self {
         Self {
@@ -137,6 +94,50 @@ impl Graph {
         Ok(())
     }
 }
+
+fn validate_birth_order(parent: Node, child: Node, birth_time: &[i64]) -> bool {
+    birth_time[parent.as_index()] < birth_time[child.as_index()]
+}
+
+fn update_birth_ancestry(
+    left: i64,
+    right: i64,
+    parent: Node,
+    child: Node,
+    birth_ancestry: &mut BirthAncestry,
+) {
+    if let Some(ancestry) = birth_ancestry.get_mut(&child) {
+        if let Some(last) = ancestry.last() {
+            if left != last.right() {
+                panic!("transmitted segments not contiguous");
+            }
+            ancestry.push(AncestrySegment {
+                left,
+                right,
+                parent: Some(parent),
+                mapped_node: child,
+            });
+        }
+    } else {
+        panic!("individual is not a birth");
+    }
+}
+
+fn add_parent_edge(
+    left: i64,
+    right: i64,
+    parent: Node,
+    child: Node,
+    new_parent_edges: &mut NewParentEdges,
+) {
+    let new_edge = Edge { left, right, child };
+    if let Some(edges) = new_parent_edges.get_mut(&parent) {
+        edges.push(new_edge);
+    } else {
+        new_parent_edges.insert(parent, vec![new_edge]);
+    }
+}
+
 
 #[test]
 fn test_with_initial_nodes() {
