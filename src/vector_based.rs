@@ -347,8 +347,9 @@ fn update_ancestry(
     right: i64,
     mapped_node: Node,
     current_ancestry: &mut AncestrySegment,
+    node_heap: &mut NodeHeap,
     output_ancestry: &mut Ancestry,
-) -> (usize, i32) {
+) -> usize {
     todo!()
 }
 
@@ -356,6 +357,7 @@ fn process_node(
     node: Node,
     node_input_ancestry: &mut [AncestrySegment],
     queue: &[AncestryIntersection],
+    node_heap: &mut NodeHeap,
     temp_edges: &mut Vec<Edge>,
     output_ancestry: &mut Ancestry,
 ) {
@@ -366,7 +368,6 @@ fn process_node(
     let mut overlapper = AncestryOverlapper::new(node, queue);
     let mut current_input_ancestry = 0_usize;
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
-    let mut num_ancestry_changes = 0;
     debug_assert!(current_overlaps.is_some());
 
     while current_input_ancestry < node_input_ancestry.len() {
@@ -393,16 +394,15 @@ fn process_node(
                 // We are less interested in counting
                 // changes than sending them into our
                 // node heap for future processing
-                let (increment, num_changes) = update_ancestry(
+                current_input_ancestry += update_ancestry(
                     node,
                     overlaps.left,
                     overlaps.right,
                     mapped_node,
                     a,
+                    node_heap,
                     output_ancestry,
                 );
-                current_input_ancestry += increment;
-                num_ancestry_changes += num_changes;
                 current_overlaps = overlapper.calculate_next_overlap_set();
             } else {
                 current_input_ancestry += 1;
@@ -411,6 +411,7 @@ fn process_node(
             break;
         }
     }
+    debug_assert!(current_overlaps.is_none());
     todo!()
 }
 
