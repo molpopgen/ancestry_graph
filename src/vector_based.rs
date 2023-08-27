@@ -8,8 +8,8 @@ use crate::exploration::GenomicInterval;
 use crate::Node;
 use crate::NodeHash;
 use crate::NodeStatus;
-use crate::QueuedNode;
 use crate::PropagationOptions;
+use crate::QueuedNode;
 
 #[derive(Default, Clone, Copy)]
 struct Range {
@@ -23,12 +23,34 @@ struct NodeHeap {
     node_queue: std::collections::BinaryHeap<QueuedNode>,
 }
 
+impl NodeHeap {
+    fn insert(&mut self, node: Node, birth_time: i64) {
+        if !self.queued_nodes.contains(&node) {
+            self.queued_nodes.insert(node);
+            self.node_queue.push(QueuedNode { node, birth_time });
+        }
+    }
+
+    fn pop(&mut self) -> Option<Node> {
+        if let Some(qn) = self.node_queue.pop() {
+            self.queued_nodes.remove(&qn.node);
+            Some(qn.node)
+        } else {
+            None
+        }
+    }
+
+    fn len(&self) -> usize {
+        assert_eq!(self.queued_nodes.len(), self.node_queue.len());
+        self.queued_nodes.len()
+    }
+}
+
 #[derive(Default)]
 struct Ancestry {
     ancestry: Vec<AncestrySegment>,
     ranges: Vec<Range>,
 }
-
 
 impl Ancestry {
     fn with_initial_nodes(num_nodes: usize) -> Self {
