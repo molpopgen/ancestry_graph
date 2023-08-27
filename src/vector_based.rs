@@ -365,13 +365,13 @@ fn process_node(
 
     let mut overlapper = AncestryOverlapper::new(node, queue);
     let mut current_input_ancestry = 0_usize;
-    let mut overlaps = overlapper.calculate_next_overlap_set();
+    let mut current_overlaps = overlapper.calculate_next_overlap_set();
     let mut num_ancestry_changes = 0;
-    debug_assert!(overlaps.is_some());
+    debug_assert!(current_overlaps.is_some());
 
     while current_input_ancestry < node_input_ancestry.len() {
         let a = &mut node_input_ancestry[current_input_ancestry];
-        if let Some(overlaps) = overlapper.calculate_next_overlap_set() {
+        if let Some(ref overlaps) = current_overlaps {
             if a.right > overlaps.left && overlaps.right > a.left {
                 let mapped_node;
                 if overlaps.overlaps.len() == 1 {
@@ -403,6 +403,7 @@ fn process_node(
                 );
                 current_input_ancestry += increment;
                 num_ancestry_changes += num_changes;
+                current_overlaps = overlapper.calculate_next_overlap_set();
             } else {
                 current_input_ancestry += 1;
             }
