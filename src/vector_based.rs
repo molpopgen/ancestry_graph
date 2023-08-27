@@ -8,6 +8,7 @@ use crate::exploration::GenomicInterval;
 use crate::Node;
 use crate::NodeHash;
 use crate::NodeStatus;
+use crate::QueuedNode;
 use crate::PropagationOptions;
 
 #[derive(Default, Clone, Copy)]
@@ -17,10 +18,17 @@ struct Range {
 }
 
 #[derive(Default)]
+struct NodeHeap {
+    queued_nodes: NodeHash,
+    node_queue: std::collections::BinaryHeap<QueuedNode>,
+}
+
+#[derive(Default)]
 struct Ancestry {
     ancestry: Vec<AncestrySegment>,
     ranges: Vec<Range>,
 }
+
 
 impl Ancestry {
     fn with_initial_nodes(num_nodes: usize) -> Self {
@@ -275,13 +283,75 @@ fn add_parent_edge(
     }
 }
 
+fn update_ancestry(
+    node: Node,
+    left: i64,
+    right: i64,
+    mapped_node: Node,
+    current_ancestry: &mut AncestrySegment,
+    output_ancestry: &mut Ancestry,
+) -> (usize, i32) {
+    todo!()
+}
+
 fn process_node(
     node: Node,
-    node_input_ancestry: &[AncestrySegment],
-    queue: &mut [AncestryIntersection],
+    node_input_ancestry: &mut [AncestrySegment],
+    queue: &[AncestryIntersection],
     temp_edges: &mut Vec<Edge>,
     output_ancestry: &mut Ancestry,
 ) {
+    if queue.is_empty() {
+        todo!("no overlaps -- this node is extinct!")
+    }
+
+    let mut overlapper = AncestryOverlapper::new(node, queue);
+    let mut current_input_ancestry = 0_usize;
+    let mut overlaps = overlapper.calculate_next_overlap_set();
+    let mut num_ancestry_changes = 0;
+    debug_assert!(overlaps.is_some());
+
+    while current_input_ancestry < node_input_ancestry.len() {
+        let a = &mut node_input_ancestry[current_input_ancestry];
+        if let Some(overlaps) = overlapper.calculate_next_overlap_set() {
+            if a.right > overlaps.left && overlaps.right > a.left {
+                let mapped_node;
+                if overlaps.overlaps.len() == 1 {
+                    mapped_node = overlaps.overlaps[0].mapped_node;
+                    todo!("unary");
+                } else {
+                    mapped_node = node;
+                    // output un-squashed edges
+                    for seg in overlaps.overlaps {
+                        temp_edges.push(Edge {
+                            left: seg.left,
+                            right: seg.right,
+                            child: seg.mapped_node,
+                        })
+                    }
+                }
+
+                // FIXME: wrong design.
+                // We are less interested in counting
+                // changes than sending them into our
+                // node heap for future processing
+                let (increment, num_changes) = update_ancestry(
+                    node,
+                    overlaps.left,
+                    overlaps.right,
+                    mapped_node,
+                    a,
+                    output_ancestry,
+                );
+                current_input_ancestry += increment;
+                num_ancestry_changes += num_changes;
+            } else {
+                current_input_ancestry += 1;
+            }
+        } else {
+            break;
+        }
+    }
     todo!()
 }
 
