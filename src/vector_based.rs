@@ -299,6 +299,24 @@ fn ancestry_intersection(
     }
 }
 
+fn ancestry_intersection_part_deux(
+    node: Node,
+    parent_edges: &[Edge],
+    ancestry: &Ancestry,
+    output_node_map: &[Option<Node>],
+    queue: &mut Vec<AncestryIntersection>,
+) {
+    for edge in parent_edges {
+        let child_ancestry = {
+            println!("going south...{:?}", edge.child);
+            let output_node = output_node_map[edge.child.as_index()].unwrap().as_index();
+            let range = ancestry.ranges[output_node];
+            &ancestry.ancestry[range.start..range.stop]
+        };
+        update_ancestry_intersection(edge, child_ancestry, queue);
+    }
+}
+
 fn finalize_ancestry_intersection(queue: &mut Vec<AncestryIntersection>) {
     queue.sort_unstable_by_key(|x| x.left);
     // Sentinel
@@ -361,7 +379,6 @@ fn update_ancestry(
     is_unary: bool,
     mapped_node: Node,
     birth_time: &[i64],
-    output_node_map: &mut [Option<Node>],
     current_ancestry: &mut AncestrySegment,
     node_heap: &mut NodeHeap,
     temp_ancestry: &mut Vec<AncestrySegment>,
@@ -394,7 +411,7 @@ fn update_ancestry(
     let output_segment = AncestrySegment {
         left,
         right,
-        mapped_node: output_node_map[mapped_node.as_index()].unwrap(),
+        mapped_node,
         parent: current_ancestry.parent,
     };
     temp_ancestry.push(output_segment);
@@ -473,7 +490,6 @@ fn process_node(
                     is_unary,
                     mapped_node,
                     birth_time,
-                    output_node_map,
                     a,
                     node_heap,
                     temp_ancestry,
@@ -889,7 +905,13 @@ mod multistep_tests {
             println!("{node:?}");
             let range = graph.edges.ranges[node.as_index()];
             let parent_edges = &graph.edges.edges[range.start..range.stop];
-            ancestry_intersection(node, &parent_edges, &graph.ancestry, &mut queue);
+            ancestry_intersection_part_deux(
+                node,
+                &parent_edges,
+                &graph.simplified_ancestry,
+                &output_node_map,
+                &mut queue,
+            );
             if let Some(edges) = graph.new_parent_edges.get(&node) {
                 for edge in edges {
                     // the CHILD ancestry MUST be a birth
@@ -934,12 +956,21 @@ mod multistep_tests {
                     start: current,
                     stop: graph.simplified_edges.edges.len(),
                 });
+                // Don't output ancestry for extinct nodes...
+                // This step causes the problem referred to above:
+                // we need some other concept of "ancestry for extinct nodes"
+                // on order to deal with this.
                 let current_output_ancestry_len = graph.simplified_ancestry.ancestry.len();
-                graph.simplified_ancestry.ancestry.extend_from_slice(&temp_ancestry);
+                graph
+                    .simplified_ancestry
+                    .ancestry
+                    .extend_from_slice(&temp_ancestry);
                 graph.simplified_ancestry.ranges.push(Range {
                     start: current_output_ancestry_len,
                     stop: graph.simplified_ancestry.ancestry.len(),
                 });
+            } else {
+                println!("extinct node {node:?} ancestry = {temp_ancestry:?}");
             }
 
             queue.clear();
