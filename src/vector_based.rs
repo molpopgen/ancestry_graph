@@ -18,8 +18,8 @@ struct Range {
 
 #[derive(Debug, Copy, Clone, PartialOrd, Ord)]
 struct QueuedNode {
-    node: Node,
     birth_time: i64,
+    node: Node,
 }
 
 impl PartialEq for QueuedNode {
@@ -458,4 +458,16 @@ fn test_queue_node_ord() {
     ];
     v.sort_unstable();
     assert_eq!(v[0].node, Node(0));
+    let mut v = vec![
+        QueuedNode {
+            node: Node(1),
+            birth_time: 0,
+        },
+        QueuedNode {
+            node: Node(0),
+            birth_time: 1,
+        },
+    ];
+    v.sort_unstable();
+    assert_eq!(v[0].node, Node(1));
 }
