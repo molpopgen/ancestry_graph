@@ -364,7 +364,7 @@ fn update_ancestry(
     output_node_map: &mut [Option<Node>],
     current_ancestry: &mut AncestrySegment,
     node_heap: &mut NodeHeap,
-    output_ancestry: &mut Ancestry,
+    temp_ancestry: &mut Vec<AncestrySegment>,
 ) -> usize {
     let temp_left = std::cmp::max(left, current_ancestry.left);
     let temp_right = std::cmp::max(right, current_ancestry.right);
@@ -397,7 +397,7 @@ fn update_ancestry(
         mapped_node: output_node_map[mapped_node.as_index()].unwrap(),
         parent: current_ancestry.parent,
     };
-    output_ancestry.ancestry.push(output_segment);
+    temp_ancestry.push(output_segment);
 
     increment
 }
@@ -411,7 +411,7 @@ fn process_node(
     birth_time: &[i64],
     node_heap: &mut NodeHeap,
     temp_edges: &mut Vec<Edge>,
-    output_ancestry: &mut Ancestry,
+    temp_ancestry: &mut Vec<AncestrySegment>,
 ) -> usize {
     if queue.is_empty() {
         todo!("no overlaps -- node {node:?} is extinct!")
@@ -421,7 +421,6 @@ fn process_node(
     let mut overlapper = AncestryOverlapper::new(node, queue);
     let mut current_input_ancestry = 0_usize;
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
-    let mut current_num_anc_segments = output_ancestry.ancestry.len();
     debug_assert!(current_overlaps.is_some());
     let mut rv = 0_usize;
 
@@ -477,7 +476,7 @@ fn process_node(
                     output_node_map,
                     a,
                     node_heap,
-                    output_ancestry,
+                    temp_ancestry,
                 );
                 println!("current_input_ancestry = {current_input_ancestry:?}");
                 current_overlaps = overlapper.calculate_next_overlap_set();
@@ -554,6 +553,7 @@ mod test_process_node {
         }
         let mut node_heap = NodeHeap::default();
         let mut temp_edges: Vec<Edge> = vec![];
+        let mut temp_ancestry: Vec<AncestrySegment> = vec![];
         let mut node_input_ancestry = vec![AncestrySegment {
             left: 0,
             right: 2,
@@ -578,7 +578,7 @@ mod test_process_node {
             &birth_time,
             &mut node_heap,
             &mut temp_edges,
-            &mut output_ancestry,
+            &mut temp_ancestry,
         );
         assert!(temp_edges.is_empty());
         assert!(node_heap.is_empty());
@@ -610,6 +610,7 @@ mod test_process_node {
         }
         let mut node_heap = NodeHeap::default();
         let mut temp_edges: Vec<Edge> = vec![];
+        let mut temp_ancestry: Vec<AncestrySegment> = vec![];
         let mut node_input_ancestry = vec![AncestrySegment {
             left: 0,
             right: 2,
@@ -634,14 +635,14 @@ mod test_process_node {
             &birth_time,
             &mut node_heap,
             &mut temp_edges,
-            &mut output_ancestry,
+            &mut temp_ancestry,
         );
         assert!(temp_edges.is_empty());
         assert_eq!(node_heap.len(), 1);
         assert!(node_heap.queued_nodes.contains(&Node(0)));
-        assert_eq!(output_ancestry.ancestry.len(), 1);
+        assert_eq!(temp_ancestry.len(), 1);
         assert_eq!(
-            output_ancestry.ancestry[0],
+            temp_ancestry[0],
             AncestrySegment {
                 left: 0,
                 right: 2,
@@ -667,6 +668,7 @@ mod test_process_node {
         }
         let mut node_heap = NodeHeap::default();
         let mut temp_edges: Vec<Edge> = vec![];
+        let mut temp_ancestry: Vec<AncestrySegment> = vec![];
         let mut node_input_ancestry = vec![AncestrySegment {
             left: 0,
             right: 2,
@@ -698,7 +700,7 @@ mod test_process_node {
             &birth_time,
             &mut node_heap,
             &mut temp_edges,
-            &mut output_ancestry,
+            &mut temp_ancestry,
         );
         assert!(node_heap.is_empty());
         assert_eq!(output_ancestry.ancestry.len(), 1);
@@ -798,7 +800,7 @@ mod multistep_tests {
         // We have a problem:
         // When a node is extinct, we don't want to
         // propagate its ancestry to the output/simplified ancestry.
-        // But if we, say, cache it and then not output it, 
+        // But if we, say, cache it and then not output it,
         // we may lose info needed to map output mutations,
         // UNLESS we take a queue from tskit and map mutations
         // immediately when we process a node?
@@ -819,6 +821,7 @@ mod multistep_tests {
         node_heap.insert(Node(1), birth_time[1]);
 
         let mut temp_edges = vec![];
+        let mut temp_ancestry = vec![];
         let mut graph = Graph::new(2);
         graph.edges = edges;
         graph.ancestry = ancestry;
@@ -905,7 +908,6 @@ mod multistep_tests {
             finalize_ancestry_intersection(&mut queue);
             let range = graph.ancestry.ranges[node.as_index()];
             let node_input_ancestry = &mut graph.ancestry.ancestry[range.start..range.stop];
-            let current_output_ancestry_len = graph.simplified_ancestry.ancestry.len();
             next_output_node += process_node(
                 node,
                 node_input_ancestry,
@@ -915,12 +917,8 @@ mod multistep_tests {
                 &graph.birth_time,
                 &mut node_heap,
                 &mut temp_edges,
-                &mut graph.simplified_ancestry,
+                &mut temp_ancestry,
             );
-            graph.simplified_ancestry.ranges.push(Range {
-                start: current_output_ancestry_len,
-                stop: graph.simplified_ancestry.ancestry.len(),
-            });
             println!("temp_edges = {temp_edges:?}");
 
             //if !temp_edges.is_empty() {
@@ -936,10 +934,17 @@ mod multistep_tests {
                     start: current,
                     stop: graph.simplified_edges.edges.len(),
                 });
+                let current_output_ancestry_len = graph.simplified_ancestry.ancestry.len();
+                graph.simplified_ancestry.ancestry.extend_from_slice(&temp_ancestry);
+                graph.simplified_ancestry.ranges.push(Range {
+                    start: current_output_ancestry_len,
+                    stop: graph.simplified_ancestry.ancestry.len(),
+                });
             }
 
             queue.clear();
             temp_edges.clear();
+            temp_ancestry.clear();
         }
         println!("{:?}", graph.simplified_edges);
         println!("{:?}", graph.simplified_ancestry);
