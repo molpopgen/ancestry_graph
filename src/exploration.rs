@@ -176,7 +176,7 @@ impl GenomicInterval for AncestrySegment {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Edge {
     pub left: i64,
     pub right: i64,
