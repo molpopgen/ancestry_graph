@@ -199,6 +199,7 @@ struct AncestryIntersection {
     mapped_node: Node,
 }
 
+#[derive(Debug)]
 struct AncestryOverlapper<'q> {
     queue: &'q [AncestryIntersection],
     num_overlaps: usize,
@@ -737,7 +738,13 @@ fn process_queued_node(
     parent_status: NodeStatus,
     graph: &mut Graph,
     queue: &mut Vec<AncestryIntersection>,
+    temp_edges: &mut Vec<Edge>,
 ) {
+    let mut ahead = graph.ancestry_head[queued_parent.as_index()];
+    while !ahead.is_sentinel() {
+        println!("input {:?}", graph.ancestry.get(ahead));
+        ahead = graph.ancestry.next_raw(ahead);
+    }
     ancestry_intersection(queued_parent, graph, queue);
     if !queue.is_empty() {
         queue.push(AncestryIntersection {
@@ -747,6 +754,72 @@ fn process_queued_node(
         });
     }
     println!("{queued_parent:?} => {queue:?}");
+    let mut ahead = graph.ancestry_head[queued_parent.as_index()];
+    let mut last_ancestry_index = ahead;
+
+    println!("ahead = {ahead:?}");
+
+    let mut overlapper = AncestryOverlapper::new(queued_parent, queue);
+    println!("{overlapper:?}");
+
+    let mut overlaps = overlapper.calculate_next_overlap_set();
+    println!("{overlaps:?}");
+
+    while !ahead.is_sentinel() {
+        if let Some(ref current_overlaps) = overlaps {
+            let (current_left, current_right) = {
+                let current = graph.ancestry.get(ahead);
+                (current.left, current.right)
+            };
+            if current_right > current_overlaps.left && current_overlaps.right > current_left {
+                let mapped_node;
+                if current_overlaps.overlaps.len() == 1 {
+                    mapped_node = current_overlaps.overlaps[0].mapped_node;
+                } else {
+                    mapped_node = queued_parent;
+                    for o in current_overlaps.overlaps {
+                        temp_edges.push(Edge {
+                            left: current_overlaps.left,
+                            right: current_overlaps.right,
+                            child: o.mapped_node,
+                        })
+                    }
+                }
+                let next = update_ancestry(
+                    current_overlaps.left,
+                    current_overlaps.right,
+                    mapped_node,
+                    last_ancestry_index,
+                    ahead,
+                    &mut graph.ancestry,
+                );
+                last_ancestry_index = ahead;
+                ahead = next;
+            } else {
+                last_ancestry_index = ahead;
+                ahead = graph.ancestry.next_raw(ahead)
+            }
+        } else {
+            break;
+        }
+        println!("temp_edges = {temp_edges:?}");
+    }
+
+    let mut ahead = graph.ancestry_head[queued_parent.as_index()];
+    while !ahead.is_sentinel() {
+        println!("output {:?}", graph.ancestry.get(ahead));
+
+        if ahead == last_ancestry_index {
+            println!("breaking");
+            break;
+        }
+
+        ahead = graph.ancestry.next_raw(ahead);
+    }
+
+    graph.ancestry_tail[queued_parent.as_index()] = last_ancestry_index;
+    println!("{:?}", graph.ancestry.next_raw(last_ancestry_index));
+
     todo!();
 }
 
@@ -757,6 +830,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     let mut queued_nodes: NodeHash = NodeHash::with_hasher(BuildNoHashHasher::default());
     let mut node_queue: std::collections::BinaryHeap<QueuedNode> =
         std::collections::BinaryHeap::new();
+    let mut temp_edges = vec![];
     for node in graph.parents.iter() {
         if !queued_nodes.contains(node) {
             node_queue.push(QueuedNode {
@@ -786,7 +860,12 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
             graph.node_status[queued_node.node.as_index()],
             graph,
             &mut queue,
-        )
+            &mut temp_edges,
+        );
+
+        // Clean up for next loop
+        queue.clear();
+        temp_edges.clear();
     }
 
     // TODO: should be a "cleanup" fn.
