@@ -197,17 +197,96 @@ struct AncestryIntersection {
     left: i64,
     right: i64,
     mapped_node: Node,
-    edge_index: Index,
 }
 
-struct AncestryOverlapper {
-    queue: Vec<AncestryIntersection>,
+struct AncestryOverlapper<'q> {
+    queue: &'q [AncestryIntersection],
     num_overlaps: usize,
     current_overlap: usize,
     parent: Node,
     left: i64,
     right: i64,
     overlaps: Vec<AncestryIntersection>,
+}
+
+impl<'q> AncestryOverlapper<'q> {
+    fn new(parent: Node, queue: &'q [AncestryIntersection]) -> Self {
+        let num_overlaps = if queue.is_empty() { 0 } else { queue.len() - 1 };
+        let right = if num_overlaps > 0 {
+            queue[0].right
+        } else {
+            i64::MAX
+        };
+        let left = i64::MAX;
+        Self {
+            queue,
+            num_overlaps,
+            parent,
+            left,
+            right,
+            current_overlap: 0,
+            overlaps: vec![],
+        }
+    }
+
+    fn calculate_next_overlap_set(&mut self) -> Option<Overlaps<'_>> {
+        // NOTE: this if statement hides from the compiler
+        // that current_overlap is always < queue.len().
+        // We should be able to check current_overlap + 1 <
+        // queue.len() and have the later bounds check optimmized out.
+        if self.current_overlap < self.num_overlaps {
+            self.overlaps.retain(|o| o.right > self.left);
+            if self.overlaps.is_empty() {
+                self.left = self.queue[self.current_overlap].left;
+            }
+            let mut new_right = self.right;
+            for segment in &self.queue[self.current_overlap..] {
+                if segment.left == self.left {
+                    self.current_overlap += 1;
+                    new_right = std::cmp::min(new_right, segment.right);
+                    self.overlaps.push(*segment)
+                } else {
+                    break;
+                }
+            }
+            // NOTE: we can track the left value while
+            // traversing the overlaps, setting it to MAX
+            // initially, and dodge another bounds check
+            self.right = new_right;
+            self.right = std::cmp::min(self.right, self.queue[self.current_overlap].left);
+            Some(Overlaps {
+                left: self.left,
+                right: self.right,
+                overlaps: &self.overlaps,
+            })
+        } else {
+            if !self.overlaps.is_empty() {
+                self.left = self.right;
+                // DUPLICATION
+                self.overlaps.retain(|o| o.right > self.left);
+            }
+            if !self.overlaps.is_empty() {
+                self.right = match self.overlaps.iter().map(|&overlap| overlap.right).min() {
+                    Some(right) => right,
+                    None => self.right,
+                };
+                Some(Overlaps {
+                    left: self.left,
+                    right: self.right,
+                    overlaps: &self.overlaps,
+                })
+            } else {
+                None
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Overlaps<'overlapper> {
+    left: i64,
+    right: i64,
+    overlaps: &'overlapper [AncestryIntersection],
 }
 
 // Some definitions:
@@ -456,7 +535,6 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
                     left,
                     right,
                     mapped_node: anc_ref.mapped_node,
-                    edge_index,
                 });
             }
             child_ancestry = graph.ancestry.next(child_ancestry_index);
@@ -661,6 +739,13 @@ fn process_queued_node(
     queue: &mut Vec<AncestryIntersection>,
 ) {
     ancestry_intersection(queued_parent, graph, queue);
+    if !queue.is_empty() {
+        queue.push(AncestryIntersection {
+            left: i64::MAX,
+            right: i64::MAX,
+            mapped_node: Node(usize::MAX),
+        });
+    }
     println!("{queued_parent:?} => {queue:?}");
     todo!();
 }
@@ -854,7 +939,6 @@ mod test_utils {
                         left,
                         right,
                         mapped_node: a.mapped_node,
-                        edge_index,
                     });
                 }
             }
