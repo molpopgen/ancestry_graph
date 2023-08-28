@@ -259,6 +259,7 @@ impl<'q> AncestryOverlapper<'q> {
     }
 }
 
+#[derive(Debug)]
 struct Overlaps<'overlapper> {
     left: i64,
     right: i64,
@@ -357,8 +358,10 @@ fn update_ancestry(
     node: Node,
     left: i64,
     right: i64,
+    is_unary: bool,
     mapped_node: Node,
     birth_time: &[i64],
+    output_node_map: &mut [Option<Node>],
     current_ancestry: &mut AncestrySegment,
     node_heap: &mut NodeHeap,
     output_ancestry: &mut Ancestry,
@@ -366,15 +369,20 @@ fn update_ancestry(
     let temp_left = std::cmp::max(left, current_ancestry.left);
     let temp_right = std::cmp::max(right, current_ancestry.right);
     let mut increment = 0;
+    println!(
+        "update: {current_ancestry:?}, {temp_left}, {temp_right}, {node:?} <=> {mapped_node:?}"
+    );
 
     // The second condition means a unary transmission that
     // needs propagating
-    if current_ancestry.left != temp_left || mapped_node != node {
+    if current_ancestry.left != temp_left || is_unary {
+        println!("adding change from {node:?}");
         if let Some(parent) = current_ancestry.parent {
             node_heap.insert(parent, birth_time[parent.as_index()])
         }
     }
     if current_ancestry.right != temp_right {
+        println!("adding change from {node:?}, case 2");
         // DUPLICATION
         if let Some(parent) = current_ancestry.parent {
             node_heap.insert(parent, birth_time[parent.as_index()])
@@ -386,7 +394,7 @@ fn update_ancestry(
     let output_segment = AncestrySegment {
         left,
         right,
-        mapped_node,
+        mapped_node: output_node_map[mapped_node.as_index()].unwrap(),
         parent: current_ancestry.parent,
     };
     output_ancestry.ancestry.push(output_segment);
@@ -398,33 +406,53 @@ fn process_node(
     node: Node,
     node_input_ancestry: &mut [AncestrySegment],
     queue: &[AncestryIntersection],
-    output_node_map: &[Option<Node>],
+    output_node_map: &mut [Option<Node>],
+    next_output_node: usize,
     birth_time: &[i64],
     node_heap: &mut NodeHeap,
     temp_edges: &mut Vec<Edge>,
     output_ancestry: &mut Ancestry,
-) {
+) -> usize {
     if queue.is_empty() {
         todo!("no overlaps -- node {node:?} is extinct!")
     }
+    let output_node_id = output_node_map[node.as_index()];
 
     let mut overlapper = AncestryOverlapper::new(node, queue);
     let mut current_input_ancestry = 0_usize;
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
     let mut current_num_anc_segments = output_ancestry.ancestry.len();
     debug_assert!(current_overlaps.is_some());
+    let mut rv = 0_usize;
 
     while current_input_ancestry < node_input_ancestry.len() {
+        println!(
+            "{current_input_ancestry:?}, {:?}, {current_overlaps:?}",
+            node_input_ancestry.len()
+        );
         let a = &mut node_input_ancestry[current_input_ancestry];
+        let mut is_unary = false;
         if let Some(ref overlaps) = current_overlaps {
             if a.right > overlaps.left && overlaps.right > a.left {
                 let mapped_node;
                 if overlaps.overlaps.len() == 1 {
+                    is_unary = true;
                     mapped_node = overlaps.overlaps[0].mapped_node;
+                    println!(
+                        "unary mapped node is {:?} -> {mapped_node:?}",
+                        overlaps.overlaps[0].mapped_node
+                    );
                     // TODO: if node is a sample, we have more work to
                     // do here.
                 } else {
-                    mapped_node = node;
+                    //mapped_node=node;
+                    if let Some(output) = output_node_id {
+                        mapped_node = output;
+                    } else {
+                        output_node_map[node.as_index()] = Some(Node(next_output_node));
+                        mapped_node = Node(next_output_node);
+                        rv += 1;
+                    }
                     // output un-squashed edges
                     for seg in overlaps.overlaps {
                         temp_edges.push(Edge {
@@ -434,17 +462,24 @@ fn process_node(
                         })
                     }
                 }
+                println!(
+                    "mapped_node = {mapped_node:?}, {:?}",
+                    output_node_map[mapped_node.as_index()]
+                );
 
                 current_input_ancestry += update_ancestry(
                     node,
                     overlaps.left,
                     overlaps.right,
+                    is_unary,
                     mapped_node,
                     birth_time,
+                    output_node_map,
                     a,
                     node_heap,
                     output_ancestry,
                 );
+                println!("current_input_ancestry = {current_input_ancestry:?}");
                 current_overlaps = overlapper.calculate_next_overlap_set();
             } else {
                 current_input_ancestry += 1;
@@ -454,6 +489,7 @@ fn process_node(
         }
     }
     debug_assert!(current_overlaps.is_none());
+    rv
 }
 
 #[test]
@@ -531,12 +567,14 @@ mod test_process_node {
             mapped_node: Node(1),
         }];
         finalize_ancestry_intersection(&mut queue);
+        let mut next_output_node = 0;
 
         process_node(
             Node(0),
             &mut node_input_ancestry,
             &queue,
-            &output_node_map,
+            &mut output_node_map,
+            next_output_node,
             &birth_time,
             &mut node_heap,
             &mut temp_edges,
@@ -585,12 +623,14 @@ mod test_process_node {
             mapped_node: Node(2),
         }];
         finalize_ancestry_intersection(&mut queue);
+        let mut next_output_node = 0;
 
         process_node(
             Node(1),
             &mut node_input_ancestry,
             &queue,
-            &output_node_map,
+            &mut output_node_map,
+            next_output_node,
             &birth_time,
             &mut node_heap,
             &mut temp_edges,
@@ -647,12 +687,14 @@ mod test_process_node {
             },
         ];
         finalize_ancestry_intersection(&mut queue);
+        let mut next_output_node = 0;
 
         process_node(
             Node(1),
             &mut node_input_ancestry,
             &queue,
-            &output_node_map,
+            &mut output_node_map,
+            next_output_node,
             &birth_time,
             &mut node_heap,
             &mut temp_edges,
@@ -730,6 +772,10 @@ mod multistep_tests {
         simplified_edges: &Edges,
     ) {
         let output_node = output_node_map[node].unwrap().as_index();
+        assert!(
+            output_node < simplified_edges.ranges.len(),
+            "{node:?} -> {output_node:} out of range"
+        );
         let range = simplified_edges.ranges[output_node];
         let edges = &simplified_edges.edges[range.start..range.stop];
         for (left, right, child) in expected {
@@ -820,6 +866,11 @@ mod multistep_tests {
                 start: current,
                 stop: graph.simplified_ancestry.ancestry.len(),
             });
+            let current = graph.simplified_edges.edges.len();
+            graph.simplified_edges.ranges.push(Range {
+                start: current,
+                stop: current,
+            });
         }
 
         // "simplify"
@@ -848,11 +899,12 @@ mod multistep_tests {
             let range = graph.ancestry.ranges[node.as_index()];
             let node_input_ancestry = &mut graph.ancestry.ancestry[range.start..range.stop];
             let current_output_ancestry_len = graph.simplified_ancestry.ancestry.len();
-            process_node(
+            next_output_node += process_node(
                 node,
                 node_input_ancestry,
                 &queue,
-                &output_node_map,
+                &mut output_node_map,
+                next_output_node,
                 &graph.birth_time,
                 &mut node_heap,
                 &mut temp_edges,
@@ -862,20 +914,22 @@ mod multistep_tests {
                 start: current_output_ancestry_len,
                 stop: graph.simplified_ancestry.ancestry.len(),
             });
-            println!("{temp_edges:?}");
+            println!("temp_edges = {temp_edges:?}");
+
+            //if !temp_edges.is_empty() {
+            //    assert!(output_node_map[node.as_index()].is_none());
+            //    output_node_map[node.as_index()] = Some(Node(next_output_node));
+            //    next_output_node += 1;
+            //}
 
             if !temp_edges.is_empty() {
-                assert!(output_node_map[node.as_index()].is_none());
-                output_node_map[node.as_index()] = Some(Node(next_output_node));
-                next_output_node += 1;
+                let current = graph.simplified_edges.edges.len();
+                graph.simplified_edges.edges.extend_from_slice(&temp_edges);
+                graph.simplified_edges.ranges.push(Range {
+                    start: current,
+                    stop: graph.simplified_edges.edges.len(),
+                });
             }
-
-            let current = graph.simplified_edges.edges.len();
-            graph.simplified_edges.edges.extend_from_slice(&temp_edges);
-            graph.simplified_edges.ranges.push(Range {
-                start: current,
-                stop: graph.simplified_edges.edges.len(),
-            });
 
             queue.clear();
             temp_edges.clear();
@@ -889,6 +943,6 @@ mod multistep_tests {
 
         // node 0
         let output_edges = vec![(0, 2, 2), (0, 2, 3)];
-        validate_edges(3, output_edges, &output_node_map, &graph.simplified_edges);
+        validate_edges(0, output_edges, &output_node_map, &graph.simplified_edges);
     }
 }
