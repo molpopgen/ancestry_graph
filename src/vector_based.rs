@@ -359,17 +359,47 @@ fn update_ancestry(
     left: i64,
     right: i64,
     mapped_node: Node,
+    birth_time: &[i64],
     current_ancestry: &mut AncestrySegment,
     node_heap: &mut NodeHeap,
     output_ancestry: &mut Ancestry,
 ) -> usize {
-    todo!()
+    let temp_left = std::cmp::max(left, current_ancestry.left);
+    let temp_right = std::cmp::max(right, current_ancestry.right);
+    let mut increment = 0;
+
+    // The second condition means a unary transmission that
+    // needs propagating
+    if current_ancestry.left != temp_left || mapped_node != node {
+        if let Some(parent) = current_ancestry.parent {
+            node_heap.insert(parent, birth_time[parent.as_index()])
+        }
+    }
+    if current_ancestry.right != temp_right {
+        // DUPLICATION
+        if let Some(parent) = current_ancestry.parent {
+            node_heap.insert(parent, birth_time[parent.as_index()])
+        }
+        current_ancestry.left = temp_right;
+    } else {
+        increment = 1;
+    }
+    let output_segment = AncestrySegment {
+        left,
+        right,
+        mapped_node,
+        parent: current_ancestry.parent,
+    };
+    output_ancestry.ancestry.push(output_segment);
+
+    increment
 }
 
 fn process_node(
     node: Node,
     node_input_ancestry: &mut [AncestrySegment],
     queue: &[AncestryIntersection],
+    birth_time: &[i64],
     node_heap: &mut NodeHeap,
     temp_edges: &mut Vec<Edge>,
     output_ancestry: &mut Ancestry,
@@ -409,6 +439,7 @@ fn process_node(
                     overlaps.left,
                     overlaps.right,
                     mapped_node,
+                    birth_time,
                     a,
                     node_heap,
                     output_ancestry,
