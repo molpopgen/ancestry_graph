@@ -604,4 +604,60 @@ mod test_process_node {
             }
         );
     }
+
+    //      0
+    //      |
+    //      1
+    //     ---
+    //     2 3
+    //
+    // 2 and 3 are births
+    #[test]
+    fn test_single_steps_3() {
+        let birth_time = vec![0_i64, 1, 2, 2];
+        let mut node_heap = NodeHeap::default();
+        let mut temp_edges: Vec<Edge> = vec![];
+        let mut node_input_ancestry = vec![AncestrySegment {
+            left: 0,
+            right: 2,
+            mapped_node: Node(1),
+            parent: Some(Node(0)),
+        }];
+        let mut output_ancestry = Ancestry::default();
+        let mut queue = vec![
+            AncestryIntersection {
+                left: 0,
+                right: 2,
+                mapped_node: Node(2),
+            },
+            AncestryIntersection {
+                left: 0,
+                right: 2,
+                mapped_node: Node(3),
+            },
+        ];
+        finalize_ancestry_intersection(&mut queue);
+
+        process_node(
+            Node(1),
+            &mut node_input_ancestry,
+            &queue,
+            &birth_time,
+            &mut node_heap,
+            &mut temp_edges,
+            &mut output_ancestry,
+        );
+        assert!(node_heap.is_empty());
+        assert_eq!(output_ancestry.ancestry.len(), 1);
+        assert_eq!(
+            output_ancestry.ancestry[0],
+            AncestrySegment {
+                left: 0,
+                right: 2,
+                mapped_node: Node(1),
+                parent: Some(Node(0))
+            }
+        );
+        assert_eq!(temp_edges.len(), 2);
+    }
 }
