@@ -415,6 +415,7 @@ fn process_node(
     let mut overlapper = AncestryOverlapper::new(node, queue);
     let mut current_input_ancestry = 0_usize;
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
+    let mut current_num_anc_segments = output_ancestry.ancestry.len();
     debug_assert!(current_overlaps.is_some());
 
     while current_input_ancestry < node_input_ancestry.len() {
@@ -457,6 +458,10 @@ fn process_node(
         }
     }
     debug_assert!(current_overlaps.is_none());
+    output_ancestry.ranges.push(Range {
+        start: current_num_anc_segments,
+        stop: output_ancestry.ancestry.len(),
+    })
 }
 
 #[test]
@@ -552,6 +557,7 @@ mod test_process_node {
                 parent: None
             }
         );
+        assert_eq!(output_ancestry.ranges.len(), 1);
     }
 
     //      0
@@ -602,5 +608,6 @@ mod test_process_node {
                 parent: Some(Node(0))
             }
         );
+        assert_eq!(output_ancestry.ranges.len(), 1);
     }
 }
