@@ -458,10 +458,6 @@ fn process_node(
         }
     }
     debug_assert!(current_overlaps.is_none());
-    output_ancestry.ranges.push(Range {
-        start: current_num_anc_segments,
-        stop: output_ancestry.ancestry.len(),
-    })
 }
 
 #[test]
@@ -557,7 +553,6 @@ mod test_process_node {
                 parent: None
             }
         );
-        assert_eq!(output_ancestry.ranges.len(), 1);
     }
 
     //      0
@@ -608,6 +603,5 @@ mod test_process_node {
                 parent: Some(Node(0))
             }
         );
-        assert_eq!(output_ancestry.ranges.len(), 1);
     }
 }
