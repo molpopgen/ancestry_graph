@@ -453,7 +453,6 @@ fn process_node(
         }
     }
     debug_assert!(current_overlaps.is_none());
-    todo!()
 }
 
 #[test]
