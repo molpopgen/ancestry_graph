@@ -158,7 +158,8 @@ fn update_cursor_list<T>(
 
 type NodeAncestry = CursorList<AncestrySegment>;
 
-#[derive(Clone, Copy, Debug)]
+// NOTE: Eq, PartialEq are only used in testing so far.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct AncestrySegment {
     pub left: i64,
     pub right: i64,

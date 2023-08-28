@@ -57,6 +57,10 @@ impl NodeHeap {
         assert_eq!(self.queued_nodes.len(), self.node_queue.len());
         self.queued_nodes.len()
     }
+
+    fn is_empty(&self) -> bool {
+        self.queued_nodes.is_empty()
+    }
 }
 
 #[derive(Default)]
@@ -497,4 +501,106 @@ fn test_queue_node_ord() {
     ];
     v.sort_unstable();
     assert_eq!(v[0].node, Node(1));
+}
+
+#[cfg(test)]
+mod test_process_node {
+    use super::*;
+
+    //      0
+    //     ---
+    //     1 2
+    //
+    // 2 will die, leaving 0 as unary
+    #[test]
+    fn test_single_steps_1() {
+        let birth_time = vec![0_i64, 1, 1];
+        let mut node_heap = NodeHeap::default();
+        let mut temp_edges: Vec<Edge> = vec![];
+        let mut node_input_ancestry = vec![AncestrySegment {
+            left: 0,
+            right: 2,
+            mapped_node: Node(0),
+            parent: None,
+        }];
+        let mut output_ancestry = Ancestry::default();
+        let mut queue = vec![AncestryIntersection {
+            left: 0,
+            right: 2,
+            mapped_node: Node(1),
+        }];
+        finalize_ancestry_intersection(&mut queue);
+
+        process_node(
+            Node(0),
+            &mut node_input_ancestry,
+            &queue,
+            &birth_time,
+            &mut node_heap,
+            &mut temp_edges,
+            &mut output_ancestry,
+        );
+        assert!(temp_edges.is_empty());
+        assert!(node_heap.is_empty());
+        assert_eq!(output_ancestry.ancestry.len(), 1);
+        assert_eq!(
+            output_ancestry.ancestry[0],
+            AncestrySegment {
+                left: 0,
+                right: 2,
+                mapped_node: Node(1),
+                parent: None
+            }
+        );
+    }
+
+    //      0
+    //      |
+    //      1
+    //     ---
+    //     2 3
+    //
+    // 3 will die, leaving 1 as unary
+    #[test]
+    fn test_single_steps_2() {
+        let birth_time = vec![0_i64, 1, 2, 2];
+        let mut node_heap = NodeHeap::default();
+        let mut temp_edges: Vec<Edge> = vec![];
+        let mut node_input_ancestry = vec![AncestrySegment {
+            left: 0,
+            right: 2,
+            mapped_node: Node(1),
+            parent: Some(Node(0)),
+        }];
+        let mut output_ancestry = Ancestry::default();
+        let mut queue = vec![AncestryIntersection {
+            left: 0,
+            right: 2,
+            mapped_node: Node(2),
+        }];
+        finalize_ancestry_intersection(&mut queue);
+
+        process_node(
+            Node(1),
+            &mut node_input_ancestry,
+            &queue,
+            &birth_time,
+            &mut node_heap,
+            &mut temp_edges,
+            &mut output_ancestry,
+        );
+        assert!(temp_edges.is_empty());
+        assert_eq!(node_heap.len(), 1);
+        assert!(node_heap.queued_nodes.contains(&Node(0)));
+        assert_eq!(output_ancestry.ancestry.len(), 1);
+        assert_eq!(
+            output_ancestry.ancestry[0],
+            AncestrySegment {
+                left: 0,
+                right: 2,
+                mapped_node: Node(2),
+                parent: Some(Node(0))
+            }
+        );
+    }
 }
