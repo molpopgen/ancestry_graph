@@ -795,6 +795,13 @@ mod multistep_tests {
     // 2 and 3 are births, leaving 1 as unary.
     #[test]
     fn test_multisteps_1() {
+        // We have a problem:
+        // When a node is extinct, we don't want to
+        // propagate its ancestry to the output/simplified ancestry.
+        // But if we, say, cache it and then not output it, 
+        // we may lose info needed to map output mutations,
+        // UNLESS we take a queue from tskit and map mutations
+        // immediately when we process a node?
         let birth_time = vec![0_i64, 1, 2, 2];
         let raw_edges_0 = vec![(0, 2, 1)];
         let raw_edges_1 = vec![];
