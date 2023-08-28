@@ -9,13 +9,26 @@ use crate::Node;
 use crate::NodeHash;
 use crate::NodeStatus;
 use crate::PropagationOptions;
-use crate::QueuedNode;
 
 #[derive(Default, Clone, Copy)]
 struct Range {
     start: usize,
     stop: usize,
 }
+
+#[derive(Debug, Copy, Clone, PartialOrd, Ord)]
+struct QueuedNode {
+    node: Node,
+    birth_time: i64,
+}
+
+impl PartialEq for QueuedNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.node == other.node
+    }
+}
+
+impl Eq for QueuedNode {}
 
 #[derive(Default)]
 struct NodeHeap {
@@ -429,4 +442,20 @@ fn test_lifetime() {
     let q = vec![];
     let mut ao = AncestryOverlapper::new(Node(0), &q);
     while let Some(_) = ao.calculate_next_overlap_set() {}
+}
+
+#[test]
+fn test_queue_node_ord() {
+    let mut v = vec![
+        QueuedNode {
+            node: Node(1),
+            birth_time: 0,
+        },
+        QueuedNode {
+            node: Node(0),
+            birth_time: 0,
+        },
+    ];
+    v.sort_unstable();
+    assert_eq!(v[0].node, Node(0));
 }
