@@ -390,7 +390,8 @@ fn process_node(
                 let mapped_node;
                 if overlaps.overlaps.len() == 1 {
                     mapped_node = overlaps.overlaps[0].mapped_node;
-                    todo!("unary");
+                    // TODO: if node is a sample, we have more work to
+                    // do here.
                 } else {
                     mapped_node = node;
                     // output un-squashed edges
@@ -403,10 +404,6 @@ fn process_node(
                     }
                 }
 
-                // FIXME: wrong design.
-                // We are less interested in counting
-                // changes than sending them into our
-                // node heap for future processing
                 current_input_ancestry += update_ancestry(
                     node,
                     overlaps.left,
