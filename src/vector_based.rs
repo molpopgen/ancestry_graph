@@ -10,7 +10,7 @@ use crate::NodeHash;
 use crate::NodeStatus;
 use crate::PropagationOptions;
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 struct Range {
     start: usize,
     stop: usize,
@@ -63,7 +63,7 @@ impl NodeHeap {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Ancestry {
     ancestry: Vec<AncestrySegment>,
     ranges: Vec<Range>,
@@ -78,7 +78,7 @@ impl Ancestry {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Edges {
     edges: Vec<Edge>,
     ranges: Vec<Range>,
@@ -409,7 +409,7 @@ fn process_node(
     output_ancestry: &mut Ancestry,
 ) {
     if queue.is_empty() {
-        todo!("no overlaps -- this node is extinct!")
+        todo!("no overlaps -- node {node:?} is extinct!")
     }
 
     let mut overlapper = AncestryOverlapper::new(node, queue);
@@ -659,5 +659,250 @@ mod test_process_node {
             }
         );
         assert_eq!(temp_edges.len(), 2);
+    }
+}
+
+// These are design stage tests that should probably
+// be deleted at some point.
+#[cfg(test)]
+mod multistep_tests {
+    use super::*;
+
+    fn setup_input_edges(raw: Vec<Vec<(i64, i64, usize)>>) -> Edges {
+        let mut edges = Edges::default();
+        for r in raw {
+            let current = edges.edges.len();
+            for (left, right, n) in r {
+                edges.edges.push(Edge {
+                    left,
+                    right,
+                    child: Node(n),
+                });
+            }
+            edges.ranges.push(Range {
+                start: current,
+                stop: edges.edges.len(),
+            });
+        }
+        edges
+    }
+
+    fn setup_input_ancestry(raw: Vec<Vec<(i64, i64, usize, Option<usize>)>>) -> Ancestry {
+        let mut ancestry = Ancestry::default();
+        for r in raw {
+            let current = ancestry.ancestry.len();
+            for (left, right, mapped_node, pnode) in r {
+                let parent = if let Some(p) = pnode {
+                    Some(Node(p))
+                } else {
+                    None
+                };
+                ancestry.ancestry.push(AncestrySegment {
+                    left,
+                    right,
+                    parent,
+                    mapped_node: Node(mapped_node),
+                })
+            }
+            ancestry.ranges.push(Range {
+                start: current,
+                stop: ancestry.ancestry.len(),
+            });
+        }
+        ancestry
+    }
+
+    //     0
+    //   -----
+    //   |   |
+    //   |   1
+    //   |  ---
+    //   4  2 3
+    //
+    // 3 will die, leaving (0,(2,4)) as the output toplogy.
+    // NOTE: this test passes by visual inspection of the output,
+    // but we clearly don't have the steps in place to write
+    // code not based on hacks.
+    #[test]
+    fn test_multisteps_1_alpha() {
+        let birth_time = vec![0_i64, 1, 2, 2, 2];
+        let raw_edges_0 = vec![(0, 2, 1), (0, 2, 4)];
+        let raw_edges_1 = vec![(0, 2, 2), (0, 2, 3)];
+        let raw_edges = vec![raw_edges_0, raw_edges_1, vec![], vec![], vec![]];
+        let raw_ancestry = vec![
+            vec![(0, 2, 0, None)],
+            vec![(0, 2, 1, Some(0))],
+            vec![(0, 2, 2, Some(1))],
+            // Node 3 has lost all of it ancestry,
+            // which will propagate various losses up the graph
+            vec![],
+            vec![(0, 2, 4, Some(0))],
+        ];
+        let edges = setup_input_edges(raw_edges);
+        let mut ancestry = setup_input_ancestry(raw_ancestry);
+        let mut node_heap = NodeHeap::default();
+        node_heap.insert(Node(1), birth_time[1]);
+
+        let mut queue = vec![];
+        let mut temp_edges = vec![];
+        let mut output_ancestry = Ancestry::default();
+        let mut output_edges = Edges::default();
+        while let Some(node) = node_heap.pop() {
+            println!("{node:?}");
+            ancestry_intersection(node, &edges, &ancestry, &mut queue);
+            finalize_ancestry_intersection(&mut queue);
+            let range = ancestry.ranges[node.as_index()];
+            let node_input_ancestry = &mut ancestry.ancestry[range.start..range.stop];
+            let current_output_ancestry_len = output_ancestry.ancestry.len();
+            process_node(
+                node,
+                node_input_ancestry,
+                &queue,
+                &birth_time,
+                &mut node_heap,
+                &mut temp_edges,
+                &mut output_ancestry,
+            );
+            output_ancestry.ranges.push(Range {
+                start: current_output_ancestry_len,
+                stop: output_ancestry.ancestry.len(),
+            });
+            println!("{temp_edges:?}");
+
+            let current = output_edges.edges.len();
+            output_edges.edges.extend_from_slice(&temp_edges);
+            output_edges.ranges.push(Range {
+                start: current,
+                stop: output_edges.edges.len(),
+            });
+
+            queue.clear();
+            temp_edges.clear();
+        }
+        println!("{output_edges:?}");
+        println!("{output_ancestry:?}");
+    }
+
+    //     0
+    //   -----
+    //   |   |
+    //   |   1
+    //   |   |
+    //   3   2
+    //
+    // 2 and 3 are births, leaving 1 as unary.
+    #[test]
+    fn test_multisteps_1() {
+        let birth_time = vec![0_i64, 1, 2, 2];
+        let raw_edges_0 = vec![(0, 2, 1)];
+        let raw_edges_1 = vec![];
+        let raw_edges = vec![raw_edges_0, raw_edges_1, vec![], vec![], vec![]];
+        let raw_ancestry = vec![
+            vec![(0, 2, 0, None)],
+            vec![(0, 2, 1, Some(0))],
+            vec![(0, 2, 2, Some(1))],
+            vec![],
+            vec![(0, 2, 4, Some(0))],
+        ];
+        let edges = setup_input_edges(raw_edges);
+        let ancestry = setup_input_ancestry(raw_ancestry);
+        let mut node_heap = NodeHeap::default();
+        node_heap.insert(Node(1), birth_time[1]);
+
+        let mut temp_edges = vec![];
+        let mut graph = Graph::new(2);
+        graph.edges = edges;
+        graph.ancestry = ancestry;
+        graph.birth_time = birth_time;
+        // Manually deal with the births
+        graph.new_parent_edges.insert(
+            Node(0),
+            vec![Edge {
+                left: 0,
+                right: 2,
+                child: Node(3),
+            }],
+        );
+        graph.new_parent_edges.insert(
+            Node(1),
+            vec![Edge {
+                left: 0,
+                right: 2,
+                child: Node(3),
+            }],
+        );
+        graph.birth_ancestry.insert(
+            Node(3),
+            vec![AncestrySegment {
+                left: 0,
+                right: 2,
+                mapped_node: Node(3),
+                parent: Some(Node(0)),
+            }],
+        );
+        graph.birth_ancestry.insert(
+            Node(2),
+            vec![AncestrySegment {
+                left: 0,
+                right: 2,
+                mapped_node: Node(2),
+                parent: Some(Node(1)),
+            }],
+        );
+        let mut output_node_map = vec![None; graph.birth_time.len()];
+        let mut next_output_node = 0;
+
+        for (node, ancestry) in graph.birth_ancestry.iter() {
+            output_node_map[next_output_node] = Some(*node);
+            next_output_node += 1;
+            let current = graph.simplified_ancestry.ancestry.len();
+            graph
+                .simplified_ancestry
+                .ancestry
+                .extend_from_slice(ancestry.as_slice());
+            graph.simplified_ancestry.ranges.push(Range {
+                start: current,
+                stop: graph.simplified_ancestry.ancestry.len(),
+            });
+        }
+
+        // "simplify"
+        let mut queue = vec![];
+        while let Some(node) = node_heap.pop() {
+            println!("{node:?}");
+            ancestry_intersection(node, &graph.edges, &graph.ancestry, &mut queue);
+            if let Some(edges) = graph.new_parent_edges.get(&node) {
+                todo!("api fail");
+                ancestry_intersection(node, &graph.edges, &graph.ancestry, &mut queue);
+            }
+            finalize_ancestry_intersection(&mut queue);
+            let range = graph.ancestry.ranges[node.as_index()];
+            let node_input_ancestry = &mut graph.ancestry.ancestry[range.start..range.stop];
+            let current_output_ancestry_len = graph.simplified_ancestry.ancestry.len();
+            process_node(
+                node,
+                node_input_ancestry,
+                &queue,
+                &graph.birth_time,
+                &mut node_heap,
+                &mut temp_edges,
+                &mut graph.simplified_ancestry,
+            );
+            graph.simplified_ancestry.ranges.push(Range {
+                start: current_output_ancestry_len,
+                stop: graph.simplified_ancestry.ancestry.len(),
+            });
+            println!("{temp_edges:?}");
+
+            let current = graph.simplified_edges.edges.len();
+            graph.simplified_edges.edges.extend_from_slice(&temp_edges);
+            graph.simplified_edges.ranges.push(Range {
+                start: current,
+                stop: graph.simplified_edges.edges.len(),
+            });
+
+            queue.clear();
+            temp_edges.clear();
+        }
     }
 }
