@@ -929,7 +929,6 @@ mod test_utils {
         (ancestry_head, ancestry_tail)
     }
 
-
     pub(super) fn extract<T>(
         at: usize,
         head: &[Index],
@@ -997,7 +996,6 @@ mod test_utils {
         rv
     }
 }
-
 
 #[cfg(test)]
 mod graph_tests {
