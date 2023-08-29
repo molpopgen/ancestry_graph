@@ -797,17 +797,51 @@ fn process_queued_node(
                 ahead = next;
             } else {
                 if last_ancestry_index == ahead {
-                    todo!("shift?");
+                    println!("gotta shift left");
+                    let next = graph.ancestry.next_raw(ahead);
+                    if !next.is_sentinel() {
+                        graph.ancestry.data.swap(ahead.0, next.0);
+                        graph.ancestry.next[ahead.0] = graph.ancestry.next[next.0];
+                        graph.ancestry.free_list.push(next.0);
+                    }
+                    last_ancestry_index = ahead;
+                    println!("free list = {:?}", graph.ancestry.free_list);
                 } else {
-                    todo!("excise?")
+                    println!("gotta excise the current thing");
+                    let next = graph.ancestry.next_raw(ahead);
+                    if !next.is_sentinel() {
+                        println!("here");
+                        graph.ancestry.next[last_ancestry_index.0] = next.0;
+                        graph.ancestry.free_list.push(ahead.0);
+                    }
+                    ahead = next;
+                    println!("{ahead:?}");
                 }
-                last_ancestry_index = ahead;
-                ahead = graph.ancestry.next_raw(ahead)
+                //last_ancestry_index = ahead;
+                //ahead = graph.ancestry.next_raw(ahead)
             }
         } else {
             break;
         }
         println!("temp_edges = {temp_edges:?}");
+    }
+
+    println!(
+        "done {ahead:?}, {last_ancestry_index:?}, {:?}",
+        graph.ancestry.next_raw(last_ancestry_index)
+    );
+
+    if !ahead.is_sentinel() {
+        let mut z = graph.ancestry.next(last_ancestry_index);
+        // TODO: each of these is a right overhang
+        // that we need to reckon with.
+        while let Some(index) = z {
+            println!("removing trailing segment {:?}", graph.ancestry.get(index));
+            z = graph.ancestry.next(index);
+            graph.ancestry.next[index.0] = usize::MAX;
+            graph.ancestry.free_list.push(index.0);
+        }
+        graph.ancestry.next[last_ancestry_index.0] = usize::MAX;
     }
 
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
@@ -846,6 +880,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
             queued_nodes.insert(*node);
         }
     }
+
     // Repetition here shows why our Graph has the comments
     // about redundant data structures
     for node in graph.deaths.iter() {
@@ -1227,6 +1262,18 @@ mod graph_tests {
 mod propagation_tests {
     use super::*;
 
+    fn exract_ancestry(node: Node, graph: &Graph) -> Vec<AncestrySegment> {
+        let mut anc = graph.ancestry_head[node.as_index()];
+        let tail = graph.ancestry_tail[node.as_index()];
+        assert!(graph.ancestry.next_raw(tail).is_sentinel());
+        let mut rv = vec![];
+        while !anc.is_sentinel() {
+            rv.push(*graph.ancestry.get(anc));
+            anc = graph.ancestry.next_raw(anc);
+        }
+        rv
+    }
+
     #[test]
     fn propagation_test0() {
         let mut graph = Graph::with_initial_nodes(10, 10).unwrap().0;
@@ -1235,6 +1282,15 @@ mod propagation_tests {
         graph.record_transmission(0, 5, Node(0), birth).unwrap();
         graph.record_transmission(5, 10, Node(1), birth).unwrap();
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        let anc = exract_ancestry(Node(1), &graph);
+        assert_eq!(anc.len(), 1);
+        let anc = exract_ancestry(Node(0), &graph);
+        assert!(anc.contains(&AncestrySegment {
+            left: 5,
+            right: 10,
+            parent: None,
+            mapped_node: birth
+        }));
         todo!("validate");
     }
 }
