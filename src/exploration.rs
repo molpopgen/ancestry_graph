@@ -1081,7 +1081,12 @@ fn test_list_updating_1() {
     // (left, right, mapped_node)
     // cribbed from manual calculation/the python prototype
     let overlaps = [(0_i64, 1_i64, Node(2)), (1, 2, Node(1))];
-    let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    let (ancestry, _, tail) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    for t in tail{
+        if !t.is_sentinel() {
+            assert!(ancestry.next_raw(t).is_sentinel())
+        }
+    }
     // FIXME: below should be audited carefully.
     // Adding in "seg_right" is creating new entries.
     //assert_eq!(ancestry.data.len(), 5);
