@@ -785,7 +785,8 @@ fn process_queued_node(
                         })
                     }
                 }
-                let next = update_ancestry(
+                last_ancestry_index = ahead;
+                ahead = update_ancestry(
                     current_overlaps.left,
                     current_overlaps.right,
                     mapped_node,
@@ -793,8 +794,6 @@ fn process_queued_node(
                     ahead,
                     &mut graph.ancestry,
                 );
-                last_ancestry_index = ahead;
-                ahead = next;
             } else {
                 if last_ancestry_index == ahead {
                     println!("gotta shift left");
@@ -804,7 +803,7 @@ fn process_queued_node(
                         graph.ancestry.next[ahead.0] = graph.ancestry.next[next.0];
                         graph.ancestry.free_list.push(next.0);
                     }
-                    last_ancestry_index = ahead;
+                    //last_ancestry_index = ahead;
                     println!("free list = {:?}", graph.ancestry.free_list);
                 } else {
                     println!("gotta excise the current thing");
