@@ -1396,4 +1396,44 @@ mod propagation_tests {
             assert!(edges.is_empty());
         }
     }
+
+    #[test]
+    fn propagation_test1() {
+        let mut graph = Graph::with_initial_nodes(3, 10).unwrap().0;
+        graph.advance_time().unwrap();
+        let birth = graph.add_birth(1).unwrap();
+        graph.record_transmission(0, 5, Node(0), birth).unwrap();
+        graph.record_transmission(5, 10, Node(1), birth).unwrap();
+        let birth2 = graph.add_birth(1).unwrap();
+        graph.record_transmission(0, 5, Node(0), birth2).unwrap();
+        graph.record_transmission(5, 10, Node(2), birth2).unwrap();
+        let birth3 = graph.add_birth(1).unwrap();
+        graph.record_transmission(0, 10, Node(0), birth3).unwrap();
+        let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        for (node, b) in [(1, birth), (2, birth2)] {
+            let anc = exract_ancestry(Node(node), &graph);
+            assert_eq!(anc.len(), 1);
+            assert!(anc.contains(&AncestrySegment {
+                left: 5,
+                right: 10,
+                parent: None,
+                mapped_node: b
+            }));
+        }
+        for node in [1, 2] {
+            let edges = extract_edges(Node(node), &graph);
+            assert!(edges.is_empty());
+        }
+
+        let anc = exract_ancestry(Node(0), &graph);
+        assert_eq!(anc.len(), 1);
+        assert!(anc.contains(&AncestrySegment {
+            left: 0,
+            right: 5,
+            parent: None,
+            mapped_node: Node(0)
+        }));
+        let edges = extract_edges(Node(0), &graph);
+        assert_eq!(edges.len(), 2);
+    }
 }
