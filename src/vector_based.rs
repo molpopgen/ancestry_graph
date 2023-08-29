@@ -820,6 +820,14 @@ mod multistep_tests {
         // we may lose info needed to map output mutations,
         // UNLESS we take a queue from tskit and map mutations
         // immediately when we process a node?
+        //
+        // There is a way out:
+        // the output node map tracks extant/extinct status + output id
+        // During our "liftover" step (not implementer yet), we only
+        // output up until that node, effectively erasing it one simplification
+        // down the road.
+        // Corollary: we could add the extinct nodes to the heap so that 
+        // we don't have to explicly search for them?
         let birth_time = vec![0_i64, 1, 2, 2];
         let raw_edges_0 = vec![(0, 2, 1)];
         let raw_edges_1 = vec![];
