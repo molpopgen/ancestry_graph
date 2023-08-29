@@ -1427,36 +1427,6 @@ mod propagation_tests {
         }
     }
 
-    // FIXME: delete later
-    #[test]
-    fn propagation_test1_explore() {
-        let mut graph = Graph::with_initial_nodes(3, 10).unwrap().0;
-        graph.advance_time().unwrap();
-        let birth = graph.add_birth(1).unwrap();
-        graph.record_transmission(0, 5, Node(0), birth).unwrap();
-        graph.record_transmission(5, 10, Node(1), birth).unwrap();
-        let birth2 = graph.add_birth(1).unwrap();
-        graph.record_transmission(0, 5, Node(0), birth2).unwrap();
-        graph.record_transmission(5, 10, Node(2), birth2).unwrap();
-        let birth3 = graph.add_birth(1).unwrap();
-        graph.record_transmission(0, 10, Node(0), birth3).unwrap();
-        let birth4 = graph.add_birth(1).unwrap();
-        graph.record_transmission(0, 10, Node(0), birth4).unwrap();
-
-        let mut queue = vec![];
-        ancestry_intersection(Node(0), &graph, &mut queue);
-        queue.push(AncestryIntersection {
-            left: i64::MAX,
-            right: i64::MAX,
-            mapped_node: Node(usize::MAX),
-        });
-        println!("{queue:?}");
-        let mut overlapper = AncestryOverlapper::new(Node(0), &queue);
-        while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
-            println!("{overlaps:?}");
-        }
-    }
-
     #[test]
     fn propagation_test1() {
         let mut graph = Graph::with_initial_nodes(3, 10).unwrap().0;
