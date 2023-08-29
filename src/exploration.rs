@@ -1309,13 +1309,12 @@ mod propagation_tests {
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
         let anc = exract_ancestry(Node(1), &graph);
         assert_eq!(anc.len(), 1);
-        let anc = exract_ancestry(Node(0), &graph);
         assert!(anc.contains(&AncestrySegment {
             left: 5,
             right: 10,
             parent: None,
             mapped_node: birth
         }));
-        todo!("validate");
+        let anc = exract_ancestry(Node(0), &graph);
     }
 }
