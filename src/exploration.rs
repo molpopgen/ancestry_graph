@@ -583,7 +583,7 @@ fn update_ancestry(
     let out_seg = AncestrySegment {
         left,
         right,
-        parent: None, // FIXME
+        parent: None, // FIXME -- should be current parent?
         mapped_node,
     };
     println!("out = {out_seg:?}");
@@ -796,6 +796,11 @@ fn process_queued_node(
                 last_ancestry_index = ahead;
                 ahead = next;
             } else {
+                if last_ancestry_index == ahead {
+                    todo!("shift?");
+                } else {
+                    todo!("excise?")
+                }
                 last_ancestry_index = ahead;
                 ahead = graph.ancestry.next_raw(ahead)
             }
@@ -819,10 +824,11 @@ fn process_queued_node(
 
     graph.ancestry_tail[queued_parent.as_index()] = last_ancestry_index;
     println!("{:?}", graph.ancestry.next_raw(last_ancestry_index));
-
-    todo!();
 }
 
+// returns the value of the last (oldest, ignoring ties) Node processed
+// The return value has no meaning beyond testing and should eventually
+// be deleted.
 fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) -> Option<Node> {
     // 1. Need to build our queue
 
@@ -853,7 +859,9 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     }
 
     let mut queue = vec![];
+    let mut rv = None;
     while let Some(queued_node) = node_queue.pop() {
+        rv = Some(queued_node.node);
         process_queued_node(
             options,
             queued_node.node,
@@ -872,7 +880,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     graph.parents.clear();
     graph.deaths.clear();
 
-    todo!()
+    rv
 }
 
 #[cfg(test)]
@@ -1227,5 +1235,6 @@ mod propagation_tests {
         graph.record_transmission(0, 5, Node(0), birth).unwrap();
         graph.record_transmission(5, 10, Node(1), birth).unwrap();
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        todo!("validate");
     }
 }
