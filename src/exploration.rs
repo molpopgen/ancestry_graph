@@ -770,11 +770,11 @@ fn process_queued_node(
     println!("{overlapper:?}");
 
     let mut overlaps = overlapper.calculate_next_overlap_set();
-    println!("{overlaps:?}");
 
     while !ahead.is_sentinel() {
-        println!("overlaps = {overlaps:?}");
         if let Some(ref current_overlaps) = overlaps {
+            println!("current = {:?}", graph.ancestry.get(ahead));
+            println!("overlaps = {current_overlaps:?}");
             let (current_left, current_right) = {
                 let current = graph.ancestry.get(ahead);
                 (current.left, current.right)
@@ -802,6 +802,7 @@ fn process_queued_node(
                     ahead,
                     &mut graph.ancestry,
                 );
+                overlaps = overlapper.calculate_next_overlap_set();
             } else {
                 if last_ancestry_index == ahead {
                     println!("gotta shift left");
@@ -1465,6 +1466,36 @@ mod propagation_tests {
         for node in [0, 1] {
             let edges = extract_edges(Node(node), &graph);
             assert!(edges.is_empty());
+        }
+    }
+
+    // FIXME: delete later
+    #[test]
+    fn propagation_test1_explore() {
+        let mut graph = Graph::with_initial_nodes(3, 10).unwrap().0;
+        graph.advance_time().unwrap();
+        let birth = graph.add_birth(1).unwrap();
+        graph.record_transmission(0, 5, Node(0), birth).unwrap();
+        graph.record_transmission(5, 10, Node(1), birth).unwrap();
+        let birth2 = graph.add_birth(1).unwrap();
+        graph.record_transmission(0, 5, Node(0), birth2).unwrap();
+        graph.record_transmission(5, 10, Node(2), birth2).unwrap();
+        let birth3 = graph.add_birth(1).unwrap();
+        graph.record_transmission(0, 10, Node(0), birth3).unwrap();
+        let birth4 = graph.add_birth(1).unwrap();
+        graph.record_transmission(0, 10, Node(0), birth4).unwrap();
+
+        let mut queue = vec![];
+        ancestry_intersection(Node(0), &graph, &mut queue);
+        queue.push(AncestryIntersection {
+            left: i64::MAX,
+            right: i64::MAX,
+            mapped_node: Node(usize::MAX),
+        });
+        println!("{queue:?}");
+        let mut overlapper = AncestryOverlapper::new(Node(0), &queue);
+        while let Some(overlaps) = overlapper.calculate_next_overlap_set() {
+            println!("{overlaps:?}");
         }
     }
 
