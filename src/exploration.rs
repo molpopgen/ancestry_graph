@@ -711,11 +711,14 @@ fn update_ancestry_design(
                 last_ancestry_index = ahead;
                 println!("free list = {:?}", ancestry.free_list);
             } else {
-                println!("gotta excise the current thing");
-                let next = ancestry.next_raw(ahead);
-                ancestry.next[last_ancestry_index.0] = next.0;
-                ancestry.free_list.push(ahead.0);
-                ahead = next;
+                last_ancestry_index = ahead;
+                ahead = ancestry.next_raw(ahead);
+
+                //println!("gotta excise the current thing");
+                //let next = ancestry.next_raw(ahead);
+                //ancestry.next[last_ancestry_index.0] = next.0;
+                //ancestry.free_list.push(ahead.0);
+                //ahead = next;
             }
             println!("updated to {ahead:?} (non overlap)");
         }
@@ -813,6 +816,8 @@ fn process_queued_node(
                 } else {
                     println!("gotta excise the current thing");
                     let next = graph.ancestry.next_raw(ahead);
+                    println!("current = {:?}", graph.ancestry.get(ahead));
+                    println!("prev = {:?}", graph.ancestry.get(last_ancestry_index));
                     println!("here");
                     graph.ancestry.next[last_ancestry_index.0] = next.0;
                     graph.ancestry.free_list.push(ahead.0);
@@ -1251,6 +1256,48 @@ fn test_list_updating_5() {
         right: 10,
         parent: None,
         mapped_node: Node(2)
+    }));
+}
+
+#[test]
+fn test_list_updating_6() {
+    let input_ancestry = vec![
+        vec![(0_i64, 10_i64, Node(0))],
+        vec![(0, 10, Node(1))],
+        vec![(0, 10, Node(2))],
+        vec![(0, 10, Node(3))],
+        vec![(0, 10, Node(5))],
+    ];
+    let overlaps = vec![
+        (0_i64, 5_i64, Node(1)),
+        (0, 5, Node(2)),
+        (0, 10, Node(3)),
+        (0, 10, Node(4)),
+    ];
+    let (ancestry, head, tail) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    for t in tail.iter() {
+        if !t.is_sentinel() {
+            assert!(ancestry.next_raw(*t).is_sentinel())
+        }
+    }
+    let mut a = head[0];
+    let mut anc = vec![];
+    while !a.is_sentinel() {
+        anc.push(*ancestry.get(a));
+        a = ancestry.next_raw(a);
+    }
+    assert_eq!(anc.len(), 2);
+    assert!(anc.contains(&AncestrySegment {
+        left: 0,
+        right: 5,
+        parent: None,
+        mapped_node: Node(0)
+    }));
+    assert!(anc.contains(&AncestrySegment {
+        left: 5,
+        right: 10,
+        parent: None,
+        mapped_node: Node(0)
     }));
 }
 
