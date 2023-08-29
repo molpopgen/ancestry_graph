@@ -582,11 +582,13 @@ fn update_ancestry(
     mapped_node: Node,
     last_ancestry_index: Index,
     current_ancestry_index: Index,
+    birth_time: &[i64],
     ancestry: &mut NodeAncestry,
-    node_head: &mut NodeHeap,
+    node_heap: &mut NodeHeap,
 ) -> Index {
     let mut seg_right = None;
     let current_ancestry_index = current_ancestry_index;
+    let current = *ancestry.get(current_ancestry_index);
     let (current_left, current_right) = {
         let current = ancestry.get(current_ancestry_index);
         (current.left, current.right)
@@ -598,8 +600,14 @@ fn update_ancestry(
     if current_left != temp_left {
         assert!(current_left < temp_left);
         println!("we have a left dangle on {current_left}, {temp_left}");
+        if let Some(parent) = current.parent {
+            node_heap.insert(parent, birth_time[parent.as_index()]);
+        }
     }
     if current_right != temp_right {
+        if let Some(parent) = current.parent {
+            node_heap.insert(parent, birth_time[parent.as_index()]);
+        }
         println!("right dangle: {current_right:?}, {temp_right}");
         {
             let current = ancestry.get_mut(current_ancestry_index);
@@ -830,6 +838,7 @@ fn process_queued_node(
                     mapped_node,
                     last_ancestry_index,
                     ahead,
+                    &graph.birth_time,
                     &mut graph.ancestry,
                     &mut graph.node_heap,
                 );
