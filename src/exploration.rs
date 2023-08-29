@@ -1110,6 +1110,26 @@ mod propagation_tests {
         .collect::<Vec<_>>()
     }
 
+    fn setup_graph(
+        num_nodes: usize,
+        genome_length: i64,
+        num_births: usize,
+        // left, right, parent, child
+        initial_edges: Vec<Vec<(i64, i64, usize, usize)>>,
+        // left, right, parent, mapped_node
+        initial_ancestry: Vec<Vec<(i64, i64, Option<usize>, usize)>>,
+        // left, right, parent, child
+        transmissions: Vec<(i64, i64, usize, usize)>,
+    ) -> Graph {
+        let mut rv = Graph::with_initial_nodes(num_nodes, genome_length)
+            .unwrap()
+            .0;
+
+        todo!("this is hard");
+
+        rv
+    }
+
     #[test]
     fn propagation_test0() {
         let mut graph = Graph::with_initial_nodes(10, 10).unwrap().0;
