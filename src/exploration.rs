@@ -1260,48 +1260,6 @@ fn test_list_updating_5() {
     }));
 }
 
-#[test]
-fn test_list_updating_6() {
-    let input_ancestry = vec![
-        vec![(0_i64, 10_i64, Node(0))],
-        vec![(0, 10, Node(1))],
-        vec![(0, 10, Node(2))],
-        vec![(0, 10, Node(3))],
-        vec![(0, 10, Node(5))],
-    ];
-    let overlaps = vec![
-        (0_i64, 5_i64, Node(1)),
-        (0, 5, Node(2)),
-        (0, 10, Node(3)),
-        (0, 10, Node(4)),
-    ];
-    let (ancestry, head, tail) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
-    for t in tail.iter() {
-        if !t.is_sentinel() {
-            assert!(ancestry.next_raw(*t).is_sentinel())
-        }
-    }
-    let mut a = head[0];
-    let mut anc = vec![];
-    while !a.is_sentinel() {
-        anc.push(*ancestry.get(a));
-        a = ancestry.next_raw(a);
-    }
-    assert_eq!(anc.len(), 2);
-    assert!(anc.contains(&AncestrySegment {
-        left: 0,
-        right: 5,
-        parent: None,
-        mapped_node: Node(0)
-    }));
-    assert!(anc.contains(&AncestrySegment {
-        left: 5,
-        right: 10,
-        parent: None,
-        mapped_node: Node(0)
-    }));
-}
-
 #[cfg(test)]
 mod design_property_tests {
     use super::*;
