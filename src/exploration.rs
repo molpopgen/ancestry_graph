@@ -12,6 +12,39 @@ use crate::QueuedNode;
 #[derive(Clone, Copy, Debug, Hash, PartialEq, PartialOrd, Ord, Eq)]
 pub struct Index(usize);
 
+#[derive(Default)]
+struct NodeHeap {
+    queued_nodes: NodeHash,
+    node_queue: std::collections::BinaryHeap<QueuedNode>,
+}
+
+impl NodeHeap {
+    fn insert(&mut self, node: Node, birth_time: i64) {
+        if !self.queued_nodes.contains(&node) {
+            self.queued_nodes.insert(node);
+            self.node_queue.push(QueuedNode { node, birth_time });
+        }
+    }
+
+    fn pop(&mut self) -> Option<Node> {
+        if let Some(qn) = self.node_queue.pop() {
+            self.queued_nodes.remove(&qn.node);
+            Some(qn.node)
+        } else {
+            None
+        }
+    }
+
+    fn len(&self) -> usize {
+        assert_eq!(self.queued_nodes.len(), self.node_queue.len());
+        self.queued_nodes.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.queued_nodes.is_empty()
+    }
+}
+
 pub trait GenomicInterval {
     fn left(&self) -> i64;
     fn right(&self) -> i64;
@@ -307,6 +340,9 @@ pub struct Graph {
     // This effectively is just a place to hold
     // new births
     cached_extant_nodes: Vec<Node>,
+
+    node_heap: NodeHeap,
+
     // NOTE: this is redundant
     // with what we will do during propagation,
     // we the graph should contain information
@@ -362,6 +398,7 @@ impl Graph {
             ancestry_tail,
             parents,
             deaths,
+            node_heap:NodeHeap::default(),
         })
     }
 
