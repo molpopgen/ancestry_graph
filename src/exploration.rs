@@ -1017,7 +1017,7 @@ mod test_utils {
         (ancestry, ancestry_head, ancestry_tail)
     }
 
-    fn extract<T>(
+    pub(super) fn extract<T>(
         at: usize,
         head: &[Index],
         tail: &[Index],
@@ -1343,28 +1343,27 @@ mod propagation_tests {
     use super::*;
 
     fn exract_ancestry(node: Node, graph: &Graph) -> Vec<AncestrySegment> {
-        let mut anc = graph.ancestry_head[node.as_index()];
-        let tail = graph.ancestry_tail[node.as_index()];
-        assert!(graph.ancestry.next_raw(tail).is_sentinel());
-        let mut rv = vec![];
-        while !anc.is_sentinel() {
-            rv.push(*graph.ancestry.get(anc));
-            anc = graph.ancestry.next_raw(anc);
-        }
-        rv
+        test_utils::extract(
+            node.as_index(),
+            &graph.ancestry_head,
+            &graph.ancestry_tail,
+            &graph.ancestry,
+        )
+        .into_iter()
+        .map(|(a, _)| a)
+        .collect::<Vec<_>>()
     }
 
     fn extract_edges(node: Node, graph: &Graph) -> Vec<Edge> {
-        println!("{:?}", graph.edges);
-        let mut edge = graph.edge_head[node.as_index()];
-        let tail = graph.edge_tail[node.as_index()];
-        assert!(graph.edges.next(tail).is_none());
-        let mut rv = vec![];
-        while !edge.is_sentinel() {
-            rv.push(*graph.edges.get(edge));
-            edge = graph.edges.next_raw(edge);
-        }
-        rv
+        test_utils::extract(
+            node.as_index(),
+            &graph.edge_head,
+            &graph.edge_tail,
+            &graph.edges,
+        )
+        .into_iter()
+        .map(|(e, _)| e)
+        .collect::<Vec<_>>()
     }
 
     #[test]
