@@ -869,6 +869,30 @@ fn process_queued_node(
         }
         graph.edge_head[queued_parent.as_index()] = Index::sentinel();
         graph.edge_tail[queued_parent.as_index()] = Index::sentinel();
+    } else {
+        let mut e = graph.edge_head[queued_parent.as_index()];
+        let mut last_e = e;
+        for edge in temp_edges.iter() {
+            println!("adding edge: {edge:?}, {e:?}, {last_e:?}");
+            if !e.is_sentinel() {
+                *graph.edges.get_mut(e) = *edge;
+                last_e = e;
+                e = graph.edges.next_raw(e);
+            } else {
+                last_e = graph.edges.insert_after(last_e, *edge);
+            }
+        }
+        // Recycle extraneous edges
+        if !graph.edges.next_raw(last_e).is_sentinel() {
+            let mut z = graph.edges.next(last_e);
+            while let Some(index) = z {
+                z = graph.edges.next(index);
+                graph.edges.next[index.0] = usize::MAX;
+                graph.edges.free_list.push(index.0);
+            }
+            graph.edges.next[last_e.0] = usize::MAX;
+        }
+        graph.edge_tail[queued_parent.as_index()] = last_e;
     }
 
     graph.ancestry_tail[queued_parent.as_index()] = last_ancestry_index;
@@ -1409,6 +1433,8 @@ mod propagation_tests {
         graph.record_transmission(5, 10, Node(2), birth2).unwrap();
         let birth3 = graph.add_birth(1).unwrap();
         graph.record_transmission(0, 10, Node(0), birth3).unwrap();
+        let birth4 = graph.add_birth(1).unwrap();
+        graph.record_transmission(0, 10, Node(0), birth4).unwrap();
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
         for (node, b) in [(1, birth), (2, birth2)] {
             let anc = exract_ancestry(Node(node), &graph);
@@ -1434,6 +1460,6 @@ mod propagation_tests {
             mapped_node: Node(0)
         }));
         let edges = extract_edges(Node(0), &graph);
-        assert_eq!(edges.len(), 2);
+        assert_eq!(edges.len(), 4);
     }
 }
