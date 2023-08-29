@@ -1201,7 +1201,12 @@ mod design_property_tests {
                     last = last + next + rng.sample(next_distance);
                 } else { break }
             }
-            let (_, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+            let (ancestry, _, tail) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+            for t in tail{
+                if !t.is_sentinel() {
+                    assert!(ancestry.next_raw(t).is_sentinel())
+                }
+            }
         }
     }
 }
