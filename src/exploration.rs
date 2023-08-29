@@ -1078,7 +1078,14 @@ mod graph_tests {
 mod propagation_tests {
     use super::*;
 
+    fn tail_is_tail<T>(tail: &[Index], list: &CursorList<T>) {
+        for &t in tail {
+            assert!(list.next(t).is_none())
+        }
+    }
+
     fn exract_ancestry(node: Node, graph: &Graph) -> Vec<AncestrySegment> {
+        tail_is_tail(&graph.ancestry_tail, &graph.ancestry);
         test_utils::extract(
             node.as_index(),
             &graph.ancestry_head,
@@ -1091,6 +1098,7 @@ mod propagation_tests {
     }
 
     fn extract_edges(node: Node, graph: &Graph) -> Vec<Edge> {
+        tail_is_tail(&graph.edge_tail, &graph.edges);
         test_utils::extract(
             node.as_index(),
             &graph.edge_head,
