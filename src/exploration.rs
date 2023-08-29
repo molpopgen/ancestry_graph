@@ -1465,6 +1465,12 @@ mod propagation_tests {
             parent: None,
             mapped_node: Node(0)
         }));
+        assert!(anc.contains(&AncestrySegment {
+            left: 5,
+            right: 10,
+            parent: None,
+            mapped_node: Node(0)
+        }));
         let edges = extract_edges(Node(0), &graph);
         assert_eq!(edges.len(), 6);
         for node in [birth, birth2, birth3, birth4] {
