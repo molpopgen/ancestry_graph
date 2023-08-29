@@ -102,7 +102,11 @@ impl<T> CursorList<T> {
     }
 
     pub fn next(&self, at: Index) -> Option<Index> {
-        self.next_raw(at).into_option()
+        if at.is_sentinel() {
+            None
+        } else {
+            self.next_raw(at).into_option()
+        }
     }
 
     fn next_raw(&self, at: Index) -> Index {
@@ -854,6 +858,19 @@ fn process_queued_node(
         ahead = graph.ancestry.next_raw(ahead);
     }
 
+    if temp_edges.is_empty() {
+        let mut e = graph.edge_head[queued_parent.as_index()];
+        while !e.is_sentinel() {
+            println!("deleting edge {e:?}");
+            let next = graph.edges.next_raw(e);
+            graph.edges.next[e.0] = usize::MAX;
+            graph.edges.free_list.push(e.0);
+            e = next;
+        }
+        graph.edge_head[queued_parent.as_index()] = Index::sentinel();
+        graph.edge_tail[queued_parent.as_index()] = Index::sentinel();
+    }
+
     graph.ancestry_tail[queued_parent.as_index()] = last_ancestry_index;
     println!("{:?}", graph.ancestry.next_raw(last_ancestry_index));
 }
@@ -1337,6 +1354,19 @@ mod propagation_tests {
         rv
     }
 
+    fn extract_edges(node: Node, graph: &Graph) -> Vec<Edge> {
+        println!("{:?}", graph.edges);
+        let mut edge = graph.edge_head[node.as_index()];
+        let tail = graph.edge_tail[node.as_index()];
+        assert!(graph.edges.next(tail).is_none());
+        let mut rv = vec![];
+        while !edge.is_sentinel() {
+            rv.push(*graph.edges.get(edge));
+            edge = graph.edges.next_raw(edge);
+        }
+        rv
+    }
+
     #[test]
     fn propagation_test0() {
         let mut graph = Graph::with_initial_nodes(10, 10).unwrap().0;
@@ -1361,5 +1391,10 @@ mod propagation_tests {
             parent: None,
             mapped_node: birth
         }));
+
+        for node in [0, 1] {
+            let edges = extract_edges(Node(node), &graph);
+            assert!(edges.is_empty());
+        }
     }
 }
