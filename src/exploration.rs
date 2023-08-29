@@ -766,6 +766,7 @@ fn process_queued_node(
     println!("{overlaps:?}");
 
     while !ahead.is_sentinel() {
+        println!("overlaps = {overlaps:?}");
         if let Some(ref current_overlaps) = overlaps {
             let (current_left, current_right) = {
                 let current = graph.ancestry.get(ahead);
@@ -808,11 +809,9 @@ fn process_queued_node(
                 } else {
                     println!("gotta excise the current thing");
                     let next = graph.ancestry.next_raw(ahead);
-                    if !next.is_sentinel() {
-                        println!("here");
-                        graph.ancestry.next[last_ancestry_index.0] = next.0;
-                        graph.ancestry.free_list.push(ahead.0);
-                    }
+                    println!("here");
+                    graph.ancestry.next[last_ancestry_index.0] = next.0;
+                    graph.ancestry.free_list.push(ahead.0);
                     ahead = next;
                     println!("{ahead:?}");
                 }
