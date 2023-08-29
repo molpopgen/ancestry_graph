@@ -1082,7 +1082,7 @@ fn test_list_updating_1() {
     // cribbed from manual calculation/the python prototype
     let overlaps = [(0_i64, 1_i64, Node(2)), (1, 2, Node(1))];
     let (ancestry, _, tail) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
-    for t in tail{
+    for t in tail {
         if !t.is_sentinel() {
             assert!(ancestry.next_raw(t).is_sentinel())
         }
@@ -1105,7 +1105,12 @@ fn test_list_updating_2() {
     // (left, right, mapped_node)
     // cribbed from manual calculation/the python prototype
     let overlaps = [(0_i64, 1_i64, Node(0)), (2, 3, Node(1))];
-    let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    let (ancestry, _, tail) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    for t in tail {
+        if !t.is_sentinel() {
+            assert!(ancestry.next_raw(t).is_sentinel())
+        }
+    }
     // FIXME: below should be audited carefully.
     // Adding in "seg_right" is creating new entries.
     // assert_eq!(ancestry.data.len(), 6);
@@ -1126,7 +1131,12 @@ fn test_list_updating_3() {
         vec![],
     ];
     let overlaps = vec![(2_i64, 8_i64, Node(1)), (12, 14, Node(1))];
-    let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    let (ancestry, _, tail) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    for t in tail {
+        if !t.is_sentinel() {
+            assert!(ancestry.next_raw(t).is_sentinel())
+        }
+    }
     for i in 0..ancestry.data.len() {
         println!("{i}: {:?} => {:?}", ancestry.data[i], ancestry.next[i])
     }
@@ -1142,7 +1152,12 @@ fn test_list_updating_3b() {
         vec![],
     ];
     let overlaps = vec![(2_i64, 8_i64, Node(1)), (12, 14, Node(1))];
-    let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    let (ancestry, _, tail) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    for t in tail {
+        if !t.is_sentinel() {
+            assert!(ancestry.next_raw(t).is_sentinel())
+        }
+    }
     for i in 0..ancestry.data.len() {
         println!("{i}: {:?} => {:?}", ancestry.data[i], ancestry.next[i])
     }
@@ -1153,7 +1168,12 @@ fn test_list_updating_3b() {
 fn test_list_updating_4() {
     let input_ancestry = vec![vec![(0_i64, 5_i64, Node(0))], vec![], vec![], vec![]];
     let overlaps = vec![(1_i64, 2_i64, Node(0)), (3, 4, Node(1))];
-    let (ancestry, _, _) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    let (ancestry, _, tail) = test_utils::run_ancestry_tests(&input_ancestry, &overlaps);
+    for t in tail {
+        if !t.is_sentinel() {
+            assert!(ancestry.next_raw(t).is_sentinel())
+        }
+    }
     for i in 0..ancestry.data.len() {
         println!("{i}: {:?} => {:?}", ancestry.data[i], ancestry.next[i])
     }
