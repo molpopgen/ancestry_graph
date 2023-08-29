@@ -1452,7 +1452,7 @@ mod propagation_tests {
         }
 
         let anc = exract_ancestry(Node(0), &graph);
-        assert_eq!(anc.len(), 1);
+        assert_eq!(anc.len(), 2);
         assert!(anc.contains(&AncestrySegment {
             left: 0,
             right: 5,
@@ -1460,6 +1460,21 @@ mod propagation_tests {
             mapped_node: Node(0)
         }));
         let edges = extract_edges(Node(0), &graph);
-        assert_eq!(edges.len(), 4);
+        assert_eq!(edges.len(), 6);
+        for node in [birth, birth2, birth3, birth4] {
+            assert!(edges.contains(&Edge {
+                left: 0,
+                right: 5,
+                child: node
+            }));
+        }
+        // NOTE: will fail once we squash
+        for node in [birth3, birth4] {
+            assert!(edges.contains(&Edge {
+                left: 5,
+                right: 10,
+                child: node
+            }));
+        }
     }
 }
