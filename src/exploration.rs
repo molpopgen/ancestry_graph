@@ -583,6 +583,7 @@ fn update_ancestry(
     last_ancestry_index: Index,
     current_ancestry_index: Index,
     ancestry: &mut NodeAncestry,
+    node_head: &mut NodeHeap,
 ) -> Index {
     let mut seg_right = None;
     let current_ancestry_index = current_ancestry_index;
@@ -691,6 +692,7 @@ fn update_ancestry_design(
     ancestry: &mut NodeAncestry,
     ancestry_head: &mut [Index],
     ancestry_tail: &mut [Index],
+    node_heap: &mut NodeHeap,
 ) {
     assert_eq!(ancestry_head.len(), ancestry_tail.len());
     let mut ahead = ancestry_head[node.as_index()];
@@ -714,6 +716,7 @@ fn update_ancestry_design(
                 last_ancestry_index,
                 ahead,
                 ancestry,
+                node_heap,
             );
             println!("updated to {ahead:?} (overlap)");
             current_overlap += 1;
@@ -828,6 +831,7 @@ fn process_queued_node(
                     last_ancestry_index,
                     ahead,
                     &mut graph.ancestry,
+                    &mut graph.node_heap,
                 );
                 overlaps = overlapper.calculate_next_overlap_set();
             } else {
@@ -1010,12 +1014,14 @@ mod test_utils {
         for i in 0..ancestry.data.len() {
             println!("{i}: {:?} => {:?}", ancestry.data[i], ancestry.next[i])
         }
+        let mut node_heap = NodeHeap::default();
         update_ancestry_design(
             Node(0),
             overlaps,
             &mut ancestry,
             &mut ancestry_head,
             &mut ancestry_tail,
+            &mut node_heap,
         );
         let mut extracted = vec![];
         let mut h = ancestry_head[0];
