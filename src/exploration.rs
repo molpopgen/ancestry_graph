@@ -343,15 +343,6 @@ pub struct Graph {
 
     node_heap: NodeHeap,
 
-    // NOTE: this is redundant
-    // with what we will do during propagation,
-    // we the graph should contain information
-    // about the queue.
-    parents: crate::NodeHash,
-    // NOTE: this is redundant with what we
-    // need to accomplish.
-    deaths: Vec<Node>,
-
     // "Tables"
     // Arguably, these could be better encapsulated.
     edges: CursorList<Edge>,
@@ -380,7 +371,6 @@ impl Graph {
         let edges = CursorList::<Edge>::with_capacity(1000);
         let ancestry = CursorList::<AncestrySegment>::with_capacity(1000);
         let parents = NodeHash::with_hasher(BuildNoHashHasher::default());
-        let deaths = vec![];
 
         Some(Self {
             current_time,
@@ -396,9 +386,7 @@ impl Graph {
             ancestry,
             ancestry_head,
             ancestry_tail,
-            parents,
-            deaths,
-            node_heap:NodeHeap::default(),
+            node_heap: NodeHeap::default(),
         })
     }
 
@@ -535,13 +523,15 @@ impl Graph {
             &mut self.ancestry_tail,
             &mut self.ancestry,
         );
-        self.parents.insert(parent);
+        self.node_heap
+            .insert(parent, self.birth_time[parent.as_index()]);
         Ok(())
     }
 
     pub fn mark_node_death(&mut self, node: Node) {
         self.node_status[node.as_index()] = NodeStatus::Death;
-        self.deaths.push(node);
+        self.node_heap
+            .insert(node, self.birth_time[node.as_index()]);
     }
 }
 
@@ -949,40 +939,40 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     // 1. Need to build our queue
 
     // We need some encapsulation here:
-    let mut queued_nodes: NodeHash = NodeHash::with_hasher(BuildNoHashHasher::default());
+    //let mut queued_nodes: NodeHash = NodeHash::with_hasher(BuildNoHashHasher::default());
     let mut node_queue: std::collections::BinaryHeap<QueuedNode> =
         std::collections::BinaryHeap::new();
     let mut temp_edges = vec![];
-    for node in graph.parents.iter() {
-        if !queued_nodes.contains(node) {
-            node_queue.push(QueuedNode {
-                node: *node,
-                birth_time: graph.birth_time[node.as_index()],
-            });
-            queued_nodes.insert(*node);
-        }
-    }
+    //for node in graph.parents.iter() {
+    //    if !queued_nodes.contains(node) {
+    //        node_queue.push(QueuedNode {
+    //            node: *node,
+    //            birth_time: graph.birth_time[node.as_index()],
+    //        });
+    //        queued_nodes.insert(*node);
+    //    }
+    //}
 
     // Repetition here shows why our Graph has the comments
     // about redundant data structures
-    for node in graph.deaths.iter() {
-        if !queued_nodes.contains(node) {
-            node_queue.push(QueuedNode {
-                node: *node,
-                birth_time: graph.birth_time[node.as_index()],
-            });
-            queued_nodes.insert(*node);
-        }
-    }
+    //for node in graph.deaths.iter() {
+    //    if !queued_nodes.contains(node) {
+    //        node_queue.push(QueuedNode {
+    //            node: *node,
+    //            birth_time: graph.birth_time[node.as_index()],
+    //        });
+    //        queued_nodes.insert(*node);
+    //    }
+    //}
 
     let mut queue = vec![];
     let mut rv = None;
-    while let Some(queued_node) = node_queue.pop() {
-        rv = Some(queued_node.node);
+    while let Some(queued_node) = graph.node_heap.pop() {
+        rv = Some(queued_node);
         process_queued_node(
             options,
-            queued_node.node,
-            graph.node_status[queued_node.node.as_index()],
+            queued_node,
+            graph.node_status[queued_node.as_index()],
             graph,
             &mut queue,
             &mut temp_edges,
@@ -994,9 +984,9 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     }
 
     // TODO: should be a "cleanup" fn.
-    graph.parents.clear();
-    graph.deaths.clear();
-
+    //graph.parents.clear();
+    //graph.deaths.clear();
+    debug_assert!(graph.node_heap.is_empty());
     rv
 }
 
@@ -1366,7 +1356,7 @@ mod graph_tests {
         let birth = g.add_birth(1).unwrap();
         assert!(g.record_transmission(0, 5, Node(0), birth).is_ok());
         assert!(g.record_transmission(5, 10, Node(1), birth).is_ok());
-        assert_eq!(g.parents.len(), 2);
+        assert_eq!(g.node_heap.len(), 2);
     }
 
     #[test]
@@ -1376,7 +1366,7 @@ mod graph_tests {
         let birth = g.add_birth(1).unwrap();
         assert!(g.record_transmission(0, 5, Node(0), birth).is_ok());
         assert!(g.record_transmission(6, 10, Node(0), birth).is_err());
-        assert_eq!(g.parents.len(), 1);
+        assert_eq!(g.node_heap.len(), 1);
     }
 
     #[test]
@@ -1386,7 +1376,8 @@ mod graph_tests {
         let birth = g.add_birth(1).unwrap();
         assert!(g.record_transmission(0, 5, Node(0), birth).is_ok());
         assert!(g.record_transmission(4, 10, Node(1), birth).is_err());
-        assert_eq!(g.parents.len(), 1);
+        // 1 b/c the previous recording Err'd
+        assert_eq!(g.node_heap.len(), 1);
     }
 
     #[test]
