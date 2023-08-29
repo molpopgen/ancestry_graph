@@ -936,34 +936,7 @@ fn process_queued_node(
 // The return value has no meaning beyond testing and should eventually
 // be deleted.
 fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) -> Option<Node> {
-    // 1. Need to build our queue
-
-    // We need some encapsulation here:
-    //let mut queued_nodes: NodeHash = NodeHash::with_hasher(BuildNoHashHasher::default());
-    let mut node_queue: std::collections::BinaryHeap<QueuedNode> =
-        std::collections::BinaryHeap::new();
     let mut temp_edges = vec![];
-    //for node in graph.parents.iter() {
-    //    if !queued_nodes.contains(node) {
-    //        node_queue.push(QueuedNode {
-    //            node: *node,
-    //            birth_time: graph.birth_time[node.as_index()],
-    //        });
-    //        queued_nodes.insert(*node);
-    //    }
-    //}
-
-    // Repetition here shows why our Graph has the comments
-    // about redundant data structures
-    //for node in graph.deaths.iter() {
-    //    if !queued_nodes.contains(node) {
-    //        node_queue.push(QueuedNode {
-    //            node: *node,
-    //            birth_time: graph.birth_time[node.as_index()],
-    //        });
-    //        queued_nodes.insert(*node);
-    //    }
-    //}
 
     let mut queue = vec![];
     let mut rv = None;
@@ -977,15 +950,11 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
             &mut queue,
             &mut temp_edges,
         );
-
         // Clean up for next loop
         queue.clear();
         temp_edges.clear();
     }
 
-    // TODO: should be a "cleanup" fn.
-    //graph.parents.clear();
-    //graph.deaths.clear();
     debug_assert!(graph.node_heap.is_empty());
     rv
 }
