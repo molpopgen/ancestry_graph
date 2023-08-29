@@ -1316,5 +1316,12 @@ mod propagation_tests {
             mapped_node: birth
         }));
         let anc = exract_ancestry(Node(0), &graph);
+        assert_eq!(anc.len(), 1);
+        assert!(anc.contains(&AncestrySegment {
+            left: 0,
+            right: 5,
+            parent: None,
+            mapped_node: birth
+        }));
     }
 }
