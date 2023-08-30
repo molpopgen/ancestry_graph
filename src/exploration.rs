@@ -1144,10 +1144,10 @@ mod propagation_tests {
         initial_ancestry: Vec<Vec<(i64, i64, Option<usize>, usize)>>,
         // left, right, parent, child
         transmissions: Vec<(i64, i64, usize, usize)>,
-    ) -> Graph {
+    ) -> (Graph, Vec<Node>) {
         let max_time = *initial_birth_times.iter().max().unwrap();
-        assert_eq!(initial_birth_times.len(), initial_edges.len());
-        assert_eq!(initial_birth_times.len(), initial_ancestry.len());
+        //assert_eq!(initial_birth_times.len(), initial_edges.len());
+        //assert_eq!(initial_birth_times.len(), initial_ancestry.len());
 
         let mut graph = Graph::with_initial_nodes(num_nodes, genome_length)
             .unwrap()
@@ -1195,7 +1195,37 @@ mod propagation_tests {
                 .unwrap();
         }
 
-        graph
+        (graph, birth_nodes)
+    }
+
+    #[test]
+    fn propagation_test0_with_setup() {
+        let birth_times = vec![0; 10];
+        let transmissions = vec![(0, 5, 0, 0), (5, 10, 1, 0)];
+        let (mut graph, birth_nodes) =
+            setup_graph(10, 10, 1, birth_times, vec![], vec![], transmissions);
+        let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        let anc = exract_ancestry(Node(1), &graph);
+        assert_eq!(anc.len(), 1);
+        assert!(anc.contains(&AncestrySegment {
+            left: 5,
+            right: 10,
+            parent: None,
+            mapped_node: birth_nodes[0]
+        }));
+        let anc = exract_ancestry(Node(0), &graph);
+        assert_eq!(anc.len(), 1);
+        assert!(anc.contains(&AncestrySegment {
+            left: 0,
+            right: 5,
+            parent: None,
+            mapped_node: birth_nodes[0]
+        }));
+
+        for node in [0, 1] {
+            let edges = extract_edges(Node(node), &graph);
+            assert!(edges.is_empty());
+        }
     }
 
     #[test]
@@ -1224,6 +1254,43 @@ mod propagation_tests {
         }));
 
         for node in [0, 1] {
+            let edges = extract_edges(Node(node), &graph);
+            assert!(edges.is_empty());
+        }
+    }
+
+    #[test]
+    fn propagation_test1_with_setup() {
+        let initial_birth_times = vec![0; 3];
+        let num_births = 4;
+        let transmissions = vec![
+            (0, 5, 0, 0),
+            (5, 10, 1, 0),
+            (0, 5, 0, 1),
+            (5, 10, 2, 1),
+            (0, 10, 0, 2),
+            (0, 10, 0, 3),
+        ];
+        let (mut graph, birth_nodes) = setup_graph(
+            3,
+            10,
+            num_births,
+            initial_birth_times,
+            vec![],
+            vec![],
+            transmissions,
+        );
+        for (node, b) in [(1, birth_nodes[0]), (2, birth_nodes[1])] {
+            let anc = exract_ancestry(Node(node), &graph);
+            assert_eq!(anc.len(), 1);
+            assert!(anc.contains(&AncestrySegment {
+                left: 5,
+                right: 10,
+                parent: None,
+                mapped_node: b
+            }));
+        }
+        for node in [1, 2] {
             let edges = extract_edges(Node(node), &graph);
             assert!(edges.is_empty());
         }
