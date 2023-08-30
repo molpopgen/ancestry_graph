@@ -561,11 +561,14 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
                 Some(a)
             }
         };
+        println!("{edge_ref:?}, {child_ancestry:?}");
         while let Some(child_ancestry_index) = child_ancestry {
             let anc_ref = graph.ancestry.get(child_ancestry_index);
+            println!("{anc_ref:?}");
             if edge_ref.overlaps(anc_ref) {
                 let left = std::cmp::max(edge_ref.left, anc_ref.left);
                 let right = std::cmp::min(edge_ref.right, anc_ref.right);
+                println!("overlap!!!");
                 queue.push(AncestryIntersection {
                     left,
                     right,
@@ -1088,7 +1091,7 @@ mod test_utils {
             initial_edges,
             |e: (i64, i64, usize)| Edge {
                 left: e.0,
-                right: e.0,
+                right: e.1,
                 child: Node(e.2),
             },
             &mut graph.edge_head,
@@ -1363,7 +1366,6 @@ mod multistep_tests {
         let mut queue = vec![];
         ancestry_intersection(Node(0), &graph, &mut queue);
         println!("queue = {queue:?}");
-        todo!();
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         // node 1
