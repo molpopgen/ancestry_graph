@@ -1037,12 +1037,13 @@ mod test_utils {
     fn initialize_list<T, I, F>(
         input: Vec<Vec<I>>,
         f: F,
-        head: &mut Vec<Index>,
-        tail: &mut Vec<Index>,
+        head: &mut [Index],
+        tail: &mut [Index],
         list: &mut CursorList<T>,
     ) where
         F: Fn(I) -> T,
         I: Copy,
+        T: std::fmt::Debug,
     {
         for (i, e) in input.iter().enumerate() {
             assert!(head[i].is_sentinel());
