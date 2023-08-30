@@ -539,17 +539,8 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
     queue.clear();
     assert!(!graph.edge_head[node.as_index()].is_sentinel());
     let mut current_edge = Some(graph.edge_head[node.as_index()]);
-    //let mut current_ancestry = Some(graph.ancestry_head[node.as_index()]);
-
     while let Some(edge_index) = current_edge {
         let edge_ref = graph.edges.get(edge_index);
-        // while let Some(aseg) = current_ancestry {
-        //     let anc_ref = graph.ancestry.get(aseg);
-        //     if anc_ref.overlaps(edge_ref) {
-        //         break;
-        //     }
-        //     current_ancestry = graph.ancestry.next(aseg);
-        // }
         let mut child_ancestry = {
             let a = graph.ancestry_head[edge_ref.child.as_index()];
             if a.is_sentinel() {
@@ -574,6 +565,13 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
         current_edge = graph.edges.next(edge_index);
     }
     queue.sort_unstable_by_key(|x| x.left);
+    if !queue.is_empty() {
+        queue.push(AncestryIntersection {
+            left: i64::MAX,
+            right: i64::MAX,
+            mapped_node: Node(usize::MAX),
+        });
+    }
 }
 
 fn update_ancestry(
@@ -708,13 +706,6 @@ fn process_queued_node(
         ahead = graph.ancestry.next_raw(ahead);
     }
     ancestry_intersection(queued_parent, graph, queue);
-    if !queue.is_empty() {
-        queue.push(AncestryIntersection {
-            left: i64::MAX,
-            right: i64::MAX,
-            mapped_node: Node(usize::MAX),
-        });
-    }
     println!("{queued_parent:?} => {queue:?}");
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
     let mut last_ancestry_index = ahead;
@@ -1068,8 +1059,12 @@ mod graph_tests {
         for n in [0, 1] {
             let mut queue = vec![];
             ancestry_intersection(Node(n), &g, &mut queue);
-            assert_eq!(queue.len(), 1);
-            assert_eq!(queue, test_utils::naive_ancestry_intersection(Node(n), &g));
+            // Have to be careful re: the sentinel value
+            assert_eq!(queue.len(), 2);
+            assert_eq!(
+                queue[0..1],
+                test_utils::naive_ancestry_intersection(Node(n), &g)
+            );
         }
     }
 }
