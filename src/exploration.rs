@@ -776,6 +776,7 @@ fn process_queued_node(
                     println!("free list = {:?}", graph.ancestry.free_list);
                 } else {
                     println!("gotta excise the current thing");
+                    panic!("no coverage until now!");
                     ahead = graph.ancestry.excise_next(last_ancestry_index);
                     //let next = graph.ancestry.next_raw(ahead);
                     //println!("current = {:?}", graph.ancestry.get(ahead));
