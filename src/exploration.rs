@@ -1057,6 +1057,7 @@ mod test_utils {
                     println!("added {:?} for node {i}", j);
                     index = list.insert_after(index, f(j))
                 }
+                tail[i]=index;
             }
         }
     }
