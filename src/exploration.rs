@@ -1001,6 +1001,126 @@ mod test_utils {
         rv.sort_unstable_by_key(|f| f.left);
         rv
     }
+
+    fn tail_is_tail<T>(tail: &[Index], list: &CursorList<T>) {
+        for &t in tail {
+            assert!(list.next(t).is_none())
+        }
+    }
+
+    pub(super) fn exract_ancestry(node: Node, graph: &Graph) -> Vec<AncestrySegment> {
+        tail_is_tail(&graph.ancestry_tail, &graph.ancestry);
+        test_utils::extract(
+            node.as_index(),
+            &graph.ancestry_head,
+            &graph.ancestry_tail,
+            &graph.ancestry,
+        )
+        .into_iter()
+        .map(|(a, _)| a)
+        .collect::<Vec<_>>()
+    }
+
+    pub(super) fn extract_edges(node: Node, graph: &Graph) -> Vec<Edge> {
+        tail_is_tail(&graph.edge_tail, &graph.edges);
+        test_utils::extract(
+            node.as_index(),
+            &graph.edge_head,
+            &graph.edge_tail,
+            &graph.edges,
+        )
+        .into_iter()
+        .map(|(e, _)| e)
+        .collect::<Vec<_>>()
+    }
+
+    fn initialize_list<T, I, F>(
+        input: Vec<Vec<I>>,
+        f: F,
+        head: &mut Vec<Index>,
+        tail: &mut Vec<Index>,
+        list: &mut CursorList<T>,
+    ) where
+        F: Fn(I) -> T,
+        I: Copy,
+    {
+        for (i, e) in input.iter().enumerate() {
+            assert!(head[i].is_sentinel());
+            assert!(tail[i].is_sentinel());
+            if !e.is_empty() {
+                let mut index = list.new_index(f(e[0]));
+                head[i] = index;
+                for &j in &e[1..] {
+                    index = list.insert_after(index, f(j))
+                }
+            }
+        }
+    }
+
+    pub(super) fn setup_graph(
+        num_nodes: usize,
+        genome_length: i64,
+        num_births: usize,
+        initial_birth_times: Vec<i64>,
+        // left, right, child
+        initial_edges: Vec<Vec<(i64, i64, usize)>>,
+        // left, right, parent, mapped_node
+        initial_ancestry: Vec<Vec<(i64, i64, Option<usize>, usize)>>,
+        // left, right, parent, child
+        transmissions: Vec<(i64, i64, usize, usize)>,
+    ) -> (Graph, Vec<Node>) {
+        let max_time = *initial_birth_times.iter().max().unwrap();
+        //assert_eq!(initial_birth_times.len(), initial_edges.len());
+        //assert_eq!(initial_birth_times.len(), initial_ancestry.len());
+
+        let mut graph = Graph::with_initial_nodes(num_nodes, genome_length)
+            .unwrap()
+            .0;
+
+        graph.birth_time = initial_birth_times;
+
+        initialize_list(
+            initial_edges,
+            |e: (i64, i64, usize)| Edge {
+                left: e.0,
+                right: e.0,
+                child: Node(e.2),
+            },
+            &mut graph.edge_head,
+            &mut graph.edge_tail,
+            &mut graph.edges,
+        );
+
+        initialize_list(
+            initial_ancestry,
+            |e: (i64, i64, Option<usize>, usize)| {
+                let parent = e.2.map(Node);
+                AncestrySegment {
+                    left: e.0,
+                    right: e.1,
+                    parent,
+                    mapped_node: Node(e.3),
+                }
+            },
+            &mut graph.ancestry_head,
+            &mut graph.ancestry_tail,
+            &mut graph.ancestry,
+        );
+
+        graph.advance_time_by(max_time + 1);
+        let mut birth_nodes = vec![];
+        for _ in 0..num_births {
+            birth_nodes.push(graph.add_birth(graph.current_time).unwrap());
+        }
+
+        for t in transmissions {
+            graph
+                .record_transmission(t.0, t.1, Node(t.2), birth_nodes[t.3])
+                .unwrap();
+        }
+
+        (graph, birth_nodes)
+    }
 }
 
 #[cfg(test)]
@@ -1087,129 +1207,10 @@ mod graph_tests {
 #[cfg(test)]
 mod propagation_tests {
     use super::*;
-
-    fn tail_is_tail<T>(tail: &[Index], list: &CursorList<T>) {
-        for &t in tail {
-            assert!(list.next(t).is_none())
-        }
-    }
-
-    fn exract_ancestry(node: Node, graph: &Graph) -> Vec<AncestrySegment> {
-        tail_is_tail(&graph.ancestry_tail, &graph.ancestry);
-        test_utils::extract(
-            node.as_index(),
-            &graph.ancestry_head,
-            &graph.ancestry_tail,
-            &graph.ancestry,
-        )
-        .into_iter()
-        .map(|(a, _)| a)
-        .collect::<Vec<_>>()
-    }
-
-    fn extract_edges(node: Node, graph: &Graph) -> Vec<Edge> {
-        tail_is_tail(&graph.edge_tail, &graph.edges);
-        test_utils::extract(
-            node.as_index(),
-            &graph.edge_head,
-            &graph.edge_tail,
-            &graph.edges,
-        )
-        .into_iter()
-        .map(|(e, _)| e)
-        .collect::<Vec<_>>()
-    }
-
-    fn initialize_list<T, I, F>(
-        input: Vec<Vec<I>>,
-        f: F,
-        head: &mut Vec<Index>,
-        tail: &mut Vec<Index>,
-        list: &mut CursorList<T>,
-    ) where
-        F: Fn(I) -> T,
-        I: Copy,
-    {
-        for (i, e) in input.iter().enumerate() {
-            assert!(head[i].is_sentinel());
-            assert!(tail[i].is_sentinel());
-            if !e.is_empty() {
-                let mut index = list.new_index(f(e[0]));
-                head[i] = index;
-                for &j in &e[1..] {
-                    index = list.insert_after(index, f(j))
-                }
-            }
-        }
-    }
-
-    fn setup_graph(
-        num_nodes: usize,
-        genome_length: i64,
-        num_births: usize,
-        initial_birth_times: Vec<i64>,
-        // left, right, child
-        initial_edges: Vec<Vec<(i64, i64, usize)>>,
-        // left, right, parent, mapped_node
-        initial_ancestry: Vec<Vec<(i64, i64, Option<usize>, usize)>>,
-        // left, right, parent, child
-        transmissions: Vec<(i64, i64, usize, usize)>,
-    ) -> (Graph, Vec<Node>) {
-        let max_time = *initial_birth_times.iter().max().unwrap();
-        //assert_eq!(initial_birth_times.len(), initial_edges.len());
-        //assert_eq!(initial_birth_times.len(), initial_ancestry.len());
-
-        let mut graph = Graph::with_initial_nodes(num_nodes, genome_length)
-            .unwrap()
-            .0;
-
-        graph.birth_time = initial_birth_times;
-
-        initialize_list(
-            initial_edges,
-            |e: (i64, i64, usize)| Edge {
-                left: e.0,
-                right: e.0,
-                child: Node(e.2),
-            },
-            &mut graph.edge_head,
-            &mut graph.edge_tail,
-            &mut graph.edges,
-        );
-
-        initialize_list(
-            initial_ancestry,
-            |e: (i64, i64, Option<usize>, usize)| {
-                let parent = e.2.map(Node);
-                AncestrySegment {
-                    left: e.0,
-                    right: e.1,
-                    parent,
-                    mapped_node: Node(e.3),
-                }
-            },
-            &mut graph.ancestry_head,
-            &mut graph.ancestry_tail,
-            &mut graph.ancestry,
-        );
-
-        graph.advance_time_by(max_time + 1);
-        let mut birth_nodes = vec![];
-        for _ in 0..num_births {
-            birth_nodes.push(graph.add_birth(graph.current_time).unwrap());
-        }
-
-        for t in transmissions {
-            graph
-                .record_transmission(t.0, t.1, Node(t.2), birth_nodes[t.3])
-                .unwrap();
-        }
-
-        (graph, birth_nodes)
-    }
+    use test_utils::*;
 
     #[test]
-    fn propagation_test0_with_setup() {
+    fn propagation_test0() {
         let birth_times = vec![0; 10];
         let transmissions = vec![(0, 5, 0, 0), (5, 10, 1, 0)];
         let (mut graph, birth_nodes) =
@@ -1239,7 +1240,7 @@ mod propagation_tests {
     }
 
     #[test]
-    fn propagation_test1_with_setup() {
+    fn propagation_test1() {
         let initial_birth_times = vec![0; 3];
         let num_births = 4;
         let transmissions = vec![
@@ -1308,4 +1309,17 @@ mod propagation_tests {
             }));
         }
     }
+}
+
+#[cfg(test)]
+mod multistep_tests {
+    //     0
+    //   -----
+    //   |   |
+    //   |   1
+    //   |  ---
+    //   4  2 3
+    //
+    // 3 will die, leaving (0,(2,4)) as the output toplogy.
+    fn test0() {}
 }
