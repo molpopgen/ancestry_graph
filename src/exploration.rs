@@ -1313,6 +1313,9 @@ mod propagation_tests {
 
 #[cfg(test)]
 mod multistep_tests {
+    use super::*;
+    use test_utils::*;
+
     //     0
     //   -----
     //   |   |
@@ -1320,6 +1323,23 @@ mod multistep_tests {
     //   |  ---
     //   4  2 3
     //
-    // 3 will die, leaving (0,(2,4)) as the output toplogy.
-    fn test0() {}
+    // 2-4 will be births
+    #[test]
+    fn test0() {
+        let initial_edges = vec![vec![(0, 2, 1)], vec![]];
+        let initial_ancestry = vec![vec![(0, 2, None, 1)], vec![(0, 2, Some(0), 1)]];
+        let initial_birth_times = vec![0, 1];
+        let num_births = 3;
+        let transmissions = vec![(0, 2, 0, 2), (0, 2, 1, 0), (0, 2, 1, 1)];
+        let (mut graph, birth_nodes) = setup_graph(
+            3,
+            2,
+            num_births,
+            initial_birth_times,
+            initial_edges,
+            initial_ancestry,
+            transmissions,
+        );
+        let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+    }
 }
