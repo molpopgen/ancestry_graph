@@ -1360,6 +1360,10 @@ mod multistep_tests {
         println!("input edges for node 0: {:?}", edges);
         let ancestry = extract_ancestry(Node(1), &graph);
         println!("input ancestry for node 1: {:?}", ancestry);
+        let mut queue = vec![];
+        ancestry_intersection(Node(0), &graph, &mut queue);
+        println!("queue = {queue:?}");
+        todo!();
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         // node 1
