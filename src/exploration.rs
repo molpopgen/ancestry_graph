@@ -1057,7 +1057,7 @@ mod test_utils {
                     println!("added {:?} for node {i}", j);
                     index = list.insert_after(index, f(j))
                 }
-                tail[i]=index;
+                tail[i] = index;
             }
         }
     }
@@ -1117,9 +1117,9 @@ mod test_utils {
                 &mut graph.ancestry_tail,
                 &mut graph.ancestry,
             );
-            println!("{:?}",graph.ancestry);
-            println!("{:?}",graph.ancestry_head);
-            println!("{:?}",graph.ancestry_tail);
+            println!("{:?}", graph.ancestry);
+            println!("{:?}", graph.ancestry_head);
+            println!("{:?}", graph.ancestry_tail);
         }
 
         graph.advance_time_by(max_time + 1);
