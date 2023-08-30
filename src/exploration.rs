@@ -155,6 +155,18 @@ impl<T> CursorList<T> {
         new_index
     }
 
+    /// # Panics
+    ///
+    /// * If `at` is out of range
+    pub fn excise_next(&mut self, at: Index) -> Index {
+        let next = self.next_raw(at);
+        self.next[at.0] = next.0;
+        if !next.is_sentinel() {
+            self.free_list.push(next.0);
+        }
+        next
+    }
+
     // Excise a node from a list.
     // The Index goes into the free list for
     // later recycling, making it a logic error
@@ -764,14 +776,15 @@ fn process_queued_node(
                     println!("free list = {:?}", graph.ancestry.free_list);
                 } else {
                     println!("gotta excise the current thing");
-                    let next = graph.ancestry.next_raw(ahead);
-                    println!("current = {:?}", graph.ancestry.get(ahead));
-                    println!("prev = {:?}", graph.ancestry.get(last_ancestry_index));
-                    println!("here");
-                    graph.ancestry.next[last_ancestry_index.0] = next.0;
-                    graph.ancestry.free_list.push(ahead.0);
-                    ahead = next;
-                    println!("{ahead:?}");
+                    ahead = graph.ancestry.excise_next(last_ancestry_index);
+                    //let next = graph.ancestry.next_raw(ahead);
+                    //println!("current = {:?}", graph.ancestry.get(ahead));
+                    //println!("prev = {:?}", graph.ancestry.get(last_ancestry_index));
+                    //println!("here");
+                    //graph.ancestry.next[last_ancestry_index.0] = next.0;
+                    //graph.ancestry.free_list.push(ahead.0);
+                    //ahead = next;
+                    //println!("{ahead:?}");
                 }
                 //last_ancestry_index = ahead;
                 //ahead = graph.ancestry.next_raw(ahead)
