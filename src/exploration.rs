@@ -12,7 +12,7 @@ use crate::QueuedNode;
 #[derive(Clone, Copy, Debug, Hash, PartialEq, PartialOrd, Ord, Eq)]
 pub struct Index(usize);
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct NodeHeap {
     queued_nodes: NodeHash,
     node_queue: std::collections::BinaryHeap<QueuedNode>,
@@ -1008,7 +1008,7 @@ mod test_utils {
         }
     }
 
-    pub(super) fn exract_ancestry(node: Node, graph: &Graph) -> Vec<AncestrySegment> {
+    pub(super) fn extract_ancestry(node: Node, graph: &Graph) -> Vec<AncestrySegment> {
         tail_is_tail(&graph.ancestry_tail, &graph.ancestry);
         test_utils::extract(
             node.as_index(),
@@ -1044,14 +1044,17 @@ mod test_utils {
         F: Fn(I) -> T,
         I: Copy,
         T: std::fmt::Debug,
+        I: std::fmt::Debug,
     {
         for (i, e) in input.iter().enumerate() {
             assert!(head[i].is_sentinel());
             assert!(tail[i].is_sentinel());
             if !e.is_empty() {
+                println!("added {:?} for node {i}", e[0]);
                 let mut index = list.new_index(f(e[0]));
                 head[i] = index;
                 for &j in &e[1..] {
+                    println!("added {:?} for node {i}", j);
                     index = list.insert_after(index, f(j))
                 }
             }
@@ -1125,6 +1128,7 @@ mod test_utils {
                 .record_transmission(t.0, t.1, Node(t.2), birth_nodes[t.3])
                 .unwrap();
         }
+        println!("{:?}", graph.node_heap);
 
         (graph, birth_nodes)
     }
@@ -1223,7 +1227,7 @@ mod propagation_tests {
         let (mut graph, birth_nodes) =
             setup_graph(10, 10, 1, birth_times, vec![], vec![], transmissions);
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
-        let anc = exract_ancestry(Node(1), &graph);
+        let anc = extract_ancestry(Node(1), &graph);
         assert_eq!(anc.len(), 1);
         assert!(anc.contains(&AncestrySegment {
             left: 5,
@@ -1231,7 +1235,7 @@ mod propagation_tests {
             parent: None,
             mapped_node: birth_nodes[0]
         }));
-        let anc = exract_ancestry(Node(0), &graph);
+        let anc = extract_ancestry(Node(0), &graph);
         assert_eq!(anc.len(), 1);
         assert!(anc.contains(&AncestrySegment {
             left: 0,
@@ -1270,7 +1274,7 @@ mod propagation_tests {
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
         println!("{birth_nodes:?}");
         for (node, b) in [(1, birth_nodes[0]), (2, birth_nodes[1])] {
-            let anc = exract_ancestry(Node(node), &graph);
+            let anc = extract_ancestry(Node(node), &graph);
             assert_eq!(anc.len(), 1);
             println!("{node:?} -> {anc:?}");
             assert!(anc.contains(&AncestrySegment {
@@ -1284,7 +1288,7 @@ mod propagation_tests {
             let edges = extract_edges(Node(node), &graph);
             assert!(edges.is_empty());
         }
-        let anc = exract_ancestry(Node(0), &graph);
+        let anc = extract_ancestry(Node(0), &graph);
         assert_eq!(anc.len(), 2);
         assert!(anc.contains(&AncestrySegment {
             left: 0,
@@ -1347,6 +1351,10 @@ mod multistep_tests {
             initial_ancestry,
             transmissions,
         );
+        let edges = extract_edges(Node(0), &graph);
+        println!("input edges for node 0: {:?}", edges);
+        let ancestry = extract_ancestry(Node(1), &graph);
+        println!("input ancestry for node 1: {:?}", ancestry);
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         // node 1
