@@ -1380,6 +1380,20 @@ mod multistep_tests {
                 "{i:?} not in {edges:?}"
             );
         }
+        let ancestry = extract_ancestry(Node(1), &graph);
+        assert_eq!(ancestry.len(), 1);
+        for a in [(0, 2, None, 0)] {
+            assert!(
+                ancestry.contains(&AncestrySegment {
+                    left: a.0,
+                    right: a.1,
+                    parent: a.2,
+                    mapped_node: Node(a.3)
+                }),
+                "ancestry {:?} not in {ancestry:?}",
+                a
+            );
+        }
 
         // node 0
         let edges = extract_edges(Node(0), &graph);
