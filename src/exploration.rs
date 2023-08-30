@@ -1092,21 +1092,27 @@ mod test_utils {
             &mut graph.edges,
         );
 
-        initialize_list(
-            initial_ancestry,
-            |e: (i64, i64, Option<usize>, usize)| {
-                let parent = e.2.map(Node);
-                AncestrySegment {
-                    left: e.0,
-                    right: e.1,
-                    parent,
-                    mapped_node: Node(e.3),
-                }
-            },
-            &mut graph.ancestry_head,
-            &mut graph.ancestry_tail,
-            &mut graph.ancestry,
-        );
+        // HACK
+        if !initial_ancestry.is_empty() {
+            graph.ancestry_head.fill(Index::sentinel());
+            graph.ancestry_tail.fill(Index::sentinel());
+            graph.ancestry.next.fill(usize::MAX);
+            initialize_list(
+                initial_ancestry,
+                |e: (i64, i64, Option<usize>, usize)| {
+                    let parent = e.2.map(Node);
+                    AncestrySegment {
+                        left: e.0,
+                        right: e.1,
+                        parent,
+                        mapped_node: Node(e.3),
+                    }
+                },
+                &mut graph.ancestry_head,
+                &mut graph.ancestry_tail,
+                &mut graph.ancestry,
+            );
+        }
 
         graph.advance_time_by(max_time + 1);
         let mut birth_nodes = vec![];
