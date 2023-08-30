@@ -1348,5 +1348,31 @@ mod multistep_tests {
             transmissions,
         );
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+
+        // node 1
+        let edges = extract_edges(Node(1), &graph);
+        for i in [(0, 2, 2), (0, 2, 3)] {
+            assert!(
+                edges.contains(&Edge {
+                    left: i.0,
+                    right: i.1,
+                    child: Node(i.2)
+                }),
+                "{i:?} not in {edges:?}"
+            );
+        }
+
+        // node 0
+        let edges = extract_edges(Node(0), &graph);
+        for i in [(0, 2, 1), (0, 2, 4)] {
+            assert!(
+                edges.contains(&Edge {
+                    left: i.0,
+                    right: i.1,
+                    child: Node(i.2)
+                }),
+                "{i:?} not in {edges:?}"
+            );
+        }
     }
 }
