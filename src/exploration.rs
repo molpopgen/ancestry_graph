@@ -1280,9 +1280,12 @@ mod propagation_tests {
             vec![],
             transmissions,
         );
+        let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        println!("{birth_nodes:?}");
         for (node, b) in [(1, birth_nodes[0]), (2, birth_nodes[1])] {
             let anc = exract_ancestry(Node(node), &graph);
             assert_eq!(anc.len(), 1);
+            println!("{node:?} -> {anc:?}");
             assert!(anc.contains(&AncestrySegment {
                 left: 5,
                 right: 10,
@@ -1293,6 +1296,37 @@ mod propagation_tests {
         for node in [1, 2] {
             let edges = extract_edges(Node(node), &graph);
             assert!(edges.is_empty());
+        }
+        let anc = exract_ancestry(Node(0), &graph);
+        assert_eq!(anc.len(), 2);
+        assert!(anc.contains(&AncestrySegment {
+            left: 0,
+            right: 5,
+            parent: None,
+            mapped_node: Node(0)
+        }));
+        assert!(anc.contains(&AncestrySegment {
+            left: 5,
+            right: 10,
+            parent: None,
+            mapped_node: Node(0)
+        }));
+        let edges = extract_edges(Node(0), &graph);
+        assert_eq!(edges.len(), 6);
+        for &node in &birth_nodes {
+            assert!(edges.contains(&Edge {
+                left: 0,
+                right: 5,
+                child: node
+            }));
+        }
+        // NOTE: will fail once we squash
+        for node in [2, 3] {
+            assert!(edges.contains(&Edge {
+                left: 5,
+                right: 10,
+                child: birth_nodes[node]
+            }));
         }
     }
 
