@@ -1100,6 +1100,7 @@ mod test_utils {
             graph.ancestry_head.fill(Index::sentinel());
             graph.ancestry_tail.fill(Index::sentinel());
             graph.ancestry.next.fill(usize::MAX);
+            graph.ancestry.data.clear();
             initialize_list(
                 initial_ancestry,
                 |e: (i64, i64, Option<usize>, usize)| {
@@ -1115,6 +1116,9 @@ mod test_utils {
                 &mut graph.ancestry_tail,
                 &mut graph.ancestry,
             );
+            println!("{:?}",graph.ancestry);
+            println!("{:?}",graph.ancestry_head);
+            println!("{:?}",graph.ancestry_tail);
         }
 
         graph.advance_time_by(max_time + 1);
