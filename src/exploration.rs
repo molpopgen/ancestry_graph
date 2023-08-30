@@ -764,6 +764,7 @@ fn process_queued_node(
                 );
                 overlaps = overlapper.calculate_next_overlap_set();
             } else {
+                panic!("no coverage until now!");
                 if last_ancestry_index == ahead {
                     println!("gotta shift left");
                     let next = graph.ancestry.next_raw(ahead);
