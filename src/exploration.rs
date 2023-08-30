@@ -1110,24 +1110,92 @@ mod propagation_tests {
         .collect::<Vec<_>>()
     }
 
+    fn initialize_list<T, I, F>(
+        input: Vec<Vec<I>>,
+        f: F,
+        head: &mut Vec<Index>,
+        tail: &mut Vec<Index>,
+        list: &mut CursorList<T>,
+    ) where
+        F: Fn(I) -> T,
+        I: Copy,
+    {
+        for (i, e) in input.iter().enumerate() {
+            assert!(head[i].is_sentinel());
+            assert!(tail[i].is_sentinel());
+            if !e.is_empty() {
+                let mut index = list.new_index(f(e[0]));
+                head[i] = index;
+                for &j in &e[1..] {
+                    index = list.insert_after(index, f(j))
+                }
+            }
+        }
+    }
+
     fn setup_graph(
         num_nodes: usize,
         genome_length: i64,
         num_births: usize,
-        // left, right, parent, child
-        initial_edges: Vec<Vec<(i64, i64, usize, usize)>>,
+        initial_birth_times: Vec<i64>,
+        // left, right, child
+        initial_edges: Vec<Vec<(i64, i64, usize)>>,
         // left, right, parent, mapped_node
         initial_ancestry: Vec<Vec<(i64, i64, Option<usize>, usize)>>,
         // left, right, parent, child
         transmissions: Vec<(i64, i64, usize, usize)>,
     ) -> Graph {
-        let mut rv = Graph::with_initial_nodes(num_nodes, genome_length)
+        let max_time = *initial_birth_times.iter().max().unwrap();
+        assert_eq!(initial_birth_times.len(), initial_edges.len());
+        assert_eq!(initial_birth_times.len(), initial_ancestry.len());
+
+        let mut graph = Graph::with_initial_nodes(num_nodes, genome_length)
             .unwrap()
             .0;
 
-        todo!("this is hard");
+        graph.birth_time = initial_birth_times;
 
-        rv
+        initialize_list(
+            initial_edges,
+            |e: (i64, i64, usize)| Edge {
+                left: e.0,
+                right: e.0,
+                child: Node(e.2),
+            },
+            &mut graph.edge_head,
+            &mut graph.edge_tail,
+            &mut graph.edges,
+        );
+
+        initialize_list(
+            initial_ancestry,
+            |e: (i64, i64, Option<usize>, usize)| {
+                let parent = e.2.map(Node);
+                AncestrySegment {
+                    left: e.0,
+                    right: e.1,
+                    parent,
+                    mapped_node: Node(e.3),
+                }
+            },
+            &mut graph.ancestry_head,
+            &mut graph.ancestry_tail,
+            &mut graph.ancestry,
+        );
+
+        graph.advance_time_by(max_time + 1);
+        let mut birth_nodes = vec![];
+        for _ in 0..num_births {
+            birth_nodes.push(graph.add_birth(graph.current_time).unwrap());
+        }
+
+        for t in transmissions {
+            graph
+                .record_transmission(t.0, t.1, Node(t.2), birth_nodes[t.3])
+                .unwrap();
+        }
+
+        graph
     }
 
     #[test]
