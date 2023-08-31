@@ -636,7 +636,7 @@ fn update_ancestry(
     let out_seg = AncestrySegment {
         left,
         right,
-        parent: None, // FIXME -- should be current parent?
+        parent: current.parent,
         mapped_node,
     };
     println!("out = {out_seg:?}");
@@ -1398,6 +1398,9 @@ mod multistep_tests {
         println!("queue = {queue:?}");
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
+        println!("{:?}", graph.ancestry_head);
+        println!("{:?}", graph.ancestry);
+
         // node 1
         validate_edges(1, &[(0, 2, 2), (0, 2, 3)], &graph);
         let ancestry = extract_ancestry(Node(1), &graph);
@@ -1417,7 +1420,7 @@ mod multistep_tests {
 
         // node 0
         validate_edges(0, &[(0, 2, 1), (0, 2, 4)], &graph);
-        let ancestry = extract_ancestry(Node(1), &graph);
+        let ancestry = extract_ancestry(Node(0), &graph);
         assert_eq!(ancestry.len(), 1);
         for a in [(0, 2, None, 1)] {
             assert!(
