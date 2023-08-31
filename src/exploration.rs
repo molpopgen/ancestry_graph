@@ -167,6 +167,22 @@ impl<T> CursorList<T> {
         next
     }
 
+    /// Delete the entire list starting from `from`
+    ///
+    /// # Panics
+    ///
+    /// * If `from` is out of range
+    fn eliminate(&mut self, from: Index) {
+        assert!(from.0 < self.next.len());
+        let mut next = self.excise_next(from);
+        while !next.is_sentinel() {
+            println!("next = {next:?}");
+            next = self.excise_next(next);
+        }
+        self.next[from.0] = usize::MAX;
+        self.free_list.push(from.0)
+    }
+
     // Excise a node from a list.
     // The Index goes into the free list for
     // later recycling, making it a logic error
@@ -1393,9 +1409,68 @@ mod multistep_tests {
         println!("input edges for node 0: {:?}", edges);
         let ancestry = extract_ancestry(Node(1), &graph);
         println!("input ancestry for node 1: {:?}", ancestry);
-        let mut queue = vec![];
-        ancestry_intersection(Node(0), &graph, &mut queue);
-        println!("queue = {queue:?}");
+        let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+
+        println!("{:?}", graph.ancestry_head);
+        println!("{:?}", graph.ancestry);
+
+        // node 1
+        validate_edges(1, &[(0, 2, 2), (0, 2, 3)], &graph);
+        validate_ancestry(1, &[(0, 2, Some(0), 1)], &graph);
+
+        // node 0
+        validate_edges(0, &[(0, 2, 1), (0, 2, 4)], &graph);
+        validate_ancestry(0, &[(0, 2, None, 0)], &graph);
+    }
+
+    //     0
+    //   -----
+    //   |   |
+    //   |   1
+    //   |  ---
+    //   4  2 3
+    //
+    // 3 will "die", resulting in (0,(2,4)) being the remaining topo.
+    #[test]
+    fn test1() {
+        let initial_edges = vec![
+            vec![(0, 2, 1), (0, 2, 4)],
+            vec![(0, 2, 2), (0, 2, 3)],
+            vec![],
+            vec![],
+            vec![],
+        ];
+        let initial_ancestry = vec![
+            vec![(0, 2, None, 0)],
+            vec![(0, 2, Some(0), 1)],
+            vec![(0, 2, Some(1), 2)],
+            vec![(0, 2, Some(1), 3)],
+            vec![(0, 2, Some(0), 4)],
+        ];
+        let initial_birth_times = vec![0, 1, 2, 2, 2];
+        let num_births = 0;
+        let transmissions = vec![];
+        let (mut graph, birth_nodes) = setup_graph(
+            5,
+            2,
+            num_births,
+            initial_birth_times,
+            initial_edges,
+            initial_ancestry,
+            transmissions,
+        );
+        // This is an API limitation
+        graph.ancestry.eliminate(graph.ancestry_head[3]);
+        graph.ancestry_head[3] = Index::sentinel();
+        graph.ancestry_tail[3] = Index::sentinel();
+
+        graph.node_heap.insert(Node(1), graph.birth_time[1]);
+        println!("ancestry of 3 = {:?}", extract_ancestry(Node(3), &graph));
+        assert!(extract_ancestry(Node(3), &graph).is_empty());
+        let edges = extract_edges(Node(0), &graph);
+        println!("input edges for node 0: {:?}", edges);
+        let ancestry = extract_ancestry(Node(1), &graph);
+        println!("input ancestry for node 1: {:?}", ancestry);
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         println!("{:?}", graph.ancestry_head);
