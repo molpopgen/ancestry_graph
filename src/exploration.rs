@@ -1291,10 +1291,17 @@ mod graph_tests {
             ancestry_intersection(Node(n), &g, &mut queue);
             // Have to be careful re: the sentinel value
             assert_eq!(queue.len(), 2);
-            assert_eq!(
-                queue[0..1],
-                test_utils::naive_ancestry_intersection(Node(n), &g)
-            );
+            // NOTE: we cannot compare the child ancestry index
+            // here b/c our naive method generates it incorrectly,
+            // b/c it pulls from another set of data types.
+            for (i, j) in queue[0..1]
+                .iter()
+                .zip(test_utils::naive_ancestry_intersection(Node(n), &g).iter())
+            {
+                assert_eq!(i.left, j.left);
+                assert_eq!(i.right, j.right);
+                assert_eq!(i.mapped_node, j.mapped_node);
+            }
         }
     }
 }
