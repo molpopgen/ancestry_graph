@@ -763,6 +763,7 @@ fn process_queued_node(
                 } else {
                     mapped_node = queued_parent;
                     for o in current_overlaps.overlaps {
+                        println!("child node = {:?}", o.mapped_node);
                         temp_edges.push(Edge {
                             left: current_overlaps.left,
                             right: current_overlaps.right,
@@ -1473,7 +1474,8 @@ mod multistep_tests {
         println!("input edges for node 0: {:?}", edges);
         let ancestry = extract_ancestry(Node(1), &graph);
         println!("input ancestry for node 1: {:?}", ancestry);
-        let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        let last_node = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        assert_eq!(last_node, Some(Node(0)));
 
         println!("{:?}", graph.ancestry_head);
         println!("{:?}", graph.ancestry);
