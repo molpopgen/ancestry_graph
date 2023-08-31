@@ -1519,4 +1519,76 @@ mod multistep_tests {
             validate_ancestry(node, &[(0, 2, Some(0), node)], &graph)
         }
     }
+
+    // Fundamentally the same as the previous test but with an extra level
+    // of unary stuff.
+    //
+    //     0
+    //   -----
+    //   |   |
+    //   |   1
+    //   |   |
+    //   |   2
+    //   |   |
+    //   |  ---
+    //   5  3 4
+    //
+    // 3 will "die", resulting in (0,(5,4)) being the remaining topo.
+    #[test]
+    fn test2() {
+        let initial_edges = vec![
+            vec![(0, 2, 1), (0, 2, 5)],
+            vec![(0, 2, 2)],
+            vec![(0, 2, 3), (0, 2, 4)],
+            vec![],
+            vec![],
+            vec![],
+        ];
+        let initial_ancestry = vec![
+            vec![(0, 2, None, 0)],
+            vec![(0, 2, Some(0), 1)],
+            vec![(0, 2, Some(1), 2)],
+            vec![(0, 2, Some(2), 3)],
+            vec![(0, 2, Some(2), 4)],
+            vec![(0, 2, Some(0), 5)],
+        ];
+        let initial_birth_times = vec![0, 1, 2, 3, 3, 3];
+        let num_births = 0;
+        let transmissions = vec![];
+        let (mut graph, _) = setup_graph(
+            6,
+            2,
+            num_births,
+            initial_birth_times,
+            initial_edges,
+            initial_ancestry,
+            transmissions,
+        );
+        // NOTE: This is an API limitation
+        graph.ancestry.eliminate(graph.ancestry_head[3]);
+        graph.ancestry_head[3] = Index::sentinel();
+        graph.ancestry_tail[3] = Index::sentinel();
+        assert!(extract_ancestry(Node(3), &graph).is_empty());
+        // By "killing" node 3, we must enter its parents
+        // into the queue
+        graph.node_heap.insert(Node(2), graph.birth_time[1]);
+        assert!(extract_ancestry(Node(3), &graph).is_empty());
+        let last_node = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        assert_eq!(last_node, Some(Node(0)));
+
+        // node 1
+        validate_edges(1, &[], &graph);
+        validate_ancestry(1, &[(0, 2, Some(0), 4)], &graph);
+
+        // node 0
+        validate_ancestry(0, &[(0, 2, None, 0)], &graph);
+        validate_edges(0, &[(0, 2, 5), (0, 2, 4)], &graph);
+
+        // Node 2
+        validate_ancestry(2, &[(0, 2, Some(0), 4)], &graph);
+
+        for node in [4, 5] {
+            validate_ancestry(node, &[(0, 2, Some(0), node)], &graph)
+        }
+    }
 }
