@@ -1161,11 +1161,12 @@ mod test_utils {
         let edges = extract_edges(Node(node), graph);
         assert_eq!(edges.len(), expected.len());
         for e in expected {
-            assert!(edges.contains(&Edge {
+            let edge = Edge {
                 left: e.0,
                 right: e.1,
-                child: Node(e.2)
-            }));
+                child: Node(e.2),
+            };
+            assert!(edges.contains(&edge), "{edge:?} not in {edges:?}");
         }
     }
 
@@ -1459,11 +1460,12 @@ mod multistep_tests {
             initial_ancestry,
             transmissions,
         );
-        // This is an API limitation
+        // NOTE: This is an API limitation
         graph.ancestry.eliminate(graph.ancestry_head[3]);
         graph.ancestry_head[3] = Index::sentinel();
         graph.ancestry_tail[3] = Index::sentinel();
-
+        // By "killing" node 3, we must enter its parents
+        // into the queue
         graph.node_heap.insert(Node(1), graph.birth_time[1]);
         println!("ancestry of 3 = {:?}", extract_ancestry(Node(3), &graph));
         assert!(extract_ancestry(Node(3), &graph).is_empty());
@@ -1477,11 +1479,11 @@ mod multistep_tests {
         println!("{:?}", graph.ancestry);
 
         // node 1
-        validate_edges(1, &[(0, 2, 2), (0, 2, 3)], &graph);
-        validate_ancestry(1, &[(0, 2, Some(0), 1)], &graph);
+        validate_edges(1, &[], &graph);
+        validate_ancestry(1, &[(0, 2, Some(0), 2)], &graph);
 
         // node 0
-        validate_edges(0, &[(0, 2, 1), (0, 2, 4)], &graph);
         validate_ancestry(0, &[(0, 2, None, 0)], &graph);
+        validate_edges(0, &[(0, 2, 2), (0, 2, 4)], &graph);
     }
 }
