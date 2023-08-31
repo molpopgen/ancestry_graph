@@ -1176,7 +1176,10 @@ mod test_utils {
                 right: e.1,
                 child: Node(e.2),
             };
-            assert!(edges.contains(&edge), "{edge:?} not in {edges:?}");
+            assert!(
+                edges.contains(&edge),
+                "edges of node {node}: {edge:?} not in {edges:?}"
+            );
         }
     }
 
@@ -1189,12 +1192,16 @@ mod test_utils {
         assert_eq!(ancestry.len(), expected.len());
         for e in expected {
             let parent = e.2.map(Node);
-            assert!(ancestry.contains(&AncestrySegment {
+            let seg = AncestrySegment {
                 left: e.0,
                 right: e.1,
                 parent,
-                mapped_node: Node(e.3)
-            }));
+                mapped_node: Node(e.3),
+            };
+            assert!(
+                ancestry.contains(&seg),
+                "ancestry of node {node}: {seg:?} not in {ancestry:?}"
+            );
         }
     }
 }
@@ -1488,5 +1495,9 @@ mod multistep_tests {
         // node 0
         validate_ancestry(0, &[(0, 2, None, 0)], &graph);
         validate_edges(0, &[(0, 2, 2), (0, 2, 4)], &graph);
+
+        for node in [2, 4] {
+            validate_ancestry(node, &[(0, 2, Some(0), node)], &graph)
+        }
     }
 }
