@@ -1140,6 +1140,36 @@ mod test_utils {
 
         (graph, birth_nodes)
     }
+
+    pub(super) fn validate_edges(node: usize, expected: &[(i64, i64, usize)], graph: &Graph) {
+        let edges = extract_edges(Node(node), graph);
+        assert_eq!(edges.len(), expected.len());
+        for e in expected {
+            assert!(edges.contains(&Edge {
+                left: e.0,
+                right: e.1,
+                child: Node(e.2)
+            }));
+        }
+    }
+
+    pub(super) fn validate_ancestry(
+        node: usize,
+        expected: &[(i64, i64, Option<usize>, usize)],
+        graph: &Graph,
+    ) {
+        let ancestry = extract_ancestry(Node(node), graph);
+        assert_eq!(ancestry.len(), expected.len());
+        for e in expected {
+            let parent = e.2.map(Node);
+            assert!(ancestry.contains(&AncestrySegment {
+                left: e.0,
+                right: e.1,
+                parent,
+                mapped_node: Node(e.3)
+            }));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1369,17 +1399,7 @@ mod multistep_tests {
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
 
         // node 1
-        let edges = extract_edges(Node(1), &graph);
-        for i in [(0, 2, 2), (0, 2, 3)] {
-            assert!(
-                edges.contains(&Edge {
-                    left: i.0,
-                    right: i.1,
-                    child: Node(i.2)
-                }),
-                "{i:?} not in {edges:?}"
-            );
-        }
+        validate_edges(1, &[(0, 2, 2), (0, 2, 3)], &graph);
         let ancestry = extract_ancestry(Node(0), &graph);
         assert_eq!(ancestry.len(), 1);
         for a in [(0, 2, None, 0)] {
@@ -1396,25 +1416,15 @@ mod multistep_tests {
         }
 
         // node 0
-        let edges = extract_edges(Node(0), &graph);
-        for i in [(0, 2, 1), (0, 2, 4)] {
-            assert!(
-                edges.contains(&Edge {
-                    left: i.0,
-                    right: i.1,
-                    child: Node(i.2)
-                }),
-                "{i:?} not in {edges:?}"
-            );
-        }
+        validate_edges(0, &[(0, 2, 1), (0, 2, 4)], &graph);
         let ancestry = extract_ancestry(Node(1), &graph);
         assert_eq!(ancestry.len(), 1);
-        for a in [(0, 2, None, 1)] {
+        for a in [(0, 2, Some(0), 1)] {
             assert!(
                 ancestry.contains(&AncestrySegment {
                     left: a.0,
                     right: a.1,
-                    parent: a.2,
+                    parent: a.2.map(Node),
                     mapped_node: Node(a.3)
                 }),
                 "ancestry {:?} not in {ancestry:?}",
