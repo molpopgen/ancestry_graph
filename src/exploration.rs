@@ -1403,36 +1403,10 @@ mod multistep_tests {
 
         // node 1
         validate_edges(1, &[(0, 2, 2), (0, 2, 3)], &graph);
-        let ancestry = extract_ancestry(Node(1), &graph);
-        assert_eq!(ancestry.len(), 1);
-        for a in [(0, 2, Some(0), 1)] {
-            assert!(
-                ancestry.contains(&AncestrySegment {
-                    left: a.0,
-                    right: a.1,
-                    parent: a.2.map(Node),
-                    mapped_node: Node(a.3)
-                }),
-                "ancestry {:?} not in {ancestry:?}",
-                a
-            );
-        }
+        validate_ancestry(1, &[(0, 2, Some(0), 1)], &graph);
 
         // node 0
         validate_edges(0, &[(0, 2, 1), (0, 2, 4)], &graph);
-        let ancestry = extract_ancestry(Node(0), &graph);
-        assert_eq!(ancestry.len(), 1);
-        for a in [(0, 2, None, 0)] {
-            assert!(
-                ancestry.contains(&AncestrySegment {
-                    left: a.0,
-                    right: a.1,
-                    parent: a.2.map(Node),
-                    mapped_node: Node(a.3)
-                }),
-                "ancestry {:?} not in {ancestry:?}",
-                a
-            );
-        }
+        validate_ancestry(0, &[(0, 2, None, 0)], &graph);
     }
 }
