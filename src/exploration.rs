@@ -1461,7 +1461,7 @@ mod multistep_tests {
         let initial_birth_times = vec![0, 1, 2, 2, 2];
         let num_births = 0;
         let transmissions = vec![];
-        let (mut graph, birth_nodes) = setup_graph(
+        let (mut graph, _) = setup_graph(
             5,
             2,
             num_births,
@@ -1477,17 +1477,9 @@ mod multistep_tests {
         // By "killing" node 3, we must enter its parents
         // into the queue
         graph.node_heap.insert(Node(1), graph.birth_time[1]);
-        println!("ancestry of 3 = {:?}", extract_ancestry(Node(3), &graph));
         assert!(extract_ancestry(Node(3), &graph).is_empty());
-        let edges = extract_edges(Node(0), &graph);
-        println!("input edges for node 0: {:?}", edges);
-        let ancestry = extract_ancestry(Node(1), &graph);
-        println!("input ancestry for node 1: {:?}", ancestry);
         let last_node = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
         assert_eq!(last_node, Some(Node(0)));
-
-        println!("{:?}", graph.ancestry_head);
-        println!("{:?}", graph.ancestry);
 
         // node 1
         validate_edges(1, &[], &graph);
