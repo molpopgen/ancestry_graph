@@ -262,6 +262,7 @@ struct AncestryIntersection {
     left: i64,
     right: i64,
     mapped_node: Node,
+    ancestry_segment: Index,
 }
 
 #[derive(Debug)]
@@ -589,6 +590,7 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
                     left,
                     right,
                     mapped_node: anc_ref.mapped_node,
+                    ancestry_segment: child_ancestry_index,
                 });
             }
             child_ancestry = graph.ancestry.next(child_ancestry_index);
@@ -601,6 +603,7 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
             left: i64::MAX,
             right: i64::MAX,
             mapped_node: Node(usize::MAX),
+            ancestry_segment: Index::sentinel(),
         });
     }
 }
@@ -611,6 +614,7 @@ fn update_ancestry(
     mapped_node: Node,
     last_ancestry_index: Index,
     current_ancestry_index: Index,
+    child_ancestry_segment_index: Index,
     birth_time: &[i64],
     ancestry: &mut NodeAncestry,
     node_heap: &mut NodeHeap,
@@ -655,6 +659,7 @@ fn update_ancestry(
         // segment, which is a change we must propagate.
         if let Some(parent) = current.parent {
             node_heap.insert(parent, birth_time[parent.as_index()]);
+            ancestry.data[child_ancestry_segment_index.0].parent = current.parent;
         }
     }
 
@@ -767,17 +772,22 @@ fn process_queued_node(
             };
             if current_right > current_overlaps.left && current_overlaps.right > current_left {
                 let mapped_node;
+                let aseg_index;
                 if current_overlaps.overlaps.len() == 1 {
                     mapped_node = current_overlaps.overlaps[0].mapped_node;
+                    aseg_index = current_overlaps.overlaps[0].ancestry_segment;
                 } else {
                     mapped_node = queued_parent;
+                    aseg_index = Index::sentinel();
                     for o in current_overlaps.overlaps {
                         println!("child node = {:?}", o.mapped_node);
                         temp_edges.push(Edge {
                             left: current_overlaps.left,
                             right: current_overlaps.right,
                             child: o.mapped_node,
-                        })
+                        });
+                        println!("anc seg = {:?}", graph.ancestry.data[o.ancestry_segment.0]);
+                        graph.ancestry.data[o.ancestry_segment.0].parent = Some(queued_parent);
                     }
                 }
                 last_ancestry_index = ahead;
@@ -787,6 +797,7 @@ fn process_queued_node(
                     mapped_node,
                     last_ancestry_index,
                     ahead,
+                    aseg_index,
                     &graph.birth_time,
                     &mut graph.ancestry,
                     &mut graph.node_heap,
@@ -1015,7 +1026,7 @@ mod test_utils {
             .into_iter()
             .map(|(a, _)| a)
             .collect::<Vec<_>>();
-            for a in child_ancestry {
+            for (i, a) in child_ancestry.into_iter().enumerate() {
                 if a.right > edge.left && edge.right > a.left {
                     let left = std::cmp::max(a.left, edge.left);
                     let right = std::cmp::min(a.right, edge.right);
@@ -1023,6 +1034,7 @@ mod test_utils {
                         left,
                         right,
                         mapped_node: a.mapped_node,
+                        ancestry_segment: Index(i),
                     });
                 }
             }
