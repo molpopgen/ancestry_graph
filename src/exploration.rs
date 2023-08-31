@@ -649,6 +649,15 @@ fn update_ancestry(
             mapped_node: ancestry.get(current_ancestry_index).mapped_node,
         });
     }
+
+    if mapped_node != current.mapped_node {
+        // This is a change from "coalescent" to "unary" on this
+        // segment, which is a change we must propagate.
+        if let Some(parent) = current.parent {
+            node_heap.insert(parent, birth_time[parent.as_index()]);
+        }
+    }
+
     let out_seg = AncestrySegment {
         left,
         right,
