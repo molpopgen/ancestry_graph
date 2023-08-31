@@ -1422,7 +1422,7 @@ mod multistep_tests {
         validate_edges(0, &[(0, 2, 1), (0, 2, 4)], &graph);
         let ancestry = extract_ancestry(Node(0), &graph);
         assert_eq!(ancestry.len(), 1);
-        for a in [(0, 2, None, 1)] {
+        for a in [(0, 2, None, 0)] {
             assert!(
                 ancestry.contains(&AncestrySegment {
                     left: a.0,
