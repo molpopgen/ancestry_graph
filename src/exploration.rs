@@ -18,7 +18,7 @@ struct NodeHeap {
     node_queue: std::collections::BinaryHeap<QueuedNode>,
 }
 
-#[derive(Clone, Copy, Debug, Hash)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 struct LabelledNode {
     node: Node,
     ancestry_segment: Index,
@@ -631,7 +631,6 @@ fn update_ancestry(
     right: i64,
     mapped_node: Node,
     current_ancestry_index: Index,
-    child_ancestry_segment_index: Index,
     birth_time: &[i64],
     ancestry: &mut NodeAncestry,
     node_heap: &mut NodeHeap,
@@ -671,14 +670,14 @@ fn update_ancestry(
         });
     }
 
-    //if mapped_node != current.mapped_node {
-    //    // This is a change from "coalescent" to "unary" on this
-    //    // segment, which is a change we must propagate.
-    //    if let Some(parent) = current.parent {
-    //        node_heap.insert(parent, birth_time[parent.as_index()]);
-    //        ancestry.data[child_ancestry_segment_index.0].parent = current.parent;
-    //    }
-    //}
+    if mapped_node != current.mapped_node {
+        // This is a change from "coalescent" to "unary" on this
+        // segment, which is a change we must propagate.
+        println!("unary change in the house: {:?}", current.parent);
+        if let Some(parent) = current.parent {
+            node_heap.insert(parent, birth_time[parent.as_index()]);
+        }
+    }
 
     let out_seg = AncestrySegment {
         left,
@@ -769,7 +768,7 @@ fn process_queued_node(
         ahead = graph.ancestry.next_raw(ahead);
     }
     ancestry_intersection(queued_parent, graph, queue);
-    println!("{queued_parent:?} => {queue:?}");
+    println!("PROCESSING {queued_parent:?} => {queue:?}");
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
     let mut last_ancestry_index = ahead;
 
@@ -790,14 +789,30 @@ fn process_queued_node(
             };
             if current_right > current_overlaps.left && current_overlaps.right > current_left {
                 let mapped_node;
-                let aseg_index;
+                let mut unary_segment = None;
                 if current_overlaps.overlaps.len() == 1 {
                     mapped_node = current_overlaps.overlaps[0].mapped_node;
-                    aseg_index = current_overlaps.overlaps[0].ancestry_segment;
+                    let aseg_index = current_overlaps.overlaps[0].ancestry_segment;
+                    let ln = LabelledNode::new(mapped_node, aseg_index);
+                    if let Some(un) = unary_segment_map.get(&ln) {
+                        unary_segment = Some(*un);
+                        unary_segment_map.remove(&ln);
+                    } else {
+                        unary_segment = Some(ln);
+                    }
+                    if let Some(parent) = graph.ancestry.get(ahead).parent {
+                        graph
+                            .node_heap
+                            .insert(parent, graph.birth_time[parent.as_index()]);
+                    }
                 } else {
                     mapped_node = queued_parent;
-                    aseg_index = Index::sentinel();
                     for o in current_overlaps.overlaps {
+                        let ln = LabelledNode::new(o.mapped_node, o.ancestry_segment);
+                        if let Some(un) = unary_segment_map.get(&ln) {
+                            graph.ancestry.data[un.ancestry_segment.0].parent = Some(queued_parent);
+                            unary_segment_map.remove(&ln);
+                        }
                         println!("child node = {:?}", o.mapped_node);
                         temp_edges.push(Edge {
                             left: current_overlaps.left,
@@ -814,11 +829,24 @@ fn process_queued_node(
                     current_overlaps.right,
                     mapped_node,
                     ahead,
-                    aseg_index,
                     &graph.birth_time,
                     &mut graph.ancestry,
                     &mut graph.node_heap,
                 );
+                println!("we think {:?}", graph.ancestry.get(last_ancestry_index));
+                let ln = LabelledNode::new(queued_parent, last_ancestry_index);
+                if let Some(useg) = unary_segment {
+                    let ln = LabelledNode::new(queued_parent, last_ancestry_index);
+                    println!("adding {:?}", graph.ancestry.get(last_ancestry_index));
+                    debug_assert!(!unary_segment_map.contains_key(&ln));
+                    unary_segment_map.insert(ln, useg);
+                }
+                if !last_ancestry_index.is_sentinel() {
+                    if let Some(useg) = unary_segment_map.get(&ln) {
+                        println!("ASDFGASDFASDGAS");
+                        //graph.ancestry.data[useg.ancestry_segment.0].parent = Some(queued_parent)
+                    }
+                }
                 overlaps = overlapper.calculate_next_overlap_set();
             } else {
                 panic!("no coverage until now!");
@@ -936,6 +964,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     let mut unary_segment_map = UnarySegmentMap::default();
     while let Some(queued_node) = graph.node_heap.pop() {
         rv = Some(queued_node);
+        println!("our node heap = {:?}", graph.node_heap);
         process_queued_node(
             options,
             queued_node,
