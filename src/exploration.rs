@@ -444,6 +444,7 @@ impl Graph {
     fn add_node(&mut self, status: NodeStatus, birth_time: i64) -> Node {
         match self.free_nodes.pop() {
             Some(index) => {
+                todo!("need to free up pre-existing ancestry");
                 assert!(self.ancestry_head[index].is_sentinel());
                 assert!(self.ancestry_tail[index].is_sentinel());
                 assert!(self.edge_head[index].is_sentinel());
@@ -745,7 +746,6 @@ fn process_queued_node(
     queue: &mut Vec<AncestryIntersection>,
     temp_edges: &mut Vec<Edge>,
 ) {
-    todo!("ancestry for extinct nodes is being saved, wbich isn't great");
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
     while !ahead.is_sentinel() {
         println!("input {:?}", graph.ancestry.get(ahead));
