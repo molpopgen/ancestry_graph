@@ -745,6 +745,7 @@ fn process_queued_node(
     queue: &mut Vec<AncestryIntersection>,
     temp_edges: &mut Vec<Edge>,
 ) {
+    todo!("ancestry for extinct nodes is being saved, wbich isn't great");
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
     while !ahead.is_sentinel() {
         println!("input {:?}", graph.ancestry.get(ahead));
