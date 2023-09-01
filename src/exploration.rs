@@ -18,6 +18,23 @@ struct NodeHeap {
     node_queue: std::collections::BinaryHeap<QueuedNode>,
 }
 
+#[derive(Clone, Copy, Debug, Hash)]
+struct LabelledNode {
+    node: Node,
+    ancestry_segment: Index,
+}
+
+impl LabelledNode {
+    fn new(node: Node, ancestry_segment: Index) -> Self {
+        Self {
+            node,
+            ancestry_segment,
+        }
+    }
+}
+
+type UnarySegmentMap = std::collections::HashMap<LabelledNode, LabelledNode>;
+
 impl NodeHeap {
     fn insert(&mut self, node: Node, birth_time: i64) {
         if !self.queued_nodes.contains(&node) {
@@ -744,6 +761,7 @@ fn process_queued_node(
     graph: &mut Graph,
     queue: &mut Vec<AncestryIntersection>,
     temp_edges: &mut Vec<Edge>,
+    unary_segment_map: &mut UnarySegmentMap,
 ) {
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
     while !ahead.is_sentinel() {
@@ -915,6 +933,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
 
     let mut queue = vec![];
     let mut rv = None;
+    let mut unary_segment_map = UnarySegmentMap::default();
     while let Some(queued_node) = graph.node_heap.pop() {
         rv = Some(queued_node);
         process_queued_node(
@@ -924,6 +943,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
             graph,
             &mut queue,
             &mut temp_edges,
+            &mut unary_segment_map,
         );
         // Clean up for next loop
         queue.clear();
