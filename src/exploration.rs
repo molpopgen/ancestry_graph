@@ -1632,7 +1632,7 @@ mod multistep_tests {
         assert!(extract_ancestry(Node(3), &graph).is_empty());
         // By "killing" node 3, we must enter its parents
         // into the queue
-        graph.node_heap.insert(Node(2), graph.birth_time[1]);
+        graph.node_heap.insert(Node(2), graph.birth_time[2]);
         assert!(extract_ancestry(Node(3), &graph).is_empty());
         let last_node = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
         assert_eq!(last_node, Some(Node(0)));
