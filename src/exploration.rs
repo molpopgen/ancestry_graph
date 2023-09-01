@@ -279,7 +279,8 @@ struct AncestryIntersection {
     left: i64,
     right: i64,
     mapped_node: Node,
-    ancestry_segment: Index,
+    child: Node,
+    child_ancestry_segment: Index,
 }
 
 #[derive(Debug)]
@@ -608,7 +609,8 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
                     left,
                     right,
                     mapped_node: anc_ref.mapped_node,
-                    ancestry_segment: child_ancestry_index,
+                    child: edge_ref.child,
+                    child_ancestry_segment: child_ancestry_index,
                 });
             }
             child_ancestry = graph.ancestry.next(child_ancestry_index);
@@ -621,7 +623,8 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
             left: i64::MAX,
             right: i64::MAX,
             mapped_node: Node(usize::MAX),
-            ancestry_segment: Index::sentinel(),
+            child: Node(usize::MAX),
+            child_ancestry_segment: Index::sentinel(),
         });
     }
 }
@@ -792,8 +795,8 @@ fn process_queued_node(
                 let mut unary_segment = None;
                 if current_overlaps.overlaps.len() == 1 {
                     mapped_node = current_overlaps.overlaps[0].mapped_node;
-                    let aseg_index = current_overlaps.overlaps[0].ancestry_segment;
-                    let ln = LabelledNode::new(mapped_node, aseg_index);
+                    let aseg_index = current_overlaps.overlaps[0].child_ancestry_segment;
+                    let ln = LabelledNode::new(current_overlaps.overlaps[0].child, aseg_index);
                     if let Some(un) = unary_segment_map.get(&ln) {
                         unary_segment = Some(*un);
                         unary_segment_map.remove(&ln);
@@ -808,8 +811,10 @@ fn process_queued_node(
                 } else {
                     mapped_node = queued_parent;
                     for o in current_overlaps.overlaps {
-                        let ln = LabelledNode::new(o.mapped_node, o.ancestry_segment);
+                        let ln = LabelledNode::new(o.child, o.child_ancestry_segment);
+                        println!("ln = {ln:?}, {:?}", graph.ancestry.get(ln.ancestry_segment));
                         if let Some(un) = unary_segment_map.get(&ln) {
+                            println!("updating parent of {un:?}");
                             graph.ancestry.data[un.ancestry_segment.0].parent = Some(queued_parent);
                             unary_segment_map.remove(&ln);
                         }
@@ -819,7 +824,10 @@ fn process_queued_node(
                             right: current_overlaps.right,
                             child: o.mapped_node,
                         });
-                        println!("anc seg = {:?}", graph.ancestry.data[o.ancestry_segment.0]);
+                        println!(
+                            "anc seg = {:?}",
+                            graph.ancestry.data[o.child_ancestry_segment.0]
+                        );
                         // graph.ancestry.data[o.ancestry_segment.0].parent = Some(queued_parent);
                     }
                 }
@@ -965,6 +973,10 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     while let Some(queued_node) = graph.node_heap.pop() {
         rv = Some(queued_node);
         println!("our node heap = {:?}", graph.node_heap);
+        println!("our useg map = {:?}", unary_segment_map);
+        for (k, v) in unary_segment_map.iter() {
+            println!("{k:?} => {:?}", graph.ancestry.data[v.ancestry_segment.0])
+        }
         process_queued_node(
             options,
             queued_node,
@@ -1082,7 +1094,8 @@ mod test_utils {
                         left,
                         right,
                         mapped_node: a.mapped_node,
-                        ancestry_segment: Index(i),
+                        child: edge.child,
+                        child_ancestry_segment: Index(i),
                     });
                 }
             }
