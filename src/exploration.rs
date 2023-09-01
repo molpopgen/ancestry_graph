@@ -814,7 +814,7 @@ fn process_queued_node(
                         let ln = LabelledNode::new(o.child, o.child_ancestry_segment);
                         println!("ln = {ln:?}, {:?}", graph.ancestry.get(ln.ancestry_segment));
                         if let Some(un) = unary_segment_map.get(&ln) {
-                            println!("updating parent of {un:?}");
+                            println!("updating parent of {un:?} to {queued_parent:?}");
                             graph.ancestry.data[un.ancestry_segment.0].parent = Some(queued_parent);
                             unary_segment_map.remove(&ln);
                         }
