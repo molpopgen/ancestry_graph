@@ -1646,6 +1646,9 @@ mod multistep_tests {
         validate_edges(0, &[(0, 2, 5), (0, 2, 4)], &graph);
 
         // Node 2
+        // This expected result is purely an internal detail:
+        // 2 is unary, and we will have no overlaps to it ancestral to 1,
+        // so its parent field stops updating
         validate_ancestry(2, &[(0, 2, Some(1), 4)], &graph);
 
         for node in [4, 5] {
