@@ -1646,7 +1646,7 @@ mod multistep_tests {
         validate_edges(0, &[(0, 2, 5), (0, 2, 4)], &graph);
 
         // Node 2
-        validate_ancestry(2, &[(0, 2, Some(0), 4)], &graph);
+        validate_ancestry(2, &[(0, 2, Some(1), 4)], &graph);
 
         for node in [4, 5] {
             validate_ancestry(node, &[(0, 2, Some(0), node)], &graph)
