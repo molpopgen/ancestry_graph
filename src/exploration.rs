@@ -765,6 +765,7 @@ fn process_queued_node(
     temp_edges: &mut Vec<Edge>,
     unary_segment_map: &mut UnarySegmentMap,
 ) {
+    todo!("UnarySegmentMap only needs to map Index to Index?");
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
     while !ahead.is_sentinel() {
         println!("input {:?}", graph.ancestry.get(ahead));
