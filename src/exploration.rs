@@ -1641,4 +1641,61 @@ mod multistep_tests {
             validate_ancestry(node, &[(0, 2, Some(0), node)], &graph)
         }
     }
+    // Tree 0, span [0,1)
+    //    0
+    //  -----
+    //  1   |
+    //  |   2
+    // ---  |
+    // 3 4  5
+    //
+    // Tree 1, span [1,2)
+    //    0
+    //  -----
+    //  1   |
+    //  |   2
+    //  |  ---
+    //  5  3 4
+    //
+    // Node 5 loses all ancestry
+    #[test]
+    fn test3() {
+        let initial_edges = vec![
+            vec![(0, 2, 1), (0, 2, 2)],
+            vec![(0, 1, 3), (0, 1, 4), (1, 2, 5)],
+            vec![(0, 1, 5), (1, 2, 3), (1, 2, 4)],
+            vec![],
+            vec![],
+            vec![],
+        ];
+
+        let initial_ancestry = vec![
+            vec![(0, 2, None, 0)],
+            vec![(0, 2, Some(0), 1)],
+            vec![(0, 2, Some(0), 2)],
+            // Births
+            vec![(0, 1, Some(1), 3), (1, 2, Some(2), 3)],
+            vec![(0, 1, Some(1), 4), (1, 2, Some(2), 4)],
+            // Loss of ancestry for node 5
+            vec![],
+        ];
+        let initial_birth_times = vec![0, 1, 2, 3, 3, 3];
+        let num_births = 0;
+        let transmissions = vec![];
+        let (mut graph, _) = setup_graph(
+            6,
+            2,
+            num_births,
+            initial_birth_times,
+            initial_edges,
+            initial_ancestry,
+            transmissions,
+        );
+        graph.node_heap.insert(Node(2), graph.birth_time[2]);
+        assert!(extract_ancestry(Node(5), &graph).is_empty());
+        let last_node = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+
+        // Node 0
+        validate_ancestry(1, &[(0, 1, None, 1), (1, 2, None, 2)], &graph);
+    }
 }
