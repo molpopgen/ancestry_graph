@@ -306,7 +306,6 @@ impl<'q> AncestryOverlapper<'q> {
     }
 
     fn calculate_next_overlap_set(&mut self) -> Option<Overlaps<'_>> {
-        println!("right = {:?}, left = {:?}", self.right, self.left);
         // NOTE: this if statement hides from the compiler
         // that current_overlap is always < queue.len().
         // We should be able to check current_overlap + 1 <
@@ -319,7 +318,6 @@ impl<'q> AncestryOverlapper<'q> {
             }
             let mut new_right = i64::MAX;
             for segment in &self.queue[self.current_overlap..] {
-                println!("segment = {segment:?}");
                 if segment.left == self.left {
                     self.current_overlap += 1;
                     new_right = std::cmp::min(new_right, segment.right);
@@ -849,7 +847,7 @@ fn process_queued_node(
                     println!("next seg = {:?}", graph.ancestry.get(ahead));
                 }
             } else {
-                //panic!("no coverage until now!");
+                panic!("no coverage until now!");
                 if last_ancestry_index == ahead {
                     println!("gotta shift left");
                     let next = graph.ancestry.next_raw(ahead);
