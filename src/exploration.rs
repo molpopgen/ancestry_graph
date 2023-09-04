@@ -317,7 +317,7 @@ impl<'q> AncestryOverlapper<'q> {
             if self.overlaps.is_empty() {
                 self.left = self.queue[self.current_overlap].left;
             }
-            let mut new_right = self.right;
+            let mut new_right = i64::MAX;
             for segment in &self.queue[self.current_overlap..] {
                 println!("segment = {segment:?}");
                 if segment.left == self.left {
