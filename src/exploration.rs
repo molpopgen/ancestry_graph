@@ -843,7 +843,7 @@ fn process_queued_node(
                 }
                 overlaps = overlapper.calculate_next_overlap_set();
             } else {
-                panic!("no coverage until now!");
+                //panic!("no coverage until now!");
                 if last_ancestry_index == ahead {
                     println!("gotta shift left");
                     let next = graph.ancestry.next_raw(ahead);
@@ -856,15 +856,15 @@ fn process_queued_node(
                     println!("free list = {:?}", graph.ancestry.free_list);
                 } else {
                     println!("gotta excise the current thing");
-                    panic!("no coverage until now!");
+                    //panic!("no coverage until now!");
                     ahead = graph.ancestry.excise_next(last_ancestry_index);
-                    //let next = graph.ancestry.next_raw(ahead);
-                    //println!("current = {:?}", graph.ancestry.get(ahead));
-                    //println!("prev = {:?}", graph.ancestry.get(last_ancestry_index));
-                    //println!("here");
-                    //graph.ancestry.next[last_ancestry_index.0] = next.0;
-                    //graph.ancestry.free_list.push(ahead.0);
-                    //ahead = next;
+                    let next = graph.ancestry.next_raw(ahead);
+                    println!("current = {:?}", graph.ancestry.get(ahead));
+                    println!("prev = {:?}", graph.ancestry.get(last_ancestry_index));
+                    println!("here");
+                    graph.ancestry.next[last_ancestry_index.0] = next.0;
+                    graph.ancestry.free_list.push(ahead.0);
+                    ahead = next;
                     //println!("{ahead:?}");
                 }
                 //last_ancestry_index = ahead;
@@ -1248,7 +1248,11 @@ mod test_utils {
         graph: &Graph,
     ) {
         let ancestry = extract_ancestry(Node(node), graph);
-        assert_eq!(ancestry.len(), expected.len());
+        assert_eq!(
+            ancestry.len(),
+            expected.len(),
+            "Node({node}): {ancestry:?} != {expected:?}"
+        );
         for e in expected {
             let parent = e.2.map(Node);
             let seg = AncestrySegment {
@@ -1692,10 +1696,19 @@ mod multistep_tests {
             transmissions,
         );
         graph.node_heap.insert(Node(2), graph.birth_time[2]);
+        graph.node_heap.insert(Node(1), graph.birth_time[1]);
         assert!(extract_ancestry(Node(5), &graph).is_empty());
         let last_node = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        assert_eq!(last_node, Some(Node(0)));
+
+        // Node 1
+        validate_ancestry(1, &[(0, 1, None, 1)], &graph);
+
+        // Node 2
+        validate_ancestry(1, &[(1, 2, None, 2)], &graph);
 
         // Node 0
-        validate_ancestry(1, &[(0, 1, None, 1), (1, 2, None, 2)], &graph);
+        validate_ancestry(0, &[(0, 1, None, 1), (1, 2, None, 2)], &graph);
+
     }
 }
