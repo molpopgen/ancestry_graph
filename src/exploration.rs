@@ -837,11 +837,14 @@ fn process_queued_node(
                 }
                 if !last_ancestry_index.is_sentinel() {
                     if let Some(useg) = unary_segment_map.get(&last_ancestry_index) {
-                        println!("ASDFGASDFASDGAS");
-                        //graph.ancestry.data[useg.ancestry_segment.0].parent = Some(queued_parent)
+                        graph.ancestry.data[useg.0].parent = None;
                     }
                 }
                 overlaps = overlapper.calculate_next_overlap_set();
+                println!("overlaps updated to {overlaps:?}");
+                if !ahead.is_sentinel() {
+                    println!("next seg = {:?}", graph.ancestry.get(ahead));
+                }
             } else {
                 //panic!("no coverage until now!");
                 if last_ancestry_index == ahead {
@@ -1705,10 +1708,9 @@ mod multistep_tests {
         validate_ancestry(1, &[(0, 1, None, 1)], &graph);
 
         // Node 2
-        validate_ancestry(1, &[(1, 2, None, 2)], &graph);
+        validate_ancestry(2, &[(1, 2, None, 2)], &graph);
 
         // Node 0
         validate_ancestry(0, &[(0, 1, None, 1), (1, 2, None, 2)], &graph);
-
     }
 }
