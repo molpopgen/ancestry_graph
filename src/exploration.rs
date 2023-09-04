@@ -24,16 +24,7 @@ struct LabelledNode {
     ancestry_segment: Index,
 }
 
-impl LabelledNode {
-    fn new(node: Node, ancestry_segment: Index) -> Self {
-        Self {
-            node,
-            ancestry_segment,
-        }
-    }
-}
-
-type UnarySegmentMap = std::collections::HashMap<LabelledNode, LabelledNode>;
+type UnarySegmentMap = std::collections::HashMap<Index, Index>;
 
 impl NodeHeap {
     fn insert(&mut self, node: Node, birth_time: i64) {
@@ -765,7 +756,6 @@ fn process_queued_node(
     temp_edges: &mut Vec<Edge>,
     unary_segment_map: &mut UnarySegmentMap,
 ) {
-    todo!("UnarySegmentMap only needs to map Index to Index?");
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
     while !ahead.is_sentinel() {
         println!("input {:?}", graph.ancestry.get(ahead));
@@ -797,12 +787,11 @@ fn process_queued_node(
                 if current_overlaps.overlaps.len() == 1 {
                     mapped_node = current_overlaps.overlaps[0].mapped_node;
                     let aseg_index = current_overlaps.overlaps[0].child_ancestry_segment;
-                    let ln = LabelledNode::new(current_overlaps.overlaps[0].child, aseg_index);
-                    if let Some(un) = unary_segment_map.get(&ln) {
+                    if let Some(un) = unary_segment_map.get(&aseg_index) {
                         unary_segment = Some(*un);
-                        unary_segment_map.remove(&ln);
+                        unary_segment_map.remove(&aseg_index);
                     } else {
-                        unary_segment = Some(ln);
+                        unary_segment = Some(aseg_index);
                     }
                     if let Some(parent) = graph.ancestry.get(ahead).parent {
                         graph
@@ -812,12 +801,10 @@ fn process_queued_node(
                 } else {
                     mapped_node = queued_parent;
                     for o in current_overlaps.overlaps {
-                        let ln = LabelledNode::new(o.child, o.child_ancestry_segment);
-                        println!("ln = {ln:?}, {:?}", graph.ancestry.get(ln.ancestry_segment));
-                        if let Some(un) = unary_segment_map.get(&ln) {
+                        if let Some(un) = unary_segment_map.get(&o.child_ancestry_segment) {
                             println!("updating parent of {un:?} to {queued_parent:?}");
-                            graph.ancestry.data[un.ancestry_segment.0].parent = Some(queued_parent);
-                            unary_segment_map.remove(&ln);
+                            graph.ancestry.data[un.0].parent = Some(queued_parent);
+                            unary_segment_map.remove(&o.child_ancestry_segment);
                         }
                         println!("child node = {:?}", o.mapped_node);
                         temp_edges.push(Edge {
@@ -843,15 +830,13 @@ fn process_queued_node(
                     &mut graph.node_heap,
                 );
                 println!("we think {:?}", graph.ancestry.get(last_ancestry_index));
-                let ln = LabelledNode::new(queued_parent, last_ancestry_index);
                 if let Some(useg) = unary_segment {
-                    let ln = LabelledNode::new(queued_parent, last_ancestry_index);
                     println!("adding {:?}", graph.ancestry.get(last_ancestry_index));
-                    debug_assert!(!unary_segment_map.contains_key(&ln));
-                    unary_segment_map.insert(ln, useg);
+                    debug_assert!(!unary_segment_map.contains_key(&last_ancestry_index));
+                    unary_segment_map.insert(last_ancestry_index, useg);
                 }
                 if !last_ancestry_index.is_sentinel() {
-                    if let Some(useg) = unary_segment_map.get(&ln) {
+                    if let Some(useg) = unary_segment_map.get(&last_ancestry_index) {
                         println!("ASDFGASDFASDGAS");
                         //graph.ancestry.data[useg.ancestry_segment.0].parent = Some(queued_parent)
                     }
@@ -976,7 +961,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
         println!("our node heap = {:?}", graph.node_heap);
         println!("our useg map = {:?}", unary_segment_map);
         for (k, v) in unary_segment_map.iter() {
-            println!("{k:?} => {:?}", graph.ancestry.data[v.ancestry_segment.0])
+            println!("{k:?} => {:?}", graph.ancestry.data[v.0])
         }
         process_queued_node(
             options,
