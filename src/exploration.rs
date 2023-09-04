@@ -306,6 +306,7 @@ impl<'q> AncestryOverlapper<'q> {
     }
 
     fn calculate_next_overlap_set(&mut self) -> Option<Overlaps<'_>> {
+        println!("right = {:?}, left = {:?}", self.right, self.left);
         // NOTE: this if statement hides from the compiler
         // that current_overlap is always < queue.len().
         // We should be able to check current_overlap + 1 <
@@ -1357,6 +1358,28 @@ mod graph_tests {
                 assert_eq!(i.mapped_node, j.mapped_node);
             }
         }
+    }
+
+    #[test]
+    fn ancestry_intersection_test1() {
+        todo!("infinite loop");
+        let mut g = Graph::with_initial_nodes(1, 2).unwrap().0;
+        g.advance_time().unwrap();
+        let birth0 = g.add_birth(1).unwrap();
+        let birth1 = g.add_birth(1).unwrap();
+        assert!(g.record_transmission(0, 1, Node(0), birth0).is_ok());
+        assert!(g.record_transmission(1, 2, Node(0), birth1).is_ok());
+        let mut queue = vec![];
+        ancestry_intersection(Node(0), &g, &mut queue);
+        let mut num_iters = 0;
+        let mut overlapper = AncestryOverlapper::new(Node(0), &queue);
+        println!("{overlapper:?}");
+        while let Some(_) = overlapper.calculate_next_overlap_set() {
+            println!("{overlapper:?}");
+            num_iters += 1;
+        }
+        println!("{queue:?}");
+        assert_eq!(num_iters, 2);
     }
 }
 
