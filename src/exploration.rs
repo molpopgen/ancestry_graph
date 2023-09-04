@@ -1665,12 +1665,14 @@ mod multistep_tests {
     //  5  3 4
     //
     // Node 5 loses all ancestry
+    //
+    // Node 0 will be unary on both trees, having no edges
     #[test]
     fn test3() {
         let initial_edges = vec![
             vec![(0, 2, 1), (0, 2, 2)],
             vec![(0, 1, 3), (0, 1, 4), (1, 2, 5)],
-            vec![(0, 1, 5), (1, 2, 3), (1, 2, 4)],
+            vec![(1, 2, 3), (1, 2, 4), (0, 1, 5)],
             vec![],
             vec![],
             vec![],
