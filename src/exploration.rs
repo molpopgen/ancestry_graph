@@ -1362,7 +1362,6 @@ mod graph_tests {
 
     #[test]
     fn ancestry_intersection_test1() {
-        todo!("infinite loop");
         let mut g = Graph::with_initial_nodes(1, 2).unwrap().0;
         g.advance_time().unwrap();
         let birth0 = g.add_birth(1).unwrap();
@@ -1373,12 +1372,13 @@ mod graph_tests {
         ancestry_intersection(Node(0), &g, &mut queue);
         let mut num_iters = 0;
         let mut overlapper = AncestryOverlapper::new(Node(0), &queue);
-        println!("{overlapper:?}");
-        while let Some(_) = overlapper.calculate_next_overlap_set() {
-            println!("{overlapper:?}");
+
+        while overlapper.calculate_next_overlap_set().is_some() {
             num_iters += 1;
+            if num_iters > 2 {
+                panic!("there are only 2 overlaps")
+            }
         }
-        println!("{queue:?}");
         assert_eq!(num_iters, 2);
     }
 }
