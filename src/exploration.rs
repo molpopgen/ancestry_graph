@@ -312,12 +312,14 @@ impl<'q> AncestryOverlapper<'q> {
         // We should be able to check current_overlap + 1 <
         // queue.len() and have the later bounds check optimmized out.
         if self.current_overlap < self.num_overlaps {
+            self.left = self.right;
             self.overlaps.retain(|o| o.right > self.left);
             if self.overlaps.is_empty() {
                 self.left = self.queue[self.current_overlap].left;
             }
             let mut new_right = self.right;
             for segment in &self.queue[self.current_overlap..] {
+                println!("segment = {segment:?}");
                 if segment.left == self.left {
                     self.current_overlap += 1;
                     new_right = std::cmp::min(new_right, segment.right);
@@ -1375,6 +1377,7 @@ mod graph_tests {
 
         while overlapper.calculate_next_overlap_set().is_some() {
             num_iters += 1;
+            println!("{:?}", overlapper.overlaps);
             if num_iters > 2 {
                 panic!("there are only 2 overlaps")
             }
