@@ -1736,7 +1736,22 @@ mod multistep_tests {
         // Node 2
         validate_ancestry(2, &[(1, 2, None, 2)], &graph);
 
+        // Node 3
+        validate_ancestry(3, &[(0, 1, Some(1), 3), (1, 2, Some(2), 3)], &graph);
+
+        // Node 4
+        validate_ancestry(4, &[(0, 1, Some(1), 4), (1, 2, Some(2), 4)], &graph);
+
         // Node 0
         validate_ancestry(0, &[(0, 1, None, 1), (1, 2, None, 2)], &graph);
+
+        // Node 0
+        validate_edges(0, &[], &graph);
+
+        // Node 1
+        validate_edges(1, &[(0, 1, 3), (0, 1, 4)], &graph);
+
+        // Node 2
+        validate_edges(2, &[(1, 2, 3), (1, 2, 4)], &graph);
     }
 }
