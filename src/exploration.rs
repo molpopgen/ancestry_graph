@@ -751,6 +751,24 @@ fn process_queued_node(
         ahead = graph.ancestry.next_raw(ahead);
     }
     ancestry_intersection(queued_parent, graph, queue);
+    if queue.is_empty() {
+        graph
+            .edges
+            .eliminate(graph.edge_head[queued_parent.as_index()]);
+        graph.edge_head[queued_parent.as_index()] = Index::sentinel();
+        graph.edge_tail[queued_parent.as_index()] = Index::sentinel();
+        let mut ahead = graph.ancestry_head[queued_parent.as_index()];
+        let birth_time = graph.birth_time[queued_parent.as_index()];
+        while !ahead.is_sentinel() {
+            if let Some(parent) = graph.ancestry.get(ahead).parent {
+                graph.node_heap.insert(parent, birth_time);
+            }
+            ahead = graph.ancestry.excise_next(ahead);
+        }
+        graph.ancestry_head[queued_parent.as_index()] = Index::sentinel();
+        graph.ancestry_tail[queued_parent.as_index()] = Index::sentinel();
+        return;
+    }
     println!("PROCESSING {queued_parent:?} => {queue:?}");
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
     let mut last_ancestry_index = ahead;
@@ -1776,5 +1794,8 @@ mod multistep_tests {
 
         validate_edges(0, &[], &graph);
         validate_ancestry(0, &[], &graph);
+
+        assert_eq!(graph.edges.free_list.len(), 2);
+        assert_eq!(graph.ancestry.free_list.len(), 1);
     }
 }
