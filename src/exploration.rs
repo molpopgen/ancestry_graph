@@ -185,6 +185,19 @@ impl<T> CursorList<T> {
         self.free_list.push(from.0)
     }
 
+    fn eliminate_and<F: FnMut(&T)>(&mut self, from: Index, mut f: F) {
+        assert!(from.0 < self.next.len());
+        f(self.get(from));
+        let mut next = self.excise_next(from);
+        while !next.is_sentinel() {
+            f(self.get(next));
+            println!("next = {next:?}");
+            next = self.excise_next(next);
+        }
+        self.next[from.0] = usize::MAX;
+        self.free_list.push(from.0)
+    }
+
     // Excise a node from a list.
     // The Index goes into the free list for
     // later recycling, making it a logic error
@@ -736,6 +749,28 @@ fn update_ancestry(
     rv
 }
 
+fn record_total_loss_of_ancestry(queued_parent: Node, graph: &mut Graph) {
+    graph
+        .edges
+        .eliminate(graph.edge_head[queued_parent.as_index()]);
+    graph.edge_head[queued_parent.as_index()] = Index::sentinel();
+    graph.edge_tail[queued_parent.as_index()] = Index::sentinel();
+
+    graph.ancestry.eliminate_and(
+        graph.ancestry_head[queued_parent.as_index()],
+        |a: &AncestrySegment| {
+            if let Some(parent) = a.parent {
+                graph
+                    .node_heap
+                    .insert(parent, graph.birth_time[parent.as_index()]);
+            }
+        },
+    );
+    graph.ancestry_head[queued_parent.as_index()] = Index::sentinel();
+    graph.ancestry_tail[queued_parent.as_index()] = Index::sentinel();
+    graph.free_nodes.push(queued_parent.as_index());
+}
+
 fn process_queued_node(
     options: PropagationOptions,
     queued_parent: Node,
@@ -752,24 +787,10 @@ fn process_queued_node(
     }
     ancestry_intersection(queued_parent, graph, queue);
     if queue.is_empty() {
-        graph
-            .edges
-            .eliminate(graph.edge_head[queued_parent.as_index()]);
-        graph.edge_head[queued_parent.as_index()] = Index::sentinel();
-        graph.edge_tail[queued_parent.as_index()] = Index::sentinel();
-
-        // Very ugly -- should be encapsulated but have to wrangle w/borrows
-        let mut ahead = graph.ancestry_head[queued_parent.as_index()];
-        let birth_time = graph.birth_time[queued_parent.as_index()];
-        while !ahead.is_sentinel() {
-            if let Some(parent) = graph.ancestry.get(ahead).parent {
-                graph.node_heap.insert(parent, birth_time);
-            }
-            graph.ancestry.free_list.push(ahead.0);
-            ahead = graph.ancestry.next_raw(ahead);
-        }
-        graph.ancestry_head[queued_parent.as_index()] = Index::sentinel();
-        graph.ancestry_tail[queued_parent.as_index()] = Index::sentinel();
+        // There are no overlaps with children.
+        // The current node loses all ancestry
+        // and any parents are added to the node heap.
+        record_total_loss_of_ancestry(queued_parent, graph);
         return;
     }
     println!("PROCESSING {queued_parent:?} => {queue:?}");
