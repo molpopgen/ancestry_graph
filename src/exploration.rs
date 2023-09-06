@@ -312,7 +312,7 @@ impl<'q> AncestryOverlapper<'q> {
         }
     }
 
-    fn calculate_next_overlap_set(&mut self) -> Option<Overlaps<'_>> {
+    fn calculate_next_overlap_set(&mut self) -> Option<(i64, i64, &[AncestryIntersection])> {
         // NOTE: this if statement hides from the compiler
         // that current_overlap is always < queue.len().
         // We should be able to check current_overlap + 1 <
@@ -338,11 +338,12 @@ impl<'q> AncestryOverlapper<'q> {
             // initially, and dodge another bounds check
             self.right = new_right;
             self.right = std::cmp::min(self.right, self.queue[self.current_overlap].left);
-            Some(Overlaps {
-                left: self.left,
-                right: self.right,
-                overlaps: &self.overlaps,
-            })
+            Some((self.left, self.right, &self.overlaps))
+            //Some(Overlaps {
+            //    left: self.left,
+            //    right: self.right,
+            //    overlaps: &self.overlaps,
+            //})
         } else {
             if !self.overlaps.is_empty() {
                 self.left = self.right;
@@ -354,23 +355,18 @@ impl<'q> AncestryOverlapper<'q> {
                     Some(right) => right,
                     None => self.right,
                 };
-                Some(Overlaps {
-                    left: self.left,
-                    right: self.right,
-                    overlaps: &self.overlaps,
-                })
+                self.overlaps.retain(|o| o.right > self.left);
+                Some((self.left, self.right, &self.overlaps))
+            //    Some(Overlaps {
+            //        left: self.left,
+            //        right: self.right,
+            //        overlaps: &self.overlaps,
+            //    })
             } else {
                 None
             }
         }
     }
-}
-
-#[derive(Debug)]
-struct Overlaps<'overlapper> {
-    left: i64,
-    right: i64,
-    overlaps: &'overlapper [AncestryIntersection],
 }
 
 // Some definitions:
@@ -797,19 +793,19 @@ fn process_queued_node(
     let mut overlaps = overlapper.calculate_next_overlap_set();
 
     while !ahead.is_sentinel() {
-        if let Some(ref current_overlaps) = overlaps {
+        if let Some((left, right, current_overlaps)) = overlaps {
             println!("current = {:?}", graph.ancestry.get(ahead));
             println!("overlaps = {current_overlaps:?}");
             let (current_left, current_right) = {
                 let current = graph.ancestry.get(ahead);
                 (current.left, current.right)
             };
-            if current_right > current_overlaps.left && current_overlaps.right > current_left {
+            if current_right > left && right > current_left {
                 let mapped_node;
                 let mut unary_segment = None;
-                if current_overlaps.overlaps.len() == 1 {
-                    mapped_node = current_overlaps.overlaps[0].mapped_node;
-                    let aseg_index = current_overlaps.overlaps[0].child_ancestry_segment;
+                if current_overlaps.len() == 1 {
+                    mapped_node = current_overlaps[0].mapped_node;
+                    let aseg_index = current_overlaps[0].child_ancestry_segment;
                     if let Some(un) = unary_segment_map.get(&aseg_index) {
                         unary_segment = Some(*un);
                         unary_segment_map.remove(&aseg_index);
@@ -823,7 +819,7 @@ fn process_queued_node(
                     }
                 } else {
                     mapped_node = queued_parent;
-                    for o in current_overlaps.overlaps {
+                    for o in current_overlaps {
                         if let Some(un) = unary_segment_map.get(&o.child_ancestry_segment) {
                             println!("updating parent of {un:?} to {queued_parent:?}");
                             graph.ancestry.data[un.0].parent = Some(queued_parent);
@@ -831,8 +827,8 @@ fn process_queued_node(
                         }
                         println!("child node = {:?}", o.mapped_node);
                         temp_edges.push(Edge {
-                            left: current_overlaps.left,
-                            right: current_overlaps.right,
+                            left,
+                            right,
                             child: o.mapped_node,
                         });
                         println!(
@@ -844,8 +840,8 @@ fn process_queued_node(
                 }
                 last_ancestry_index = ahead;
                 ahead = update_ancestry(
-                    current_overlaps.left,
-                    current_overlaps.right,
+                    left,
+                    right,
                     mapped_node,
                     ahead,
                     &graph.birth_time,
