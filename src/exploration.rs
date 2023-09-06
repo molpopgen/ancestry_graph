@@ -1742,4 +1742,39 @@ mod multistep_tests {
         // Node 2
         validate_edges(2, &[(1, 2, 3), (1, 2, 4)], &graph);
     }
+
+    //     0
+    //    ---
+    //    | |
+    //    1 2
+    //
+    //  Nodes 1 and 2 lose all ancestry, leaving 0 with no overlaps.
+    #[test]
+    fn test4() {
+        let initial_edges = vec![vec![(0, 2, 1), (0, 2, 2)]];
+
+        let initial_ancestry = vec![
+            vec![(0, 2, None, 0)],
+            // Losses
+            vec![],
+            vec![],
+        ];
+        let initial_birth_times = vec![0, 1, 1];
+        let num_births = 0;
+        let transmissions = vec![];
+        let (mut graph, _) = setup_graph(
+            3,
+            2,
+            num_births,
+            initial_birth_times,
+            initial_edges,
+            initial_ancestry,
+            transmissions,
+        );
+        graph.node_heap.insert(Node(0), graph.birth_time[0]);
+        let last_node = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+
+        validate_edges(0, &[], &graph);
+        validate_ancestry(0, &[], &graph);
+    }
 }
