@@ -665,8 +665,8 @@ fn update_ancestry(
     let out_seg = AncestrySegment {
         left,
         right,
-        parent: current.parent,
         mapped_node,
+        ..current
     };
     println!("out = {out_seg:?}");
     // TODO: API fn to replace.
