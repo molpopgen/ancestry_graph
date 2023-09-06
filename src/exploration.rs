@@ -776,7 +776,7 @@ fn process_queued_node(
     queued_parent: Node,
     parent_status: NodeStatus,
     graph: &mut Graph,
-    queue: &mut Vec<AncestryIntersection>,
+    queue: &[AncestryIntersection],
     temp_edges: &mut Vec<Edge>,
     unary_segment_map: &mut UnarySegmentMap,
 ) {
@@ -784,14 +784,6 @@ fn process_queued_node(
     while !ahead.is_sentinel() {
         println!("input {:?}", graph.ancestry.get(ahead));
         ahead = graph.ancestry.next_raw(ahead);
-    }
-    ancestry_intersection(queued_parent, graph, queue);
-    if queue.is_empty() {
-        // There are no overlaps with children.
-        // The current node loses all ancestry
-        // and any parents are added to the node heap.
-        record_total_loss_of_ancestry(queued_parent, graph);
-        return;
     }
     println!("PROCESSING {queued_parent:?} => {queue:?}");
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
@@ -992,20 +984,28 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     let mut unary_segment_map = UnarySegmentMap::default();
     while let Some(queued_node) = graph.node_heap.pop() {
         rv = Some(queued_node);
-        println!("our node heap = {:?}", graph.node_heap);
-        println!("our useg map = {:?}", unary_segment_map);
-        for (k, v) in unary_segment_map.iter() {
-            println!("{k:?} => {:?}", graph.ancestry.data[v.0])
+        ancestry_intersection(queued_node, graph, &mut queue);
+        if queue.is_empty() {
+            // There are no overlaps with children.
+            // The current node loses all ancestry
+            // and any parents are added to the node heap.
+            record_total_loss_of_ancestry(queued_node, graph);
+        } else {
+            println!("our node heap = {:?}", graph.node_heap);
+            println!("our useg map = {:?}", unary_segment_map);
+            for (k, v) in unary_segment_map.iter() {
+                println!("{k:?} => {:?}", graph.ancestry.data[v.0])
+            }
+            process_queued_node(
+                options,
+                queued_node,
+                graph.node_status[queued_node.as_index()],
+                graph,
+                &queue,
+                &mut temp_edges,
+                &mut unary_segment_map,
+            );
         }
-        process_queued_node(
-            options,
-            queued_node,
-            graph.node_status[queued_node.as_index()],
-            graph,
-            &mut queue,
-            &mut temp_edges,
-            &mut unary_segment_map,
-        );
         // Clean up for next loop
         queue.clear();
         temp_edges.clear();
