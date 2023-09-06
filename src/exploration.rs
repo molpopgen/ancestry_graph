@@ -627,33 +627,29 @@ fn update_ancestry(
     let mut seg_right = None;
     let current_ancestry_index = current_ancestry_index;
     let current = *ancestry.get(current_ancestry_index);
-    let (current_left, current_right) = {
-        let current = ancestry.get(current_ancestry_index);
-        (current.left, current.right)
-    };
-    let temp_left = std::cmp::max(current_left, left);
-    let temp_right = std::cmp::min(current_right, right);
+    let temp_left = std::cmp::max(current.left, left);
+    let temp_right = std::cmp::min(current.right, right);
     println!("{:?} {temp_left} {temp_right}", current_ancestry_index);
     let mut rv = ancestry.next_raw(current_ancestry_index);
-    if current_left != temp_left {
-        assert!(current_left < temp_left);
-        println!("we have a left dangle on {current_left}, {temp_left}");
+    if current.left != temp_left {
+        assert!(current.left < temp_left);
+        println!("we have a left dangle on {}, {temp_left}", current.left);
         if let Some(parent) = current.parent {
             node_heap.insert(parent, birth_time[parent.as_index()]);
         }
     }
-    if current_right != temp_right {
+    if current.right != temp_right {
         if let Some(parent) = current.parent {
             node_heap.insert(parent, birth_time[parent.as_index()]);
         }
-        println!("right dangle: {current_right:?}, {temp_right}");
+        println!("right dangle: {:?}, {temp_right}", current.right);
         {
             let current = ancestry.get_mut(current_ancestry_index);
             current.left = temp_right;
         }
         seg_right = Some(AncestrySegment {
             left: temp_right,
-            right: current_right,
+            right: current.right,
             parent: None, // FIXME
             mapped_node: ancestry.get(current_ancestry_index).mapped_node,
         });
