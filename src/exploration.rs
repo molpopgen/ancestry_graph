@@ -847,7 +847,7 @@ fn process_queued_node(
                     println!("next seg = {:?}", graph.ancestry.get(ahead));
                 }
             } else {
-                panic!("no coverage until now!");
+                todo!("no coverage until now!");
                 if last_ancestry_index == ahead {
                     println!("gotta shift left");
                     let next = graph.ancestry.next_raw(ahead);
