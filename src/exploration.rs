@@ -339,11 +339,6 @@ impl<'q> AncestryOverlapper<'q> {
             self.right = new_right;
             self.right = std::cmp::min(self.right, self.queue[self.current_overlap].left);
             Some((self.left, self.right, &self.overlaps))
-            //Some(Overlaps {
-            //    left: self.left,
-            //    right: self.right,
-            //    overlaps: &self.overlaps,
-            //})
         } else {
             if !self.overlaps.is_empty() {
                 self.left = self.right;
@@ -357,11 +352,6 @@ impl<'q> AncestryOverlapper<'q> {
                 };
                 self.overlaps.retain(|o| o.right > self.left);
                 Some((self.left, self.right, &self.overlaps))
-            //    Some(Overlaps {
-            //        left: self.left,
-            //        right: self.right,
-            //        overlaps: &self.overlaps,
-            //    })
             } else {
                 None
             }
