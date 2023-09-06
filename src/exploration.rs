@@ -757,13 +757,16 @@ fn process_queued_node(
             .eliminate(graph.edge_head[queued_parent.as_index()]);
         graph.edge_head[queued_parent.as_index()] = Index::sentinel();
         graph.edge_tail[queued_parent.as_index()] = Index::sentinel();
+
+        // Very ugly -- should be encapsulated but have to wrangle w/borrows
         let mut ahead = graph.ancestry_head[queued_parent.as_index()];
         let birth_time = graph.birth_time[queued_parent.as_index()];
         while !ahead.is_sentinel() {
             if let Some(parent) = graph.ancestry.get(ahead).parent {
                 graph.node_heap.insert(parent, birth_time);
             }
-            ahead = graph.ancestry.excise_next(ahead);
+            graph.ancestry.free_list.push(ahead.0);
+            ahead = graph.ancestry.next_raw(ahead);
         }
         graph.ancestry_head[queued_parent.as_index()] = Index::sentinel();
         graph.ancestry_tail[queued_parent.as_index()] = Index::sentinel();
