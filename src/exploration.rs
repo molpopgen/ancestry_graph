@@ -18,12 +18,6 @@ struct NodeHeap {
     node_queue: std::collections::BinaryHeap<QueuedNode>,
 }
 
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
-struct LabelledNode {
-    node: Node,
-    ancestry_segment: Index,
-}
-
 type UnarySegmentMap = std::collections::HashMap<Index, Index>;
 
 impl NodeHeap {
