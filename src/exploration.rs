@@ -649,9 +649,7 @@ fn update_ancestry(
         }
         seg_right = Some(AncestrySegment {
             left: temp_right,
-            right: current.right,
-            parent: None, // FIXME
-            mapped_node: ancestry.get(current_ancestry_index).mapped_node,
+            ..current
         });
     }
 
