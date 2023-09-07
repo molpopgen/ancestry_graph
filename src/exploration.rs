@@ -859,7 +859,11 @@ fn process_queued_node(
                     println!("gotta shift left");
                     let next = graph.ancestry.next_raw(ahead);
                     if !next.is_sentinel() {
-                        todo!("need to add parent to node_heap");
+                        if let Some(parent) = graph.ancestry.get(next).parent {
+                            graph
+                                .node_heap
+                                .insert(parent, graph.birth_time[parent.as_index()])
+                        }
                         println!("next is not a sentinel: {:?}", graph.ancestry.get(next));
                         graph.ancestry.data.swap(ahead.0, next.0);
                         graph.ancestry.next[ahead.0] = graph.ancestry.next[next.0];
@@ -1876,6 +1880,16 @@ mod multistep_tests {
 
         validate_edges(0, &[], &graph);
         validate_ancestry(0, &[(0, 1, None, 1), (2, 3, None, 2)], &graph);
-        todo!("need test of discontiguous ancestry getting lost")
+
+        validate_edges(1, &[(0, 1, 3), (0, 1, 4)], &graph);
+        // TODO: is this None behavior consistent/desired?
+        validate_ancestry(1, &[(0, 1, None, 1)], &graph);
+
+        validate_edges(2, &[(2, 3, 3), (2, 3, 4)], &graph);
+        // TODO: is this None behavior consistent/desired?
+        validate_ancestry(2, &[(2, 3, None, 2)], &graph);
+
+        validate_ancestry(3, &[(2, 3, Some(2), 3), (0, 1, Some(1), 3)], &graph);
+        validate_ancestry(4, &[(2, 3, Some(2), 4), (0, 1, Some(1), 4)], &graph);
     }
 }
