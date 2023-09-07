@@ -637,6 +637,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
                 start: current,
                 stop: graph.simplified_ancestry.ancestry.len(),
             });
+            println!("added anc range: {:?}", graph.simplified_ancestry.ranges.last());
         }
 
         if !temp_edges.is_empty() {
@@ -659,6 +660,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
                 start: current_output_ancestry_len,
                 stop: graph.simplified_ancestry.ancestry.len(),
             });
+            println!("added anc range: {:?}", graph.simplified_ancestry.ranges.last());
         } else {
             println!("extinct node {node:?} ancestry = {temp_ancestry:?}");
             if !temp_ancestry.is_empty() {
