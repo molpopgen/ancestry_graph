@@ -1808,4 +1808,17 @@ mod multistep_tests {
         assert_eq!(graph.edges.free_list.len(), 2);
         assert_eq!(graph.ancestry.free_list.len(), 1);
     }
+
+    // Tree 1:
+    //
+    //    0
+    //   ---
+    //   1 |
+    //   | 2
+    // --- ---
+    // 3 4 5 6
+    #[test]
+    fn test5() {
+        todo!("need test of discontiguous ancestry getting lost")
+    }
 }
