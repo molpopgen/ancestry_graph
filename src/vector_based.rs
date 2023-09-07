@@ -1140,5 +1140,19 @@ mod multistep_tests {
             });
         }
         propagate_ancestry_changes(&mut graph, Some(2));
+        println!("{:?}", graph.output_node_map);
+        validate_edges(
+            1,
+            vec![(0, 1, 3), (0, 1, 4)],
+            &graph.output_node_map,
+            &graph.simplified_edges,
+        );
+        validate_edges(
+            2,
+            vec![(2, 3, 3), (2, 3, 4)],
+            &graph.output_node_map,
+            &graph.simplified_edges,
+        );
+        validate_edges(0, vec![], &graph.output_node_map, &graph.simplified_edges);
     }
 }
