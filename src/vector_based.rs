@@ -104,6 +104,7 @@ pub struct Graph {
     node_status: Vec<NodeStatus>,
     output_node_map: Vec<Option<Node>>,
 
+    node_heap: NodeHeap,
     edges: Edges,
     ancestry: Ancestry,
     simplified_edges: Edges,
@@ -543,14 +544,13 @@ fn propagate_ancestry_changes(graph: &mut Graph) {
     }
     let mut queue = vec![];
     let last_processed_node: Option<Node> = None;
-    let mut node_heap = NodeHeap::default();
     for parent in graph.new_parent_edges.keys() {
-        node_heap.insert(*parent, graph.birth_time[parent.as_index()]);
+        graph.node_heap.insert(*parent, graph.birth_time[parent.as_index()]);
     }
     let mut temp_edges = vec![];
     let mut temp_ancestry = vec![];
     println!("{:?}", graph.output_node_map);
-    while let Some(node) = node_heap.pop() {
+    while let Some(node) = graph.node_heap.pop() {
         println!("{node:?}");
         let range = graph.edges.ranges[node.as_index()];
         println!("range = {range:?}");
@@ -593,7 +593,7 @@ fn propagate_ancestry_changes(graph: &mut Graph) {
             &mut graph.output_node_map,
             next_output_node,
             &graph.birth_time,
-            &mut node_heap,
+            &mut graph.node_heap,
             &mut temp_edges,
             &mut temp_ancestry,
         );
@@ -1053,5 +1053,6 @@ mod multistep_tests {
 
         assert!(graph.new_parent_edges.is_empty());
         assert!(graph.birth_ancestry.is_empty());
+        assert!(graph.node_heap.is_empty());
     }
 }
