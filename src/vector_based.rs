@@ -837,6 +837,9 @@ mod multistep_tests {
         // down the road.
         // Corollary: we could add the extinct nodes to the heap so that
         // we don't have to explicly search for them?
+        //
+        // Update sept 7, 2023: all of this is fine.
+        // We "just need" the type of liftover bookmark mentioned above.
         let birth_time = vec![0_i64, 1, 2, 2];
         let raw_edges_0 = vec![(0, 2, 1)];
         let raw_edges_1 = vec![];
