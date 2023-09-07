@@ -901,7 +901,12 @@ fn process_queued_node(
         // that we need to reckon with.
         while let Some(index) = z {
             println!("removing trailing segment {:?}", graph.ancestry.get(index));
-            todo!("need to add parent to node_heap");
+            if let Some(parent) = graph.ancestry.get(index).parent {
+                graph
+                    .node_heap
+                    .insert(parent, graph.birth_time[parent.as_index()])
+            }
+
             z = graph.ancestry.next(index);
             graph.ancestry.next[index.0] = usize::MAX;
             graph.ancestry.free_list.push(index.0);
