@@ -514,10 +514,21 @@ fn process_node(
                 println!("current_input_ancestry = {current_input_ancestry:?}");
                 current_overlaps = overlapper.calculate_next_overlap_set();
             } else {
+                if let Some(parent) = node_input_ancestry[current_input_ancestry].parent {
+                    node_heap.insert(parent, birth_time[parent.as_index()])
+                }
                 current_input_ancestry += 1;
             }
         } else {
             break;
+        }
+    }
+
+    // Any remaining input ancestry had no overlaps, and is therefore
+    // lost. Add those segment parents to the heap.
+    for i in node_input_ancestry[current_input_ancestry..].iter() {
+        if let Some(parent) = i.parent {
+            node_heap.insert(parent, birth_time[parent.as_index()])
         }
     }
     debug_assert!(current_overlaps.is_none());
@@ -1141,6 +1152,7 @@ mod multistep_tests {
         }
         propagate_ancestry_changes(&mut graph, Some(2));
         println!("{:?}", graph.output_node_map);
+        println!("{:?}", graph.simplified_edges);
         validate_edges(
             1,
             vec![(0, 1, 3), (0, 1, 4)],
