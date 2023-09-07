@@ -447,7 +447,12 @@ impl Graph {
     fn add_node(&mut self, status: NodeStatus, birth_time: i64) -> Node {
         match self.free_nodes.pop() {
             Some(index) => {
-                todo!("need to free up pre-existing ancestry");
+                let head = self.ancestry_head[index];
+                if !head.is_sentinel() {
+                    self.ancestry.eliminate(head);
+                    self.ancestry_head[index] = Index::sentinel();
+                    self.ancestry_tail[index] = Index::sentinel();
+                }
                 assert!(self.ancestry_head[index].is_sentinel());
                 assert!(self.ancestry_tail[index].is_sentinel());
                 assert!(self.edge_head[index].is_sentinel());
@@ -1309,7 +1314,7 @@ mod test_utils {
 
 #[cfg(test)]
 mod graph_tests {
-    use super::*;
+    use super::{test_utils::validate_ancestry, *};
 
     #[test]
     fn with_initial_nodes() {
@@ -1415,6 +1420,20 @@ mod graph_tests {
             }
         }
         assert_eq!(num_iters, 2);
+    }
+
+    #[test]
+    fn test_node_recycling() {
+        let initial_ancestry = vec![vec![(0, 1, None, 0)]];
+        let birth_times = vec![0];
+        let (mut graph, _) =
+            test_utils::setup_graph(1, 1, 0, birth_times, vec![], initial_ancestry, vec![]);
+        validate_ancestry(0, &[(0, 1, None, 0)], &graph);
+        graph.free_nodes.push(0);
+        let node = graph.add_node(NodeStatus::Death, 0);
+        assert_eq!(node.as_index(), 0);
+        validate_ancestry(node.as_index(), &[], &graph);
+        assert_eq!(graph.ancestry.free_list.len(), 1);
     }
 }
 
