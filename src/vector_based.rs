@@ -628,7 +628,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         //    next_output_node += 1;
         //}
         if !temp_ancestry.is_empty() {
-            let current = graph.simplified_edges.edges.len();
+            let current = graph.simplified_ancestry.ancestry.len();
             graph
                 .simplified_ancestry
                 .ancestry
