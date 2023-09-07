@@ -991,8 +991,6 @@ mod multistep_tests {
         ];
         let edges = setup_input_edges(raw_edges);
         let ancestry = setup_input_ancestry(raw_ancestry);
-        let mut node_heap = NodeHeap::default();
-        node_heap.insert(Node(1), birth_time[1]);
 
         let mut graph = Graph::new(2);
         graph.edges = edges;
