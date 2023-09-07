@@ -1028,8 +1028,8 @@ mod multistep_tests {
         println!("{:?}", graph.simplified_ancestry);
         println!("{output_node_map:?}");
 
-        // Node1 should have no output mapping
         assert!(output_node_map[1].is_some());
+        validate_edges(1, vec![], &output_node_map, &graph.simplified_edges);
 
         // node 0
         let output_edges = vec![(0, 2, 2), (0, 2, 3)];
