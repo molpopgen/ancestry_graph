@@ -1809,7 +1809,7 @@ mod multistep_tests {
         assert_eq!(graph.ancestry.free_list.len(), 1);
     }
 
-    // Tree 1:
+    // Tree 1 on [0,1):
     //
     //    0
     //   ---
@@ -1817,8 +1817,54 @@ mod multistep_tests {
     //   | 2
     // --- ---
     // 3 4 5 6
+    //
+    // Tree 2 on [2,3)
+    //    0
+    //   ---
+    //   1 |
+    //   | 2
+    // --- ---
+    // 5 6 3 4
+    //
+    // Nodes 5,6 lose all ancestry, propagating
+    // a state of no overlap to some parental nodes.
     #[test]
     fn test5() {
+        let initial_edges = vec![
+            vec![(0, 1, 1), (2, 3, 2)],
+            vec![(0, 1, 3), (0, 1, 4), (2, 3, 5), (2, 3, 6)],
+            vec![(2, 3, 3), (2, 3, 4), (0, 1, 5), (0, 1, 6)],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+        ];
+
+        let initial_ancestry = vec![
+            vec![(0, 1, None, 0), (2, 3, None, 0)],
+            vec![(0, 1, Some(0), 1), (2, 3, Some(0), 1)],
+            vec![(0, 1, Some(0), 2), (2, 3, Some(0), 2)],
+            vec![(0, 1, Some(1), 3), (2, 3, Some(2), 3)],
+            vec![(0, 1, Some(1), 4), (2, 3, Some(2), 4)],
+            vec![],
+            vec![],
+        ];
+        let initial_birth_times = vec![0, 1, 2, 3, 3, 3, 6];
+        let num_births = 0;
+        let transmissions = vec![];
+        let (mut graph, _) = setup_graph(
+            initial_birth_times.len(),
+            3,
+            num_births,
+            initial_birth_times,
+            initial_edges,
+            initial_ancestry,
+            transmissions,
+        );
+        for node in [1, 2] {
+            graph.node_heap.insert(Node(node), graph.birth_time[node]);
+        }
+        let last_node = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
         todo!("need test of discontiguous ancestry getting lost")
     }
 }
