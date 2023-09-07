@@ -307,6 +307,7 @@ fn ancestry_intersection_part_deux(
     queue: &mut Vec<AncestryIntersection>,
 ) {
     for edge in parent_edges {
+        println!("edge = {edge:?}");
         let child_ancestry = {
             println!(
                 "this fails if the child has not been lifted over to the output...{:?}",
@@ -436,7 +437,7 @@ fn process_node(
     if queue.is_empty() {
         todo!("no overlaps -- node {node:?} is extinct!")
     }
-    let output_node_id = output_node_map[node.as_index()];
+    let mut output_node_id = output_node_map[node.as_index()];
 
     let mut overlapper = AncestryOverlapper::new(node, queue);
     let mut current_input_ancestry = 0_usize;
@@ -461,6 +462,11 @@ fn process_node(
                         "unary mapped node is {:?} -> {mapped_node:?}",
                         overlaps.overlaps[0].mapped_node
                     );
+                    if output_node_id.is_none() {
+                        output_node_map[node.as_index()] = Some(Node(next_output_node));
+                        output_node_id = Some(Node(next_output_node));
+                        rv += 1;
+                    }
                     // TODO: if node is a sample, we have more work to
                     // do here.
                 } else {
@@ -893,6 +899,7 @@ mod multistep_tests {
 
         for (node, ancestry) in graph.birth_ancestry.iter() {
             output_node_map[node.as_index()] = Some(Node(next_output_node));
+            println!("mapped {node:?} to {next_output_node}");
             next_output_node += 1;
             let current = graph.simplified_ancestry.ancestry.len();
             graph
@@ -912,10 +919,19 @@ mod multistep_tests {
 
         // "simplify"
         let mut queue = vec![];
+        let last_processed_node: Option<Node> = None;
+        println!("{output_node_map:?}");
         while let Some(node) = node_heap.pop() {
             println!("{node:?}");
             let range = graph.edges.ranges[node.as_index()];
+            println!("range = {range:?}");
+            if let Some(last) = last_processed_node {
+                // liftover
+                let last_range = graph.edges.ranges[last.as_index()];
+                println!("{last_range:?} <=> {range:?}");
+            }
             let parent_edges = &graph.edges.edges[range.start..range.stop];
+            println!("parent edges = {parent_edges:?}");
             ancestry_intersection_part_deux(
                 node,
                 &parent_edges,
@@ -952,6 +968,7 @@ mod multistep_tests {
                 &mut temp_edges,
                 &mut temp_ancestry,
             );
+            println!("temp anc = {temp_ancestry:?}");
             println!("temp_edges = {temp_edges:?}");
 
             //if !temp_edges.is_empty() {
@@ -959,6 +976,17 @@ mod multistep_tests {
             //    output_node_map[node.as_index()] = Some(Node(next_output_node));
             //    next_output_node += 1;
             //}
+            if !temp_ancestry.is_empty() {
+                let current = graph.simplified_edges.edges.len();
+                graph
+                    .simplified_ancestry
+                    .ancestry
+                    .extend_from_slice(&temp_ancestry);
+                graph.simplified_ancestry.ranges.push(Range {
+                    start: current,
+                    stop: graph.simplified_ancestry.ancestry.len(),
+                });
+            }
 
             if !temp_edges.is_empty() {
                 let current = graph.simplified_edges.edges.len();
@@ -982,6 +1010,13 @@ mod multistep_tests {
                 });
             } else {
                 println!("extinct node {node:?} ancestry = {temp_ancestry:?}");
+                if !temp_ancestry.is_empty() {
+                    let current = graph.simplified_edges.edges.len();
+                    graph.simplified_edges.ranges.push(Range {
+                        start: current,
+                        stop: current,
+                    });
+                }
             }
 
             queue.clear();
@@ -993,7 +1028,7 @@ mod multistep_tests {
         println!("{output_node_map:?}");
 
         // Node1 should have no output mapping
-        assert!(output_node_map[1].is_none());
+        assert!(output_node_map[1].is_some());
 
         // node 0
         let output_edges = vec![(0, 2, 2), (0, 2, 3)];
