@@ -309,16 +309,21 @@ fn ancestry_intersection_part_deux(
 ) {
     for edge in parent_edges {
         println!("edge = {edge:?}");
-        let child_ancestry = {
-            println!(
-                "this fails if the child has not been lifted over to the output...{:?}",
-                edge.child
-            );
-            let output_node = output_node_map[edge.child.as_index()].unwrap().as_index();
-            let range = ancestry.ranges[output_node];
-            &ancestry.ancestry[range.start..range.stop]
-        };
-        update_ancestry_intersection(edge, child_ancestry, queue);
+        if let Some(output_node) = output_node_map[edge.child.as_index()] {
+            let range = ancestry.ranges[output_node.as_index()];
+            let child_ancestry = &ancestry.ancestry[range.start..range.stop];
+            update_ancestry_intersection(edge, child_ancestry, queue);
+        }
+        //let child_ancestry = {
+        //    println!(
+        //        "this fails if the child has not been lifted over to the output...{:?}",
+        //        edge.child
+        //    );
+        //    let output_node = output_node_map[edge.child.as_index()].unwrap().as_index();
+        //    let range = ancestry.ranges[output_node];
+        //    &ancestry.ancestry[range.start..range.stop]
+        //};
+        //update_ancestry_intersection(edge, child_ancestry, queue);
     }
 }
 
@@ -1129,7 +1134,10 @@ mod multistep_tests {
                 .simplified_ancestry
                 .ancestry
                 .extend_from_slice(&graph.ancestry.ancestry[range.start..range.stop]);
-            graph.simplified_ancestry.ranges.push(Range{start:current,stop:graph.simplified_ancestry.ancestry.len()});
+            graph.simplified_ancestry.ranges.push(Range {
+                start: current,
+                stop: graph.simplified_ancestry.ancestry.len(),
+            });
         }
         propagate_ancestry_changes(&mut graph, Some(2));
     }
