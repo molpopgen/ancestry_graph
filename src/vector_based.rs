@@ -627,6 +627,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         //    output_node_map[node.as_index()] = Some(Node(next_output_node));
         //    next_output_node += 1;
         //}
+        todo!("logic in the next section is totally wrong");
         if !temp_ancestry.is_empty() {
             let current = graph.simplified_ancestry.ancestry.len();
             graph
