@@ -483,7 +483,8 @@ fn process_node(
                         temp_edges.push(Edge {
                             left: seg.left,
                             right: seg.right,
-                            child: seg.mapped_node,
+                            // TODO: can re refactor out this unwrap?
+                            child: output_node_map[seg.mapped_node.as_index()].unwrap(),
                         })
                     }
                 }
