@@ -308,7 +308,10 @@ fn ancestry_intersection_part_deux(
 ) {
     for edge in parent_edges {
         let child_ancestry = {
-            println!("going south...{:?}", edge.child);
+            println!(
+                "this fails if the child has not been lifted over to the output...{:?}",
+                edge.child
+            );
             let output_node = output_node_map[edge.child.as_index()].unwrap().as_index();
             let range = ancestry.ranges[output_node];
             &ancestry.ancestry[range.start..range.stop]
@@ -826,7 +829,7 @@ mod multistep_tests {
         // During our "liftover" step (not implementer yet), we only
         // output up until that node, effectively erasing it one simplification
         // down the road.
-        // Corollary: we could add the extinct nodes to the heap so that 
+        // Corollary: we could add the extinct nodes to the heap so that
         // we don't have to explicly search for them?
         let birth_time = vec![0_i64, 1, 2, 2];
         let raw_edges_0 = vec![(0, 2, 1)];
