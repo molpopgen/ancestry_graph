@@ -419,6 +419,7 @@ fn update_ancestry(
         parent: current_ancestry.parent,
     };
     temp_ancestry.push(output_segment);
+    println!("temp anc = {temp_ancestry:?}");
 
     increment
 }
@@ -586,14 +587,13 @@ mod test_process_node {
             mapped_node: Node(0),
             parent: None,
         }];
-        let mut output_ancestry = Ancestry::default();
         let mut queue = vec![AncestryIntersection {
             left: 0,
             right: 2,
             mapped_node: Node(1),
         }];
         finalize_ancestry_intersection(&mut queue);
-        let mut next_output_node = 0;
+        let next_output_node = 0;
 
         process_node(
             Node(0),
@@ -608,9 +608,9 @@ mod test_process_node {
         );
         assert!(temp_edges.is_empty());
         assert!(node_heap.is_empty());
-        assert_eq!(output_ancestry.ancestry.len(), 1);
+        assert_eq!(temp_ancestry.len(), 1);
         assert_eq!(
-            output_ancestry.ancestry[0],
+            temp_ancestry[0],
             AncestrySegment {
                 left: 0,
                 right: 2,
@@ -701,7 +701,6 @@ mod test_process_node {
             mapped_node: Node(1),
             parent: Some(Node(0)),
         }];
-        let mut output_ancestry = Ancestry::default();
         let mut queue = vec![
             AncestryIntersection {
                 left: 0,
@@ -715,7 +714,7 @@ mod test_process_node {
             },
         ];
         finalize_ancestry_intersection(&mut queue);
-        let mut next_output_node = 0;
+        let next_output_node = 0;
 
         process_node(
             Node(1),
@@ -729,9 +728,9 @@ mod test_process_node {
             &mut temp_ancestry,
         );
         assert!(node_heap.is_empty());
-        assert_eq!(output_ancestry.ancestry.len(), 1);
+        assert_eq!(temp_ancestry.len(), 1);
         assert_eq!(
-            output_ancestry.ancestry[0],
+            temp_ancestry[0],
             AncestrySegment {
                 left: 0,
                 right: 2,
