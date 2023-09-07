@@ -545,7 +545,9 @@ fn propagate_ancestry_changes(graph: &mut Graph) {
     let mut queue = vec![];
     let last_processed_node: Option<Node> = None;
     for parent in graph.new_parent_edges.keys() {
-        graph.node_heap.insert(*parent, graph.birth_time[parent.as_index()]);
+        graph
+            .node_heap
+            .insert(*parent, graph.birth_time[parent.as_index()]);
     }
     let mut temp_edges = vec![];
     let mut temp_ancestry = vec![];
@@ -930,6 +932,21 @@ mod multistep_tests {
         ancestry
     }
 
+    fn setup_graph(
+        edges: Vec<Vec<(i64, i64, usize)>>,
+        ancestry: Vec<Vec<(i64, i64, usize, Option<usize>)>>,
+        birth_time: Vec<i64>,
+    ) -> Graph {
+        let edges = setup_input_edges(edges);
+        let ancestry = setup_input_ancestry(ancestry);
+        Graph {
+            edges,
+            ancestry,
+            birth_time,
+            ..Default::default()
+        }
+    }
+
     fn validate_edges(
         node: usize,
         expected: Vec<(i64, i64, usize)>,
@@ -1052,5 +1069,53 @@ mod multistep_tests {
         assert!(graph.new_parent_edges.is_empty());
         assert!(graph.birth_ancestry.is_empty());
         assert!(graph.node_heap.is_empty());
+    }
+
+    // Tree 1 on [0,1):
+    //
+    //    0
+    //   ---
+    //   1 |
+    //   | 2
+    // --- ---
+    // 3 4 5 6
+    //
+    // Tree 2 on [2,3)
+    //    0
+    //   ---
+    //   1 |
+    //   | 2
+    // --- ---
+    // 5 6 3 4
+    //
+    // Nodes 5,6 lose all ancestry, propagating
+    // a state of no overlap to some parental nodes.
+    #[test]
+    fn test5() {
+        let initial_edges = vec![
+            vec![(0, 1, 1), (2, 3, 2)],
+            vec![(0, 1, 3), (0, 1, 4), (2, 3, 5), (2, 3, 6)],
+            vec![(2, 3, 3), (2, 3, 4), (0, 1, 5), (0, 1, 6)],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+        ];
+
+        let initial_ancestry = vec![
+            vec![(0, 1, 0, None), (2, 3, 0, None)],
+            vec![(0, 1, 1, Some(0)), (2, 3, 1, Some(0))],
+            vec![(0, 1, 2, Some(0)), (2, 3, 2, Some(0))],
+            vec![(0, 1, 3, Some(1)), (2, 3, 3, Some(2))],
+            vec![(0, 1, 4, Some(1)), (2, 3, 4, Some(2))],
+            vec![],
+            vec![],
+        ];
+        let initial_birth_times = vec![0, 1, 2, 3, 3, 3, 6];
+        let mut graph = setup_graph(initial_edges, initial_ancestry, initial_birth_times);
+        for node in [1,2]{
+            graph.node_heap.insert(Node(node),graph.birth_time[node]);
+        }
+        propagate_ancestry_changes(&mut graph);
     }
 }
