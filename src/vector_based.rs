@@ -311,6 +311,7 @@ fn ancestry_intersection_part_deux(
         if let Some(output_node) = output_node_map[edge.child.as_index()] {
             let range = ancestry.ranges[output_node.as_index()];
             let child_ancestry = &ancestry.ancestry[range.start..range.stop];
+            println!("ancestry of child {output_node:?} = {child_ancestry:?}");
             update_ancestry_intersection(edge, child_ancestry, queue);
         }
         //let child_ancestry = {
@@ -604,6 +605,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             }
         }
         finalize_ancestry_intersection(&mut queue);
+        println!("q = {queue:?}");
         let range = graph.ancestry.ranges[node.as_index()];
         let node_input_ancestry = &mut graph.ancestry.ancestry[range.start..range.stop];
         next_output_node += process_node(
@@ -1152,6 +1154,7 @@ mod multistep_tests {
         propagate_ancestry_changes(&mut graph, Some(2));
         println!("{:?}", graph.output_node_map);
         println!("{:?}", graph.simplified_edges);
+        println!("{:?}", graph.simplified_ancestry);
         validate_edges(
             1,
             vec![(0, 1, 3), (0, 1, 4)],
