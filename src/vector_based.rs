@@ -1121,8 +1121,15 @@ mod multistep_tests {
             graph.node_heap.insert(Node(node), graph.birth_time[node]);
         }
         setup_output_node_map(&mut graph);
-        for (i, node) in [3, 4].iter().enumerate() {
-            graph.output_node_map[*node] = Some(Node(i))
+        for (i, &node) in [3, 4].iter().enumerate() {
+            graph.output_node_map[node] = Some(Node(i));
+            let range = graph.ancestry.ranges[node];
+            let current = graph.simplified_ancestry.ancestry.len();
+            graph
+                .simplified_ancestry
+                .ancestry
+                .extend_from_slice(&graph.ancestry.ancestry[range.start..range.stop]);
+            graph.simplified_ancestry.ranges.push(Range{start:current,stop:graph.simplified_ancestry.ancestry.len()});
         }
         propagate_ancestry_changes(&mut graph, Some(2));
     }
