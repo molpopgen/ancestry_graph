@@ -873,7 +873,11 @@ fn process_queued_node(
                     println!("free list = {:?}", graph.ancestry.free_list);
                 } else {
                     println!("gotta excise the current thing");
-                    todo!("need to add parent to node_heap");
+                    if let Some(parent) = graph.ancestry.get(ahead).parent {
+                        graph
+                            .node_heap
+                            .insert(parent, graph.birth_time[parent.as_index()])
+                    }
                     //panic!("no coverage until now!");
                     ahead = graph.ancestry.excise_next(last_ancestry_index);
                     let next = graph.ancestry.next_raw(ahead);
@@ -1877,7 +1881,7 @@ mod multistep_tests {
             graph.node_heap.insert(Node(node), graph.birth_time[node]);
         }
         let last_node = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
-        assert_eq!(last_node,Some(Node(0)));
+        assert_eq!(last_node, Some(Node(0)));
 
         validate_edges(0, &[], &graph);
         validate_ancestry(0, &[(0, 1, None, 1), (2, 3, None, 2)], &graph);
