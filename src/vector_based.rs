@@ -519,10 +519,13 @@ fn process_node(
     rv
 }
 
-fn propagate_ancestry_changes(graph: &mut Graph) {
+fn setup_output_node_map(graph: &mut Graph) {
     graph.output_node_map.fill(None);
     graph.output_node_map.resize(graph.birth_time.len(), None);
-    let mut next_output_node = 0;
+}
+
+fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>) {
+    let mut next_output_node = if let Some(x) = next_output_node { x } else { 0 };
     for (node, ancestry) in graph.birth_ancestry.iter() {
         graph.output_node_map[node.as_index()] = Some(Node(next_output_node));
         println!("mapped {node:?} to {next_output_node}");
@@ -1049,7 +1052,8 @@ mod multistep_tests {
             }],
         );
 
-        propagate_ancestry_changes(&mut graph);
+        setup_output_node_map(&mut graph);
+        propagate_ancestry_changes(&mut graph, None);
         println!("{:?}", graph.simplified_edges);
         println!("{:?}", graph.simplified_ancestry);
         println!("{:?}", graph.output_node_map);
@@ -1113,9 +1117,13 @@ mod multistep_tests {
         ];
         let initial_birth_times = vec![0, 1, 2, 3, 3, 3, 6];
         let mut graph = setup_graph(initial_edges, initial_ancestry, initial_birth_times);
-        for node in [1,2]{
-            graph.node_heap.insert(Node(node),graph.birth_time[node]);
+        for node in [1, 2] {
+            graph.node_heap.insert(Node(node), graph.birth_time[node]);
         }
-        propagate_ancestry_changes(&mut graph);
+        setup_output_node_map(&mut graph);
+        for (i, node) in [3, 4].iter().enumerate() {
+            graph.output_node_map[*node] = Some(Node(i))
+        }
+        propagate_ancestry_changes(&mut graph, Some(2));
     }
 }
