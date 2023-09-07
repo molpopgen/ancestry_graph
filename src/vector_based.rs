@@ -308,7 +308,6 @@ fn ancestry_intersection_part_deux(
     queue: &mut Vec<AncestryIntersection>,
 ) {
     for edge in parent_edges {
-        println!("edge = {edge:?}");
         if let Some(output_node) = output_node_map[edge.child.as_index()] {
             let range = ancestry.ranges[output_node.as_index()];
             let child_ancestry = &ancestry.ancestry[range.start..range.stop];
