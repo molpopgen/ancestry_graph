@@ -855,11 +855,12 @@ fn process_queued_node(
                     println!("next seg = {:?}", graph.ancestry.get(ahead));
                 }
             } else {
-                todo!("no coverage until now!");
                 if last_ancestry_index == ahead {
                     println!("gotta shift left");
                     let next = graph.ancestry.next_raw(ahead);
                     if !next.is_sentinel() {
+                        todo!("need to add parent to node_heap");
+                        println!("next is not a sentinel: {:?}", graph.ancestry.get(next));
                         graph.ancestry.data.swap(ahead.0, next.0);
                         graph.ancestry.next[ahead.0] = graph.ancestry.next[next.0];
                         graph.ancestry.free_list.push(next.0);
@@ -868,6 +869,7 @@ fn process_queued_node(
                     println!("free list = {:?}", graph.ancestry.free_list);
                 } else {
                     println!("gotta excise the current thing");
+                    todo!("need to add parent to node_heap");
                     //panic!("no coverage until now!");
                     ahead = graph.ancestry.excise_next(last_ancestry_index);
                     let next = graph.ancestry.next_raw(ahead);
@@ -899,6 +901,7 @@ fn process_queued_node(
         // that we need to reckon with.
         while let Some(index) = z {
             println!("removing trailing segment {:?}", graph.ancestry.get(index));
+            todo!("need to add parent to node_heap");
             z = graph.ancestry.next(index);
             graph.ancestry.next[index.0] = usize::MAX;
             graph.ancestry.free_list.push(index.0);
