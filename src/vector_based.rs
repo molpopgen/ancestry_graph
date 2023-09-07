@@ -544,6 +544,9 @@ fn propagate_ancestry_changes(graph: &mut Graph) {
     let mut queue = vec![];
     let last_processed_node: Option<Node> = None;
     let mut node_heap = NodeHeap::default();
+    for parent in graph.new_parent_edges.keys() {
+        node_heap.insert(*parent, graph.birth_time[parent.as_index()]);
+    }
     let mut temp_edges = vec![];
     let mut temp_ancestry = vec![];
     println!("{:?}", graph.output_node_map);
@@ -649,6 +652,8 @@ fn propagate_ancestry_changes(graph: &mut Graph) {
         temp_edges.clear();
         temp_ancestry.clear();
     }
+    graph.new_parent_edges.clear();
+    graph.birth_ancestry.clear();
 }
 
 #[test]
@@ -1030,135 +1035,6 @@ mod multistep_tests {
         );
 
         propagate_ancestry_changes(&mut graph);
-        //let mut output_node_map = vec![None; graph.birth_time.len()];
-        //let mut next_output_node = 0;
-
-        //for (node, ancestry) in graph.birth_ancestry.iter() {
-        //    output_node_map[node.as_index()] = Some(Node(next_output_node));
-        //    println!("mapped {node:?} to {next_output_node}");
-        //    next_output_node += 1;
-        //    let current = graph.simplified_ancestry.ancestry.len();
-        //    graph
-        //        .simplified_ancestry
-        //        .ancestry
-        //        .extend_from_slice(ancestry.as_slice());
-        //    graph.simplified_ancestry.ranges.push(Range {
-        //        start: current,
-        //        stop: graph.simplified_ancestry.ancestry.len(),
-        //    });
-        //    let current = graph.simplified_edges.edges.len();
-        //    graph.simplified_edges.ranges.push(Range {
-        //        start: current,
-        //        stop: current,
-        //    });
-        //}
-
-        //// "simplify"
-        //let mut queue = vec![];
-        //let last_processed_node: Option<Node> = None;
-        //println!("{output_node_map:?}");
-        //while let Some(node) = node_heap.pop() {
-        //    println!("{node:?}");
-        //    let range = graph.edges.ranges[node.as_index()];
-        //    println!("range = {range:?}");
-        //    if let Some(last) = last_processed_node {
-        //        // liftover
-        //        let last_range = graph.edges.ranges[last.as_index()];
-        //        println!("{last_range:?} <=> {range:?}");
-        //    }
-        //    let parent_edges = &graph.edges.edges[range.start..range.stop];
-        //    println!("parent edges = {parent_edges:?}");
-        //    ancestry_intersection_part_deux(
-        //        node,
-        //        &parent_edges,
-        //        &graph.simplified_ancestry,
-        //        &output_node_map,
-        //        &mut queue,
-        //    );
-        //    if let Some(edges) = graph.new_parent_edges.get(&node) {
-        //        for edge in edges {
-        //            // the CHILD ancestry MUST be a birth
-        //            // and the child MUST already be in output_ancestry
-        //            let child_output_node = output_node_map[edge.child.as_index()];
-        //            if let Some(child) = child_output_node {
-        //                let range = graph.simplified_ancestry.ranges[child.as_index()];
-        //                let child_ancestry =
-        //                    &graph.simplified_ancestry.ancestry[range.start..range.stop];
-        //                update_ancestry_intersection(edge, child_ancestry, &mut queue)
-        //            } else {
-        //                panic!("{:?} must have an output node", edge.child);
-        //            }
-        //        }
-        //    }
-        //    finalize_ancestry_intersection(&mut queue);
-        //    let range = graph.ancestry.ranges[node.as_index()];
-        //    let node_input_ancestry = &mut graph.ancestry.ancestry[range.start..range.stop];
-        //    next_output_node += process_node(
-        //        node,
-        //        node_input_ancestry,
-        //        &queue,
-        //        &mut output_node_map,
-        //        next_output_node,
-        //        &graph.birth_time,
-        //        &mut node_heap,
-        //        &mut temp_edges,
-        //        &mut temp_ancestry,
-        //    );
-        //    println!("temp anc = {temp_ancestry:?}");
-        //    println!("temp_edges = {temp_edges:?}");
-
-        //    //if !temp_edges.is_empty() {
-        //    //    assert!(output_node_map[node.as_index()].is_none());
-        //    //    output_node_map[node.as_index()] = Some(Node(next_output_node));
-        //    //    next_output_node += 1;
-        //    //}
-        //    if !temp_ancestry.is_empty() {
-        //        let current = graph.simplified_edges.edges.len();
-        //        graph
-        //            .simplified_ancestry
-        //            .ancestry
-        //            .extend_from_slice(&temp_ancestry);
-        //        graph.simplified_ancestry.ranges.push(Range {
-        //            start: current,
-        //            stop: graph.simplified_ancestry.ancestry.len(),
-        //        });
-        //    }
-
-        //    if !temp_edges.is_empty() {
-        //        let current = graph.simplified_edges.edges.len();
-        //        graph.simplified_edges.edges.extend_from_slice(&temp_edges);
-        //        graph.simplified_edges.ranges.push(Range {
-        //            start: current,
-        //            stop: graph.simplified_edges.edges.len(),
-        //        });
-        //        // Don't output ancestry for extinct nodes...
-        //        // This step causes the problem referred to above:
-        //        // we need some other concept of "ancestry for extinct nodes"
-        //        // on order to deal with this.
-        //        let current_output_ancestry_len = graph.simplified_ancestry.ancestry.len();
-        //        graph
-        //            .simplified_ancestry
-        //            .ancestry
-        //            .extend_from_slice(&temp_ancestry);
-        //        graph.simplified_ancestry.ranges.push(Range {
-        //            start: current_output_ancestry_len,
-        //            stop: graph.simplified_ancestry.ancestry.len(),
-        //        });
-        //    } else {
-        //        println!("extinct node {node:?} ancestry = {temp_ancestry:?}");
-        //        if !temp_ancestry.is_empty() {
-        //            let current = graph.simplified_edges.edges.len();
-        //            graph.simplified_edges.ranges.push(Range {
-        //                start: current,
-        //                stop: current,
-        //            });
-        //        }
-        //    }
-
-        //    queue.clear();
-        //    temp_edges.clear();
-        //    temp_ancestry.clear();
-        //}
         println!("{:?}", graph.simplified_edges);
         println!("{:?}", graph.simplified_ancestry);
         println!("{:?}", graph.output_node_map);
@@ -1174,5 +1050,8 @@ mod multistep_tests {
             &graph.output_node_map,
             &graph.simplified_edges,
         );
+
+        assert!(graph.new_parent_edges.is_empty());
+        assert!(graph.birth_ancestry.is_empty());
     }
 }
