@@ -1877,6 +1877,7 @@ mod multistep_tests {
             graph.node_heap.insert(Node(node), graph.birth_time[node]);
         }
         let last_node = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        assert_eq!(last_node,Some(Node(0)));
 
         validate_edges(0, &[], &graph);
         validate_ancestry(0, &[(0, 1, None, 1), (2, 3, None, 2)], &graph);
