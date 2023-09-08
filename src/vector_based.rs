@@ -598,12 +598,17 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         if let Some(last) = last_processed_node {
             // liftover
             let last_range = graph.edges.ranges[last.as_index()];
+            // TODO: remove this assert or put it all in a debug block
+            if last_range.stop == range.start {
+                assert_eq!(node.as_index() - last.as_index(), 1);
+            }
             println!("{last_range:?} <=> {range:?}");
             todo!("need to lift since the last node")
         } else {
             // FIXME: this is wrong.
             // And node whose value is > 0 implies
             // that something needs to be done here.
+            todo!("this block is wrong so far");
             if range.start > 0 {
                 todo!("lift from the beginning");
             }
@@ -768,7 +773,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         queue.clear();
         temp_edges.clear();
         temp_ancestry.clear();
-        last_processed_node=Some(node);
+        last_processed_node = Some(node);
     }
     graph.new_parent_edges.clear();
     graph.birth_ancestry.clear();
