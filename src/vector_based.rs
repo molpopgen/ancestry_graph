@@ -601,6 +601,9 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             println!("{last_range:?} <=> {range:?}");
             todo!("need to lift since the last node")
         } else {
+            // FIXME: this is wrong.
+            // And node whose value is > 0 implies
+            // that something needs to be done here.
             if range.start > 0 {
                 todo!("lift from the beginning");
             }
@@ -1248,6 +1251,7 @@ mod multistep_tests {
                 start: current,
                 stop: graph.simplified_ancestry.ancestry.len(),
             });
+            graph.simplified_edges.ranges.push(Range::default());
         }
         propagate_ancestry_changes(&mut graph, Some(2));
         println!("{:?}", graph.output_node_map);
