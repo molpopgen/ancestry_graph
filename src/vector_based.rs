@@ -110,7 +110,16 @@ pub struct Graph {
     simplified_edges: Edges,
     simplified_ancestry: Ancestry,
 
+    // This could also be an encapsulated edge table:
+    // If we require that all birth edges be generated at once:
+    // * We can cache results per parent...
+    // * ... then lift them over to and edge table ...
+    // * And track mapping of parent -> range index
     new_parent_edges: NewParentEdges,
+    // TODO: this should go right into
+    // the simplified ancestry:
+    // * Track a mapping of birth node -> output node
+    // * Do the valiation in "real time"
     birth_ancestry: BirthAncestry,
 }
 
