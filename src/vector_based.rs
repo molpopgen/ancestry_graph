@@ -608,6 +608,12 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             // FIXME: this is wrong.
             // And node whose value is > 0 implies
             // that something needs to be done here.
+            println!("{:?}", graph.ancestry.ranges);
+            println!("{:?}", graph.edges.ranges);
+            // Here, we need to copy all previous edges
+            // and ancestry where the anscestry slice is > 0.
+            // Have to be carefuly and allow for multiple
+            // empty ancestry ranges separated by non-empty.
             todo!("this block is wrong so far");
             if range.start > 0 {
                 todo!("lift from the beginning");
