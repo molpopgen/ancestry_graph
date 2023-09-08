@@ -1189,54 +1189,54 @@ mod multistep_tests {
 
     // Tree 1 on [0,1):
     //
-    //    0
+    //    6
     //   ---
-    //   1 |
-    //   | 2
+    //   5 |
+    //   | 4
     // --- ---
-    // 3 4 5 6
+    // 0 1 2 3
     //
     // Tree 2 on [2,3)
-    //    0
+    //    6
     //   ---
-    //   1 |
-    //   | 2
+    //   5 |
+    //   | 4
     // --- ---
-    // 5 6 3 4
+    // 2 3 0 1
     //
-    // Nodes 5,6 lose all ancestry, propagating
+    // Nodes 2,3 lose all ancestry, propagating
     // a state of no overlap to some parental nodes.
     #[test]
     fn test5() {
         let initial_edges = vec![
-            vec![(0, 1, 1), (2, 3, 2)],
-            vec![(0, 1, 3), (0, 1, 4), (2, 3, 5), (2, 3, 6)],
-            vec![(2, 3, 3), (2, 3, 4), (0, 1, 5), (0, 1, 6)],
             vec![],
             vec![],
             vec![],
             vec![],
+            vec![(2, 3, 0), (2, 3, 1), (0, 1, 2), (0, 1, 3)],
+            vec![(0, 1, 0), (0, 1, 1), (2, 3, 2), (2, 3, 3)],
+            vec![(0, 1, 4), (0, 1, 5), (2, 3, 4), (2, 3, 5)],
         ];
 
         let initial_ancestry = vec![
-            vec![(0, 1, 0, None), (2, 3, 0, None)],
-            vec![(0, 1, 1, Some(0)), (2, 3, 1, Some(0))],
-            vec![(0, 1, 2, Some(0)), (2, 3, 2, Some(0))],
-            vec![(0, 1, 3, Some(1)), (2, 3, 3, Some(2))],
-            vec![(0, 1, 4, Some(1)), (2, 3, 4, Some(2))],
+            vec![(0, 1, 0, Some(5)), (2, 3, 0, Some(4))],
+            vec![(0, 1, 1, Some(5)), (2, 3, 1, Some(4))],
             vec![],
             vec![],
+            vec![(0, 1, 4, Some(6)), (2, 3, 4, Some(6))],
+            vec![(0, 1, 5, Some(6)), (2, 3, 5, Some(6))],
+            vec![(0, 1, 6, None), (2, 3, 6, None)],
         ];
-        let initial_birth_times = vec![0, 1, 2, 3, 3, 3, 6];
+        let initial_birth_times = vec![3, 3, 3, 3, 2, 1, 0];
         let mut graph = setup_graph(initial_edges, initial_ancestry, initial_birth_times);
-        for node in [1, 2] {
+        for node in [5, 4] {
             graph.node_heap.insert(Node(node), graph.birth_time[node]);
         }
         setup_output_node_map(&mut graph);
 
         // Add the output ancestry & edges for the "surviving" nodes
         // This procedure is WRONG and should be handled by LIFTOVER
-        for (i, &node) in [3, 4].iter().enumerate() {
+        for (i, &node) in [0, 1].iter().enumerate() {
             graph.output_node_map[node] = Some(Node(i));
             let range = graph.ancestry.ranges[node];
             let current = graph.simplified_ancestry.ancestry.len();
@@ -1253,6 +1253,7 @@ mod multistep_tests {
         println!("{:?}", graph.output_node_map);
         println!("{:?}", graph.simplified_edges);
         println!("{:?}", graph.simplified_ancestry);
+        todo!("the validation steps below are wrong");
         validate_edges(
             1,
             vec![(0, 1, 3), (0, 1, 4)],
