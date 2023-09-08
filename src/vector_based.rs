@@ -596,6 +596,8 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             // liftover
             let last_range = graph.edges.ranges[last.as_index()];
             println!("{last_range:?} <=> {range:?}");
+        } else {
+            println!("this is the first node we are seeing")
         }
         let parent_edges = &graph.edges.edges[range.start..range.stop];
         let range = graph.ancestry.ranges[node.as_index()];
@@ -1223,6 +1225,9 @@ mod multistep_tests {
             graph.node_heap.insert(Node(node), graph.birth_time[node]);
         }
         setup_output_node_map(&mut graph);
+
+        // Add the output ancestry & edges for the "surviving" nodes
+        // This procedure is WRONG and should be handled by LIFTOVER
         for (i, &node) in [3, 4].iter().enumerate() {
             graph.output_node_map[node] = Some(Node(i));
             let range = graph.ancestry.ranges[node];
