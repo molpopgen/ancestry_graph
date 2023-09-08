@@ -504,7 +504,7 @@ fn process_node(
                             right: seg.right,
                             // TODO: can re refactor out this unwrap?
                             //child: output_node_map[seg.mapped_node.as_index()].unwrap(),
-                            child: seg.mapped_node
+                            child: seg.mapped_node,
                         })
                     }
                 }
@@ -589,7 +589,10 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
     let mut temp_ancestry = vec![];
     println!("{:?}", graph.output_node_map);
     while let Some(node) = graph.node_heap.pop() {
-        println!("{node:?}");
+        println!(
+            "{node:?}, birth time = {:?}",
+            graph.birth_time[node.as_index()]
+        );
         let range = graph.edges.ranges[node.as_index()];
         println!("range = {range:?}");
         if let Some(last) = last_processed_node {
@@ -598,7 +601,9 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             println!("{last_range:?} <=> {range:?}");
             todo!("need to lift since the last node")
         } else {
-            todo!("lift from the beginning");
+            if range.start > 0 {
+                todo!("lift from the beginning");
+            }
         }
         let parent_edges = &graph.edges.edges[range.start..range.stop];
         let range = graph.ancestry.ranges[node.as_index()];
@@ -1074,14 +1079,17 @@ mod multistep_tests {
         }
     }
 
-    //     0
+    //  Note: the PARENTAL nodes
+    //  are indexed in order of birth time,
+    //  PRESENT to PAST.
+    //     1
     //   -----
     //   |   |
-    //   |   1
+    //   |   0
     //   |   |
     //   3   2
     //
-    // 2 and 3 are births, leaving 1 as unary.
+    // 2 and 3 are births, leaving 0 as unary.
     #[test]
     fn test_multisteps_1() {
         // We have a problem:
@@ -1102,16 +1110,15 @@ mod multistep_tests {
         //
         // Update sept 7, 2023: all of this is fine.
         // We "just need" the type of liftover bookmark mentioned above.
-        let birth_time = vec![0_i64, 1, 2, 2];
-        let raw_edges_0 = vec![(0, 2, 1)];
-        let raw_edges_1 = vec![];
+        let birth_time = vec![1_i64, 0, 2, 2];
+        let raw_edges_1 = vec![(0, 2, 0)];
+        let raw_edges_0 = vec![];
         let raw_edges = vec![raw_edges_0, raw_edges_1, vec![], vec![], vec![]];
         let raw_ancestry = vec![
-            vec![(0, 2, 0, None)],
-            vec![(0, 2, 1, Some(0))],
-            vec![(0, 2, 2, Some(1))],
-            vec![],
-            vec![(0, 2, 4, Some(0))],
+            vec![(0, 2, 0, Some(1))],
+            vec![(0, 2, 1, None)],
+            //vec![(0, 2, 2, Some(0))],
+            //vec![(0, 2, 3, Some(0))],
         ];
         let edges = setup_input_edges(raw_edges);
         let ancestry = setup_input_ancestry(raw_ancestry);
@@ -1122,7 +1129,7 @@ mod multistep_tests {
         graph.birth_time = birth_time;
         // Manually deal with the births
         graph.new_parent_edges.insert(
-            Node(0),
+            Node(1),
             vec![Edge {
                 left: 0,
                 right: 2,
@@ -1130,7 +1137,7 @@ mod multistep_tests {
             }],
         );
         graph.new_parent_edges.insert(
-            Node(1),
+            Node(0),
             vec![Edge {
                 left: 0,
                 right: 2,
@@ -1143,7 +1150,7 @@ mod multistep_tests {
                 left: 0,
                 right: 2,
                 mapped_node: Node(3),
-                parent: Some(Node(0)),
+                parent: Some(Node(1)),
             }],
         );
         graph.birth_ancestry.insert(
@@ -1152,7 +1159,7 @@ mod multistep_tests {
                 left: 0,
                 right: 2,
                 mapped_node: Node(2),
-                parent: Some(Node(1)),
+                parent: Some(Node(0)),
             }],
         );
 
@@ -1164,12 +1171,12 @@ mod multistep_tests {
         println!("{:?}", graph.output_node_map);
 
         assert!(graph.output_node_map[1].is_some());
-        validate_edges(1, vec![], &graph.output_node_map, &graph.simplified_edges);
+        validate_edges(0, vec![], &graph.output_node_map, &graph.simplified_edges);
 
-        // node 0
+        // node 1
         let output_edges = vec![(0, 2, 2), (0, 2, 3)];
         validate_edges(
-            0,
+            1,
             output_edges,
             &graph.output_node_map,
             &graph.simplified_edges,
