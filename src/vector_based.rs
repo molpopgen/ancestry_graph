@@ -550,9 +550,14 @@ fn setup_output_node_map(graph: &mut Graph) {
 
 fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>) {
     let mut next_output_node = if let Some(x) = next_output_node { x } else { 0 };
-    for (node, ancestry) in graph.birth_ancestry.iter() {
+    for (node, ancestry) in graph.birth_ancestry.iter_mut() {
         graph.output_node_map[node.as_index()] = Some(Node(next_output_node));
-        println!("mapped {node:?} to {next_output_node}");
+        println!("mapped birth {node:?} to output {next_output_node}");
+        // Remap our birth node mapped ancestry.
+        // In theory, we should be able to avoid this
+        println!("input birth ancestry = {ancestry:?}");
+        ancestry.iter_mut().for_each(|a| a.mapped_node = Node(next_output_node));
+        println!("remapped birth ancestry = {ancestry:?}");
         next_output_node += 1;
         let current = graph.simplified_ancestry.ancestry.len();
         graph
