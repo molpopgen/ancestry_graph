@@ -584,7 +584,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         println!("parent edges = {parent_edges:?}");
         ancestry_intersection_part_deux(
             node,
-            &parent_edges,
+            parent_edges,
             &graph.simplified_ancestry,
             &graph.output_node_map,
             &mut queue,
@@ -628,6 +628,11 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         //    next_output_node += 1;
         //}
         todo!("logic in the next section is totally wrong");
+        // Formal possibilities
+        // 1. No ancestry intersection -- no output data, no remapping of the node.
+        // 2. Ancestry, no edges -- node is extinct: no output edges, output ancestry, node is
+        // remapped. Example: all unary transmission
+        // 3. Edges and ancestry -- output the data, the node should already be remapped.
         if !temp_ancestry.is_empty() {
             let current = graph.simplified_ancestry.ancestry.len();
             graph
@@ -638,7 +643,10 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
                 start: current,
                 stop: graph.simplified_ancestry.ancestry.len(),
             });
-            println!("added anc range: {:?}", graph.simplified_ancestry.ranges.last());
+            println!(
+                "added anc range: {:?}",
+                graph.simplified_ancestry.ranges.last()
+            );
         }
 
         if !temp_edges.is_empty() {
@@ -661,7 +669,10 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
                 start: current_output_ancestry_len,
                 stop: graph.simplified_ancestry.ancestry.len(),
             });
-            println!("added anc range: {:?}", graph.simplified_ancestry.ranges.last());
+            println!(
+                "added anc range: {:?}",
+                graph.simplified_ancestry.ranges.last()
+            );
         } else {
             println!("extinct node {node:?} ancestry = {temp_ancestry:?}");
             if !temp_ancestry.is_empty() {
