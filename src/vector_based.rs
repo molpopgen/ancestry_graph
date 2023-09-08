@@ -636,62 +636,100 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         //    output_node_map[node.as_index()] = Some(Node(next_output_node));
         //    next_output_node += 1;
         //}
-        todo!("logic in the next section is totally wrong");
+        //todo!("logic in the next section is totally wrong");
         // Formal possibilities
         // 1. No ancestry intersection -- no output data, no remapping of the node.
         // 2. Ancestry, no edges -- node is extinct: no output edges, output ancestry, node is
         // remapped. Example: all unary transmission
         // 3. Edges and ancestry -- output the data, the node should already be remapped.
+
+        //if !temp_edges.is_empty() {
+        //    debug_assert!(!temp_ancestry.is_empty());
+        //    graph.simplified_edges.edges.extend_from_slice(&temp_edges);
+        //    graph.simplified_edges.ranges.push(Range {
+        //        start: graph.simplified_edges.edges.len() - temp_edges.len(),
+        //        stop: graph.simplified_edges.edges.len(),
+        //    });
+        //    assert_eq!(
+        //        graph.simplified_edges.ranges.len(),
+        //        graph.output_node_map[node.as_index()].unwrap().as_index() + 1
+        //    );
+        //}
         if !temp_ancestry.is_empty() {
-            let current = graph.simplified_ancestry.ancestry.len();
+            debug_assert!(!temp_ancestry.is_empty());
+            graph.simplified_edges.edges.extend_from_slice(&temp_edges);
+            graph.simplified_edges.ranges.push(Range {
+                start: graph.simplified_edges.edges.len() - temp_edges.len(),
+                stop: graph.simplified_edges.edges.len(),
+            });
+            assert_eq!(
+                graph.simplified_edges.ranges.len(),
+                graph.output_node_map[node.as_index()].unwrap().as_index() + 1
+            );
             graph
                 .simplified_ancestry
                 .ancestry
                 .extend_from_slice(&temp_ancestry);
             graph.simplified_ancestry.ranges.push(Range {
-                start: current,
+                start: graph.simplified_ancestry.ancestry.len() - temp_ancestry.len(),
                 stop: graph.simplified_ancestry.ancestry.len(),
             });
-            println!(
-                "added anc range: {:?}",
-                graph.simplified_ancestry.ranges.last()
+            assert_eq!(
+                graph.simplified_ancestry.ranges.len(),
+                graph.output_node_map[node.as_index()].unwrap().as_index() + 1
             );
         }
 
-        if !temp_edges.is_empty() {
-            let current = graph.simplified_edges.edges.len();
-            graph.simplified_edges.edges.extend_from_slice(&temp_edges);
-            graph.simplified_edges.ranges.push(Range {
-                start: current,
-                stop: graph.simplified_edges.edges.len(),
-            });
-            // Don't output ancestry for extinct nodes...
-            // This step causes the problem referred to above:
-            // we need some other concept of "ancestry for extinct nodes"
-            // on order to deal with this.
-            let current_output_ancestry_len = graph.simplified_ancestry.ancestry.len();
-            graph
-                .simplified_ancestry
-                .ancestry
-                .extend_from_slice(&temp_ancestry);
-            graph.simplified_ancestry.ranges.push(Range {
-                start: current_output_ancestry_len,
-                stop: graph.simplified_ancestry.ancestry.len(),
-            });
-            println!(
-                "added anc range: {:?}",
-                graph.simplified_ancestry.ranges.last()
-            );
-        } else {
-            println!("extinct node {node:?} ancestry = {temp_ancestry:?}");
-            if !temp_ancestry.is_empty() {
-                let current = graph.simplified_edges.edges.len();
-                graph.simplified_edges.ranges.push(Range {
-                    start: current,
-                    stop: current,
-                });
-            }
-        }
+        //if !temp_ancestry.is_empty() {
+        //    let current = graph.simplified_ancestry.ancestry.len();
+        //    graph
+        //        .simplified_ancestry
+        //        .ancestry
+        //        .extend_from_slice(&temp_ancestry);
+        //    graph.simplified_ancestry.ranges.push(Range {
+        //        start: current,
+        //        stop: graph.simplified_ancestry.ancestry.len(),
+        //    });
+        //    println!(
+        //        "added anc range: {:?}",
+        //        graph.simplified_ancestry.ranges.last()
+        //    );
+        //}
+
+        //if !temp_edges.is_empty() {
+        //    let current = graph.simplified_edges.edges.len();
+        //    graph.simplified_edges.edges.extend_from_slice(&temp_edges);
+        //    graph.simplified_edges.ranges.push(Range {
+        //        start: current,
+        //        stop: graph.simplified_edges.edges.len(),
+        //    });
+        //    // Don't output ancestry for extinct nodes...
+        //    // This step causes the problem referred to above:
+        //    // we need some other concept of "ancestry for extinct nodes"
+        //    // on order to deal with this.
+        //    let current_output_ancestry_len = graph.simplified_ancestry.ancestry.len();
+        //    graph
+        //        .simplified_ancestry
+        //        .ancestry
+        //        .extend_from_slice(&temp_ancestry);
+        //    graph.simplified_ancestry.ranges.push(Range {
+        //        start: current_output_ancestry_len,
+        //        stop: graph.simplified_ancestry.ancestry.len(),
+        //    });
+        //    println!(
+        //        "added anc range: {:?}",
+        //        graph.simplified_ancestry.ranges.last()
+        //    );
+        //} else {
+        //    println!("extinct node {node:?} ancestry = {temp_ancestry:?}");
+        //    if !temp_ancestry.is_empty() {
+        //        let current = graph.simplified_edges.edges.len();
+        //        graph.simplified_edges.ranges.push(Range {
+        //            start: current,
+        //            stop: current,
+        //        });
+        //    }
+        //}
 
         queue.clear();
         temp_edges.clear();
