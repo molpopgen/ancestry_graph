@@ -596,8 +596,9 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             // liftover
             let last_range = graph.edges.ranges[last.as_index()];
             println!("{last_range:?} <=> {range:?}");
+            todo!("need to lift since the last node")
         } else {
-            println!("this is the first node we are seeing")
+            todo!("lift from the beginning");
         }
         let parent_edges = &graph.edges.edges[range.start..range.stop];
         let range = graph.ancestry.ranges[node.as_index()];
