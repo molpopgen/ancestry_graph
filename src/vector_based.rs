@@ -1240,21 +1240,21 @@ mod multistep_tests {
 
         // Add the output ancestry & edges for the "surviving" nodes
         // This procedure is WRONG and should be handled by LIFTOVER
-        for (i, &node) in [0, 1].iter().enumerate() {
-            graph.output_node_map[node] = Some(Node(i));
-            let range = graph.ancestry.ranges[node];
-            let current = graph.simplified_ancestry.ancestry.len();
-            graph
-                .simplified_ancestry
-                .ancestry
-                .extend_from_slice(&graph.ancestry.ancestry[range.start..range.stop]);
-            graph.simplified_ancestry.ranges.push(Range {
-                start: current,
-                stop: graph.simplified_ancestry.ancestry.len(),
-            });
-            graph.simplified_edges.ranges.push(Range::default());
-        }
-        propagate_ancestry_changes(&mut graph, Some(2));
+        // for (i, &node) in [0, 1].iter().enumerate() {
+        //     graph.output_node_map[node] = Some(Node(i));
+        //     let range = graph.ancestry.ranges[node];
+        //     let current = graph.simplified_ancestry.ancestry.len();
+        //     graph
+        //         .simplified_ancestry
+        //         .ancestry
+        //         .extend_from_slice(&graph.ancestry.ancestry[range.start..range.stop]);
+        //     graph.simplified_ancestry.ranges.push(Range {
+        //         start: current,
+        //         stop: graph.simplified_ancestry.ancestry.len(),
+        //     });
+        //     graph.simplified_edges.ranges.push(Range::default());
+        // }
+        propagate_ancestry_changes(&mut graph, None);
         println!("{:?}", graph.output_node_map);
         println!("{:?}", graph.simplified_edges);
         println!("{:?}", graph.simplified_ancestry);
