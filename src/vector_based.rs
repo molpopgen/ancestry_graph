@@ -579,7 +579,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         });
     }
     let mut queue = vec![];
-    let last_processed_node: Option<Node> = None;
+    let mut last_processed_node: Option<Node> = None;
     for parent in graph.new_parent_edges.keys() {
         graph
             .node_heap
@@ -768,6 +768,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         queue.clear();
         temp_edges.clear();
         temp_ancestry.clear();
+        last_processed_node=Some(node);
     }
     graph.new_parent_edges.clear();
     graph.birth_ancestry.clear();
