@@ -589,7 +589,12 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             println!("{last_range:?} <=> {range:?}");
         }
         let parent_edges = &graph.edges.edges[range.start..range.stop];
+        let range = graph.ancestry.ranges[node.as_index()];
         println!("parent edges = {parent_edges:?}");
+        println!(
+            "(input) parent ancestry = {:?}",
+            &graph.ancestry.ancestry[range.start..range.stop]
+        );
         ancestry_intersection_part_deux(
             node,
             parent_edges,
@@ -597,6 +602,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             &graph.output_node_map,
             &mut queue,
         );
+        println!("q = {queue:?}");
         if let Some(edges) = graph.new_parent_edges.get(&node) {
             for edge in edges {
                 // the CHILD ancestry MUST be a birth
@@ -606,6 +612,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
                     let range = graph.simplified_ancestry.ranges[child.as_index()];
                     let child_ancestry =
                         &graph.simplified_ancestry.ancestry[range.start..range.stop];
+                    println!("the child anc = {:?}",child_ancestry);
                     update_ancestry_intersection(edge, child_ancestry, &mut queue)
                 } else {
                     panic!("{:?} must have an output node", edge.child);
@@ -613,7 +620,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             }
         }
         finalize_ancestry_intersection(&mut queue);
-        println!("q = {queue:?}");
+        println!("final q = {queue:?}");
         let range = graph.ancestry.ranges[node.as_index()];
         let node_input_ancestry = &mut graph.ancestry.ancestry[range.start..range.stop];
         next_output_node += process_node(
@@ -1130,6 +1137,7 @@ mod multistep_tests {
         );
 
         setup_output_node_map(&mut graph);
+        println!("{:?}", graph.output_node_map);
         propagate_ancestry_changes(&mut graph, None);
         println!("{:?}", graph.simplified_edges);
         println!("{:?}", graph.simplified_ancestry);
