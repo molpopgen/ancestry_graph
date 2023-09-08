@@ -434,7 +434,6 @@ fn update_ancestry(
         parent: current_ancestry.parent,
     };
     temp_ancestry.push(output_segment);
-    println!("temp anc = {temp_ancestry:?}");
 
     increment
 }
