@@ -482,6 +482,10 @@ fn process_node(
                         output_node_id = Some(Node(next_output_node));
                         rv += 1;
                     }
+                    println!(
+                        "output node mapping for parent of unary = {:?}",
+                        output_node_id
+                    );
                     // TODO: if node is a sample, we have more work to
                     // do here.
                 } else {
@@ -499,14 +503,12 @@ fn process_node(
                             left: seg.left,
                             right: seg.right,
                             // TODO: can re refactor out this unwrap?
-                            child: output_node_map[seg.mapped_node.as_index()].unwrap(),
+                            //child: output_node_map[seg.mapped_node.as_index()].unwrap(),
+                            child: seg.mapped_node
                         })
                     }
                 }
-                println!(
-                    "mapped_node = {mapped_node:?}, {:?}",
-                    output_node_map[mapped_node.as_index()]
-                );
+                println!("mapped_node = {mapped_node:?}",);
 
                 current_input_ancestry += update_ancestry(
                     node,
@@ -556,7 +558,9 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         // Remap our birth node mapped ancestry.
         // In theory, we should be able to avoid this
         println!("input birth ancestry = {ancestry:?}");
-        ancestry.iter_mut().for_each(|a| a.mapped_node = Node(next_output_node));
+        ancestry
+            .iter_mut()
+            .for_each(|a| a.mapped_node = Node(next_output_node));
         println!("remapped birth ancestry = {ancestry:?}");
         next_output_node += 1;
         let current = graph.simplified_ancestry.ancestry.len();
@@ -609,15 +613,20 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         );
         println!("q = {queue:?}");
         if let Some(edges) = graph.new_parent_edges.get(&node) {
+            println!("birth edges for {node:?} = {edges:?}");
             for edge in edges {
                 // the CHILD ancestry MUST be a birth
                 // and the child MUST already be in output_ancestry
                 let child_output_node = graph.output_node_map[edge.child.as_index()];
                 if let Some(child) = child_output_node {
+                    println!(
+                        "adding births for remapped child {:?} => {child:?}",
+                        edge.child
+                    );
                     let range = graph.simplified_ancestry.ranges[child.as_index()];
                     let child_ancestry =
                         &graph.simplified_ancestry.ancestry[range.start..range.stop];
-                    println!("the child anc = {:?}",child_ancestry);
+                    println!("the child anc = {:?}", child_ancestry);
                     update_ancestry_intersection(edge, child_ancestry, &mut queue)
                 } else {
                     panic!("{:?} must have an output node", edge.child);
@@ -639,7 +648,10 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             &mut temp_edges,
             &mut temp_ancestry,
         );
-        println!("temp anc = {temp_ancestry:?}");
+        println!(
+            "temp anc for {node:?} => {:?} = {temp_ancestry:?}",
+            graph.output_node_map[node.as_index()]
+        );
         println!("temp_edges = {temp_edges:?}");
 
         //if !temp_edges.is_empty() {
@@ -1119,7 +1131,7 @@ mod multistep_tests {
             vec![Edge {
                 left: 0,
                 right: 2,
-                child: Node(3),
+                child: Node(2),
             }],
         );
         graph.birth_ancestry.insert(
