@@ -1141,7 +1141,7 @@ mod multistep_tests {
         let birth_time = vec![1_i64, 0, 2, 2];
         let raw_edges_1 = vec![(0, 2, 0)];
         let raw_edges_0 = vec![];
-        let raw_edges = vec![raw_edges_0, raw_edges_1, vec![], vec![], vec![]];
+        let raw_edges = vec![raw_edges_0, raw_edges_1];
         let raw_ancestry = vec![
             vec![(0, 2, 0, Some(1))],
             vec![(0, 2, 1, None)],
