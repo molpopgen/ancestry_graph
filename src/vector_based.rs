@@ -593,6 +593,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             "{node:?}, birth time = {:?}",
             graph.birth_time[node.as_index()]
         );
+        todo!("we need to work on ancestry range, not edge range");
         let range = graph.edges.ranges[node.as_index()];
         println!("range = {range:?}");
         if let Some(last) = last_processed_node {
@@ -610,6 +611,18 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             // that something needs to be done here.
             println!("{:?}", graph.ancestry.ranges);
             println!("{:?}", graph.edges.ranges);
+            let mut start = 0;
+            let mut ranges = &graph.ancestry.ranges[start..range.start];
+            println!("the anc range of this node = {:?}",graph.ancestry.ranges[node.as_index()]);
+            println!("ar = {ranges:?}");
+            while start < ranges.len() {
+                if let Some(i) = ranges[start..].iter().position(|r| r.start == r.stop) {
+                    println!("node {} has no ancestry", start + i);
+                    start += i;
+                } else {
+                    start += ranges.len();
+                }
+            }
             // Here, we need to copy all previous edges
             // and ancestry where the anscestry slice is > 0.
             // Have to be carefuly and allow for multiple
