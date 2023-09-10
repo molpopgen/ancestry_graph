@@ -10,6 +10,10 @@ use crate::NodeHash;
 use crate::NodeStatus;
 use crate::PropagationOptions;
 
+// NOTE: we can lose this and halve the storage/
+// traversal bandwidth by simply storing starts and
+// noting that something is empty if start i == 
+// start i + 1
 #[derive(Default, Debug, Clone, Copy)]
 struct Range {
     start: usize,
