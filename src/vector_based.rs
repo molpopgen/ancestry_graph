@@ -554,8 +554,22 @@ fn setup_output_node_map(graph: &mut Graph) {
     graph.output_node_map.resize(graph.birth_time.len(), None);
 }
 
+// This function needs to:
+// 1. Copy input ancestry ranges into the output.
+// 2. The copied ancestry ranges need to be updated
+//    with respect to their new coordinates in the output.
+// 3. Copy input edge ranges into the output.
+// 4. The copied edge ranges need to be updated
+//    with respect to their new coordinates in the output.
+// 5. For copied ancestry segments, remap their mapped_node field.
+// 6. For copied edges, remap their child field.
+// 7. For copied ancestry segments, remap their parent field.
+//    Is this the FATAL FLAW? Or do we have to remap
+//    the parent node fields while processing later somehow?
+//    We may have to punt on this step and see if we can
+//    update this field later, like when checking ancestry
+//    intersection?
 fn liftover_unchanged_data(node: Node, last_processed_node: Option<Node>, graph: &mut Graph) {
-    //todo!("we need to work on ancestry range, not edge range");
     let range = graph.ancestry.ranges[node.as_index()];
     println!("range = {range:?}");
     if let Some(last) = last_processed_node {
