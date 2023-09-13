@@ -12,7 +12,7 @@ use crate::PropagationOptions;
 
 // NOTE: we can lose this and halve the storage/
 // traversal bandwidth by simply storing starts and
-// noting that something is empty if start i == 
+// noting that something is empty if start i ==
 // start i + 1
 #[derive(Default, Debug, Clone, Copy)]
 struct Range {
@@ -554,6 +554,51 @@ fn setup_output_node_map(graph: &mut Graph) {
     graph.output_node_map.resize(graph.birth_time.len(), None);
 }
 
+fn liftover_unchanged_data(node: Node, last_processed_node: Option<Node>, graph: &mut Graph) {
+    //todo!("we need to work on ancestry range, not edge range");
+    let range = graph.ancestry.ranges[node.as_index()];
+    println!("range = {range:?}");
+    if let Some(last) = last_processed_node {
+        // liftover
+        let last_range = graph.edges.ranges[last.as_index()];
+        // TODO: remove this assert or put it all in a debug block
+        if last_range.stop == range.start {
+            assert_eq!(node.as_index() - last.as_index(), 1);
+        }
+        println!("{last_range:?} <=> {range:?}");
+        todo!("need to lift since the last node")
+    } else {
+        // FIXME: this is wrong.
+        // And node whose value is > 0 implies
+        // that something needs to be done here.
+        println!("{:?}", graph.ancestry.ranges);
+        println!("{:?}", graph.edges.ranges);
+        let mut start = 0;
+        let mut ranges = &graph.ancestry.ranges[start..range.start];
+        println!(
+            "the anc range of this node = {:?}",
+            graph.ancestry.ranges[node.as_index()]
+        );
+        println!("ar = {ranges:?}");
+        while start < ranges.len() {
+            if let Some(i) = ranges[start..].iter().position(|r| r.start == r.stop) {
+                println!("node {} has no ancestry", start + i);
+                start += i + 1;
+            } else {
+                start += ranges.len();
+            }
+        }
+        // Here, we need to copy all previous edges
+        // and ancestry where the anscestry slice is > 0.
+        // Have to be carefuly and allow for multiple
+        // empty ancestry ranges separated by non-empty.
+        todo!("this block is wrong so far");
+        if range.start > 0 {
+            todo!("lift from the beginning");
+        }
+    }
+}
+
 fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>) {
     let mut next_output_node = if let Some(x) = next_output_node { x } else { 0 };
     for (node, ancestry) in graph.birth_ancestry.iter_mut() {
@@ -597,45 +642,8 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             "{node:?}, birth time = {:?}",
             graph.birth_time[node.as_index()]
         );
-        //todo!("we need to work on ancestry range, not edge range");
-        let range = graph.ancestry.ranges[node.as_index()];
-        println!("range = {range:?}");
-        if let Some(last) = last_processed_node {
-            // liftover
-            let last_range = graph.edges.ranges[last.as_index()];
-            // TODO: remove this assert or put it all in a debug block
-            if last_range.stop == range.start {
-                assert_eq!(node.as_index() - last.as_index(), 1);
-            }
-            println!("{last_range:?} <=> {range:?}");
-            todo!("need to lift since the last node")
-        } else {
-            // FIXME: this is wrong.
-            // And node whose value is > 0 implies
-            // that something needs to be done here.
-            println!("{:?}", graph.ancestry.ranges);
-            println!("{:?}", graph.edges.ranges);
-            let mut start = 0;
-            let mut ranges = &graph.ancestry.ranges[start..range.start];
-            println!("the anc range of this node = {:?}",graph.ancestry.ranges[node.as_index()]);
-            println!("ar = {ranges:?}");
-            while start < ranges.len() {
-                if let Some(i) = ranges[start..].iter().position(|r| r.start == r.stop) {
-                    println!("node {} has no ancestry", start + i);
-                    start += i + 1;
-                } else {
-                    start += ranges.len();
-                }
-            }
-            // Here, we need to copy all previous edges
-            // and ancestry where the anscestry slice is > 0.
-            // Have to be carefuly and allow for multiple
-            // empty ancestry ranges separated by non-empty.
-            todo!("this block is wrong so far");
-            if range.start > 0 {
-                todo!("lift from the beginning");
-            }
-        }
+        liftover_unchanged_data(node, last_processed_node, graph);
+        let range = graph.edges.ranges[node.as_index()];
         let parent_edges = &graph.edges.edges[range.start..range.stop];
         let range = graph.ancestry.ranges[node.as_index()];
         println!("parent edges = {parent_edges:?}");
