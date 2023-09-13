@@ -612,6 +612,15 @@ fn liftover_ancestry_from_start(
     next_output_node
 }
 
+fn liftover_edges_from_start(
+    node: Node,
+    input_edges: &Edges,
+    output_node_map: &[Option<Node>],
+    output_edges: &mut Edges,
+) {
+    todo!()
+}
+
 // This function needs to:
 // 1. Copy input ancestry ranges into the output.
 // 2. The copied ancestry ranges need to be updated
@@ -655,6 +664,12 @@ fn liftover_unchanged_data(
             &graph.ancestry,
             &mut graph.simplified_ancestry,
             &mut graph.output_node_map,
+        );
+        liftover_edges_from_start(
+            node,
+            &graph.edges,
+            &graph.output_node_map,
+            &mut graph.simplified_edges,
         );
     }
     println!("output anc = {:?}", graph.simplified_ancestry);
