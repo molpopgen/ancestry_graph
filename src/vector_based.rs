@@ -567,8 +567,8 @@ fn setup_output_node_map(graph: &mut Graph) {
 //    Is this the FATAL FLAW? Or do we have to remap
 //    the parent node fields while processing later somehow?
 //    We may have to punt on this step and see if we can
-//    update this field later, like when checking ancestry
-//    intersection?
+//    update this field later, but that has to wait until
+//    we have an output node for any parent nodes?
 fn liftover_unchanged_data(node: Node, last_processed_node: Option<Node>, graph: &mut Graph) {
     let range = graph.ancestry.ranges[node.as_index()];
     println!("range = {range:?}");
