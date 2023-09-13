@@ -597,8 +597,8 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             "{node:?}, birth time = {:?}",
             graph.birth_time[node.as_index()]
         );
-        todo!("we need to work on ancestry range, not edge range");
-        let range = graph.edges.ranges[node.as_index()];
+        //todo!("we need to work on ancestry range, not edge range");
+        let range = graph.ancestry.ranges[node.as_index()];
         println!("range = {range:?}");
         if let Some(last) = last_processed_node {
             // liftover
@@ -622,7 +622,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             while start < ranges.len() {
                 if let Some(i) = ranges[start..].iter().position(|r| r.start == r.stop) {
                     println!("node {} has no ancestry", start + i);
-                    start += i;
+                    start += i + 1;
                 } else {
                     start += ranges.len();
                 }
