@@ -569,7 +569,13 @@ fn setup_output_node_map(graph: &mut Graph) {
 //    We may have to punt on this step and see if we can
 //    update this field later, but that has to wait until
 //    we have an output node for any parent nodes?
-fn liftover_unchanged_data(node: Node, last_processed_node: Option<Node>, graph: &mut Graph) {
+// 8. Remap output nodes (at least in some cases?)
+fn liftover_unchanged_data(
+    node: Node,
+    last_processed_node: Option<Node>,
+    mut next_output_node: usize,
+    graph: &mut Graph,
+) -> usize {
     let range = graph.ancestry.ranges[node.as_index()];
     println!("range = {range:?}");
     if let Some(last) = last_processed_node {
@@ -587,7 +593,7 @@ fn liftover_unchanged_data(node: Node, last_processed_node: Option<Node>, graph:
         // that something needs to be done here.
         println!("{:?}", graph.ancestry.ranges);
         println!("{:?}", graph.edges.ranges);
-        let mut start = 0;
+        let mut start = 0_usize;
         let mut ranges = &graph.ancestry.ranges[start..range.start];
         println!(
             "the anc range of this node = {:?}",
@@ -597,20 +603,64 @@ fn liftover_unchanged_data(node: Node, last_processed_node: Option<Node>, graph:
         while start < ranges.len() {
             if let Some(i) = ranges[start..].iter().position(|r| r.start == r.stop) {
                 println!("node {} has no ancestry", start + i);
+                let current_len = graph.simplified_ancestry.ancestry.len();
+                let current_ranges_len = graph.simplified_ancestry.ranges.len();
                 start += i + 1;
+                let j = ranges[0].start;
+                let k = ranges[start - 1].start;
+                println!("copying ancestry: {:?}", &graph.ancestry.ancestry[j..k]);
+                graph
+                    .simplified_ancestry
+                    .ancestry
+                    .extend_from_slice(&graph.ancestry.ancestry[j..k]);
+                for i in graph
+                    .simplified_ancestry
+                    .ancestry
+                    .iter_mut()
+                    .skip(current_len)
+                {
+                    if let Some(mapped_node) = graph.output_node_map[i.mapped_node.as_index()] {
+                        i.mapped_node = mapped_node;
+                    } else {
+                        graph.output_node_map[i.mapped_node.as_index()] =
+                            Some(Node(next_output_node));
+                        next_output_node += 1;
+                    }
+                    i.parent = None;
+                    println!(
+                        "copied: {i:?}, mapped to {:?}",
+                        graph.output_node_map[i.mapped_node.as_index()]
+                    );
+                }
+                println!("copying ranges {:?}", &graph.ancestry.ranges[..start - 1]);
+                graph
+                    .simplified_ancestry
+                    .ranges
+                    .extend_from_slice(&graph.ancestry.ranges[..start - 1]);
+                let mut offset = current_len;
+                for i in &mut graph.simplified_ancestry.ranges[current_ranges_len..] {
+                    let delta = i.stop - i.start;
+                    i.start = offset;
+                    i.stop = i.start + delta;
+                    offset += i.stop;
+                }
             } else {
                 start += ranges.len();
             }
+            ranges = &graph.ancestry.ranges[start..];
         }
+        println!("ranges = {ranges:?}");
+        println!("output anc = {:?}", graph.simplified_ancestry);
         // Here, we need to copy all previous edges
         // and ancestry where the anscestry slice is > 0.
         // Have to be carefuly and allow for multiple
         // empty ancestry ranges separated by non-empty.
-        todo!("this block is wrong so far");
-        if range.start > 0 {
-            todo!("lift from the beginning");
-        }
+        // todo!("this block is wrong so far");
+        // if range.start > 0 {
+        //     todo!("lift from the beginning");
+        // }
     }
+    next_output_node
 }
 
 fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>) {
@@ -656,7 +706,8 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             "{node:?}, birth time = {:?}",
             graph.birth_time[node.as_index()]
         );
-        liftover_unchanged_data(node, last_processed_node, graph);
+        next_output_node =
+            liftover_unchanged_data(node, last_processed_node, next_output_node, graph);
         let range = graph.edges.ranges[node.as_index()];
         let parent_edges = &graph.edges.edges[range.start..range.stop];
         let range = graph.ancestry.ranges[node.as_index()];
