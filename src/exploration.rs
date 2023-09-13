@@ -817,6 +817,7 @@ fn process_queued_node(
                     for o in current_overlaps {
                         if let Some(un) = unary_segment_map.get(&o.child_ancestry_segment) {
                             println!("updating parent of {un:?} to {queued_parent:?}");
+                            assert!(graph.ancestry.data[un.0].parent.is_none());
                             graph.ancestry.data[un.0].parent = Some(queued_parent);
                             unary_segment_map.remove(&o.child_ancestry_segment);
                         }
