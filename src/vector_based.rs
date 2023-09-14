@@ -659,7 +659,7 @@ fn liftover_ancestry_from_start(
     output_node_map: &mut [Option<Node>],
 ) -> usize {
     let mut start = 0_usize;
-    let mut ranges = &input_ancestry.ranges[start..node.as_index()];
+    let ranges = &input_ancestry.ranges[start..node.as_index()];
     println!(
         "the anc range of this node = {:?}",
         input_ancestry.ranges[node.as_index()]
