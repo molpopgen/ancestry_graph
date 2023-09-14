@@ -67,17 +67,34 @@ impl NodeHeap {
     }
 }
 
-#[derive(Default, Debug)]
-struct Ancestry {
-    ancestry: Vec<AncestrySegment>,
+#[derive(Debug)]
+struct RangeTable<T> {
+    data: Vec<T>,
     ranges: Vec<Range>,
 }
+
+type Ancestry = RangeTable<AncestrySegment>;
+
+impl Default for Ancestry {
+    fn default() -> Self {
+        Self {
+            data: Vec::default(),
+            ranges: Vec::default(),
+        }
+    }
+}
+
+//#[derive(Default, Debug)]
+//struct Ancestry {
+//    ancestry: Vec<AncestrySegment>,
+//    ranges: Vec<Range>,
+//}
 
 impl Ancestry {
     fn with_initial_nodes(num_nodes: usize) -> Self {
         Self {
             ranges: vec![Range::default(); num_nodes],
-            ..Default::default()
+            data: vec![],
         }
     }
 }
@@ -310,7 +327,7 @@ fn ancestry_intersection(
     for edge in parent_edges {
         let child_ancestry = {
             let range = ancestry.ranges[edge.child.as_index()];
-            &ancestry.ancestry[range.start..range.stop]
+            &ancestry.data[range.start..range.stop]
         };
         update_ancestry_intersection(edge, child_ancestry, queue);
     }
@@ -326,7 +343,7 @@ fn ancestry_intersection_part_deux(
     for edge in parent_edges {
         if let Some(output_node) = output_node_map[edge.child.as_index()] {
             let range = ancestry.ranges[output_node.as_index()];
-            let child_ancestry = &ancestry.ancestry[range.start..range.stop];
+            let child_ancestry = &ancestry.data[range.start..range.stop];
             println!("ancestry of child {output_node:?} = {child_ancestry:?}");
             update_ancestry_intersection(edge, child_ancestry, queue);
         }
@@ -521,7 +538,7 @@ fn process_node(
                         // Assign the parent to the ancestry segment for the child node
                         let range = output_ancestry.ranges[seg.mapped_node.as_index()];
                         let aseg =
-                            &mut output_ancestry.ancestry[range.start..range.stop][seg.index];
+                            &mut output_ancestry.data[range.start..range.stop][seg.index];
                         assert!(output_node_map[node.as_index()].is_some());
                         aseg.parent = output_node_map[node.as_index()];
                     }
@@ -590,15 +607,15 @@ fn liftover_ancestry_since_last_node(
     while start < ranges.len() {
         if let Some(i) = ranges[start..].iter().position(|r| r.start == r.stop) {
             println!("node {} has no ancestry", start + i);
-            let current_len = output_ancestry.ancestry.len();
+            let current_len = output_ancestry.data.len();
             let current_ranges_len = output_ancestry.ranges.len();
             let j = ranges[start].start;
             let k = ranges[start + i].start;
-            println!("copying ancestry: {:?}", &input_ancestry.ancestry[j..k]);
+            println!("copying ancestry: {:?}", &input_ancestry.data[j..k]);
             output_ancestry
-                .ancestry
-                .extend_from_slice(&input_ancestry.ancestry[j..k]);
-            for i in output_ancestry.ancestry.iter_mut().skip(current_len) {
+                .data
+                .extend_from_slice(&input_ancestry.data[j..k]);
+            for i in output_ancestry.data.iter_mut().skip(current_len) {
                 if let Some(mapped_node) = output_node_map[i.mapped_node.as_index()] {
                     i.mapped_node = mapped_node;
                 } else {
@@ -656,15 +673,15 @@ fn liftover_ancestry_from_start(
     while start < ranges.len() {
         if let Some(i) = ranges[start..].iter().position(|r| r.start == r.stop) {
             println!("node {} has no ancestry", start + i);
-            let current_len = output_ancestry.ancestry.len();
+            let current_len = output_ancestry.data.len();
             let current_ranges_len = output_ancestry.ranges.len();
             let j = ranges[start].start;
             let k = ranges[start + i].start;
-            println!("copying ancestry: {:?}", &input_ancestry.ancestry[j..k]);
+            println!("copying ancestry: {:?}", &input_ancestry.data[j..k]);
             output_ancestry
-                .ancestry
-                .extend_from_slice(&input_ancestry.ancestry[j..k]);
-            for i in output_ancestry.ancestry.iter_mut().skip(current_len) {
+                .data
+                .extend_from_slice(&input_ancestry.data[j..k]);
+            for i in output_ancestry.data.iter_mut().skip(current_len) {
                 if let Some(mapped_node) = output_node_map[i.mapped_node.as_index()] {
                     i.mapped_node = mapped_node;
                 } else {
@@ -824,14 +841,14 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             .for_each(|a| a.mapped_node = Node(next_output_node));
         println!("remapped birth ancestry = {ancestry:?}");
         next_output_node += 1;
-        let current = graph.simplified_ancestry.ancestry.len();
+        let current = graph.simplified_ancestry.data.len();
         graph
             .simplified_ancestry
-            .ancestry
+            .data
             .extend_from_slice(ancestry.as_slice());
         graph.simplified_ancestry.ranges.push(Range {
             start: current,
-            stop: graph.simplified_ancestry.ancestry.len(),
+            stop: graph.simplified_ancestry.data.len(),
         });
         let current = graph.simplified_edges.edges.len();
         graph.simplified_edges.ranges.push(Range {
@@ -862,7 +879,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         println!("parent edges = {parent_edges:?}");
         println!(
             "(input) parent ancestry = {:?}",
-            &graph.ancestry.ancestry[range.start..range.stop]
+            &graph.ancestry.data[range.start..range.stop]
         );
         ancestry_intersection_part_deux(
             node,
@@ -889,7 +906,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
                     );
                     let range = graph.simplified_ancestry.ranges[child.as_index()];
                     let child_ancestry =
-                        &graph.simplified_ancestry.ancestry[range.start..range.stop];
+                        &graph.simplified_ancestry.data[range.start..range.stop];
                     println!("the child anc = {:?}", child_ancestry);
                     update_ancestry_intersection(edge, child_ancestry, &mut queue)
                 } else {
@@ -900,7 +917,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         finalize_ancestry_intersection(&mut queue);
         println!("final q = {queue:?}");
         let range = graph.ancestry.ranges[node.as_index()];
-        let node_input_ancestry = &mut graph.ancestry.ancestry[range.start..range.stop];
+        let node_input_ancestry = &mut graph.ancestry.data[range.start..range.stop];
         next_output_node += process_node(
             node,
             node_input_ancestry,
@@ -958,11 +975,11 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             );
             graph
                 .simplified_ancestry
-                .ancestry
+                .data
                 .extend_from_slice(&temp_ancestry);
             graph.simplified_ancestry.ranges.push(Range {
-                start: graph.simplified_ancestry.ancestry.len() - temp_ancestry.len(),
-                stop: graph.simplified_ancestry.ancestry.len(),
+                start: graph.simplified_ancestry.data.len() - temp_ancestry.len(),
+                stop: graph.simplified_ancestry.data.len(),
             });
             assert_eq!(
                 graph.simplified_ancestry.ranges.len(),
@@ -1051,14 +1068,14 @@ mod multistep_tests {
     fn setup_input_ancestry(raw: Vec<Vec<(i64, i64, usize, Option<usize>)>>) -> Ancestry {
         let mut ancestry = Ancestry::default();
         for r in raw {
-            let current = ancestry.ancestry.len();
+            let current = ancestry.data.len();
             for (left, right, mapped_node, pnode) in r {
                 let parent = if let Some(p) = pnode {
                     Some(Node(p))
                 } else {
                     None
                 };
-                ancestry.ancestry.push(AncestrySegment {
+                ancestry.data.push(AncestrySegment {
                     left,
                     right,
                     parent,
@@ -1067,7 +1084,7 @@ mod multistep_tests {
             }
             ancestry.ranges.push(Range {
                 start: current,
-                stop: ancestry.ancestry.len(),
+                stop: ancestry.data.len(),
             });
         }
         ancestry
@@ -1120,7 +1137,7 @@ mod multistep_tests {
             "{node:?} -> {output_node:} out of range"
         );
         let range = simplified_ancestry.ranges[output_node];
-        let ancestry = &simplified_ancestry.ancestry[range.start..range.stop];
+        let ancestry = &simplified_ancestry.data[range.start..range.stop];
         for (left, right, parent, mapped_node) in expected {
             let parent = parent.map(|n| output_node_map[n].unwrap());
             let seg = AncestrySegment {
