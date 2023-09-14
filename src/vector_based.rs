@@ -865,7 +865,8 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             });
             assert_eq!(
                 graph.simplified_edges.ranges.len(),
-                graph.output_node_map[node.as_index()].unwrap().as_index()
+                graph.output_node_map[node.as_index()].unwrap().as_index() + 1,
+                "{:?}", graph.simplified_edges.ranges,
             );
             graph
                 .simplified_ancestry
