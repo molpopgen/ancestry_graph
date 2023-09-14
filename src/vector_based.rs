@@ -554,6 +554,10 @@ fn setup_output_node_map(graph: &mut Graph) {
     graph.output_node_map.resize(graph.birth_time.len(), None);
 }
 
+// NOTE: the fns for lifting over ancestry and edges
+// are nearly identical except for how to handle modification
+// of the input data.
+// Presumably, we can do all of this work with a generic + a callback.
 fn liftover_ancestry_from_start(
     node: Node,
     mut next_output_node: usize,
