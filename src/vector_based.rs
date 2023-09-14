@@ -651,6 +651,31 @@ fn liftover_ancestry_since_last_node(
     next_output_node
 }
 
+fn liftover_from_start(
+    node: Node,
+    mut next_output_node: usize,
+    input_ancestry: &Ancestry,
+    input_edges: &Edges,
+    output_ancestry: &mut Ancestry,
+    output_edges: &mut Edges,
+    output_node_map: &mut [Option<Node>],
+) -> usize {
+    assert_eq!(input_ancestry.ranges.len(), input_edges.ranges.len());
+
+    let mut start = 0_usize;
+    let ancestry_ranges = &input_ancestry.ranges[start..node.as_index()];
+    let edge_ranges = &input_edges.ranges[start..node.as_index()];
+    while start < ancestry_ranges.len() {
+        if let Some(i) = ancestry_ranges[start..].iter().position(|r| r.start == r.stop) {
+            let num_output_ancestry = output_ancestry.data.len();
+            let num_output_edges = output_edges.data.len();
+            todo!("need to liftover and remap here")
+        }
+    }
+
+    next_output_node
+}
+
 fn liftover_ancestry_from_start(
     node: Node,
     mut next_output_node: usize,
