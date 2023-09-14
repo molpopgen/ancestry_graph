@@ -651,6 +651,22 @@ fn liftover_ancestry_since_last_node(
     next_output_node
 }
 
+fn liftover<T, F>(
+    i: usize,
+    j: usize,
+    ranges: &[Range],
+    input_data: &[T],
+    output_data: &mut Vec<T>,
+    f: &mut F,
+) where
+    F: FnMut(&T) -> T,
+{
+    let k = ranges[i].start;
+    let l = ranges[j].start;
+    output_data.extend(input_data[k..l].iter().map(f));
+    todo!("handle ranges updating")
+}
+
 fn liftover_from_start(
     node: Node,
     mut next_output_node: usize,
@@ -665,14 +681,53 @@ fn liftover_from_start(
     let mut start = 0_usize;
     let ancestry_ranges = &input_ancestry.ranges[start..node.as_index()];
     let edge_ranges = &input_edges.ranges[start..node.as_index()];
+    println!("{ancestry_ranges:?}");
+    println!("{edge_ranges:?}");
     while start < ancestry_ranges.len() {
-        if let Some(i) = ancestry_ranges[start..].iter().position(|r| r.start == r.stop) {
+        if let Some(i) = ancestry_ranges[start..]
+            .iter()
+            .position(|r| r.start == r.stop)
+        {
             let num_output_ancestry = output_ancestry.data.len();
             let num_output_edges = output_edges.data.len();
-            todo!("need to liftover and remap here")
+            liftover(
+                start,
+                start + i,
+                ancestry_ranges,
+                &input_ancestry.data,
+                &mut output_ancestry.data,
+                &mut |&a| {
+                    let mapped_node = if let Some(mn) = output_node_map[a.mapped_node.as_index()] {
+                        mn
+                    } else {
+                        let rv = Node(next_output_node);
+                        output_node_map[a.mapped_node.as_index()] = Some(rv);
+                        next_output_node += 1;
+                        rv
+                    };
+                    AncestrySegment {
+                        parent: None,
+                        mapped_node,
+                        ..a
+                    }
+                },
+            );
+            liftover(
+                start,
+                start + i,
+                edge_ranges,
+                &input_edges.data,
+                &mut output_edges.data,
+                &mut |&e| Edge {
+                    child: output_node_map[e.child.as_index()].unwrap(),
+                    ..e
+                },
+            );
+            start += i + 1;
+        } else {
+            start = ancestry_ranges.len();
         }
     }
-
     next_output_node
 }
 
@@ -829,19 +884,28 @@ fn liftover_unchanged_data(
             &mut graph.output_node_map,
         );
     } else {
-        next_output_node = liftover_ancestry_from_start(
+        next_output_node = liftover_from_start(
             node,
             next_output_node,
             &graph.ancestry,
+            &graph.edges,
             &mut graph.simplified_ancestry,
+            &mut graph.simplified_edges,
             &mut graph.output_node_map,
         );
-        liftover_edges_from_start(
-            node,
-            &graph.edges,
-            &graph.output_node_map,
-            &mut graph.simplified_edges,
-        );
+        //next_output_node = liftover_ancestry_from_start(
+        //    node,
+        //    next_output_node,
+        //    &graph.ancestry,
+        //    &mut graph.simplified_ancestry,
+        //    &mut graph.output_node_map,
+        //);
+        //liftover_edges_from_start(
+        //    node,
+        //    &graph.edges,
+        //    &graph.output_node_map,
+        //    &mut graph.simplified_edges,
+        //);
     }
     println!("output anc = {:?}", graph.simplified_ancestry);
     next_output_node
