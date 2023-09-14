@@ -454,6 +454,7 @@ fn process_node(
     output_node_map: &mut [Option<Node>],
     next_output_node: usize,
     birth_time: &[i64],
+    output_ancestry: &mut Ancestry,
     node_heap: &mut NodeHeap,
     temp_edges: &mut Vec<Edge>,
     temp_ancestry: &mut Vec<AncestrySegment>,
@@ -516,7 +517,13 @@ fn process_node(
                             // TODO: can re refactor out this unwrap?
                             //child: output_node_map[seg.mapped_node.as_index()].unwrap(),
                             child: seg.mapped_node,
-                        })
+                        });
+                        // Assign the parent to the ancestry segment for the child node
+                        let range = output_ancestry.ranges[seg.mapped_node.as_index()];
+                        let aseg =
+                            &mut output_ancestry.ancestry[range.start..range.stop][seg.index];
+                        assert!(output_node_map[node.as_index()].is_some());
+                        aseg.parent = output_node_map[node.as_index()];
                     }
                 }
                 println!("mapped_node = {mapped_node:?}",);
@@ -759,13 +766,7 @@ fn liftover_edges_from_start(
 //    with respect to their new coordinates in the output.
 // 5. For copied ancestry segments, remap their mapped_node field.
 // 6. For copied edges, remap their child field.
-// 7. For copied ancestry segments, remap their parent field.
-//    Is this the FATAL FLAW? Or do we have to remap
-//    the parent node fields while processing later somehow?
-//    We may have to punt on this step and see if we can
-//    update this field later, but that has to wait until
-//    we have an output node for any parent nodes?
-// 8. Remap output nodes (at least in some cases?)
+// 7. Remap output nodes (at least in some cases?)
 fn liftover_unchanged_data(
     node: Node,
     last_processed_node: Option<Node>,
@@ -918,6 +919,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             &mut graph.output_node_map,
             next_output_node,
             &graph.birth_time,
+            &mut graph.simplified_ancestry,
             &mut graph.node_heap,
             &mut temp_edges,
             &mut temp_ancestry,
@@ -1568,7 +1570,13 @@ mod multistep_tests {
 
         validate_ancestry(
             0,
-            vec![(0, 1, Some(5), 0), (2, 3, Some(4), 1)],
+            vec![(0, 1, Some(5), 0), (2, 3, Some(4), 0)],
+            &graph.output_node_map,
+            &graph.simplified_ancestry,
+        );
+        validate_ancestry(
+            1,
+            vec![(0, 1, Some(5), 1), (2, 3, Some(4), 1)],
             &graph.output_node_map,
             &graph.simplified_ancestry,
         );
