@@ -658,6 +658,7 @@ fn liftover_ancestry_from_start(
     output_ancestry: &mut Ancestry,
     output_node_map: &mut [Option<Node>],
 ) -> usize {
+    todo!("I think this is wrong: we consider edges and ancestry together");
     let mut start = 0_usize;
     let ranges = &input_ancestry.ranges[start..node.as_index()];
     println!(
