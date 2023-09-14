@@ -226,11 +226,12 @@ impl<'q> AncestryOverlapper<'q> {
         // We should be able to check current_overlap + 1 <
         // queue.len() and have the later bounds check optimmized out.
         if self.current_overlap < self.num_overlaps {
+            self.left = self.right;
             self.overlaps.retain(|o| o.right > self.left);
             if self.overlaps.is_empty() {
                 self.left = self.queue[self.current_overlap].left;
             }
-            let mut new_right = self.right;
+            let mut new_right = i64::MAX;
             for segment in &self.queue[self.current_overlap..] {
                 if segment.left == self.left {
                     self.current_overlap += 1;
@@ -437,6 +438,7 @@ fn update_ancestry(
         mapped_node,
         parent: current_ancestry.parent,
     };
+    println!("output = {output_segment:?}");
     temp_ancestry.push(output_segment);
 
     increment
@@ -464,12 +466,14 @@ fn process_node(
     debug_assert!(current_overlaps.is_some());
     let mut rv = 0_usize;
 
+    println!("node input anc = {node_input_ancestry:?}");
     while current_input_ancestry < node_input_ancestry.len() {
         println!(
             "{current_input_ancestry:?}, {:?}, {current_overlaps:?}",
             node_input_ancestry.len()
         );
         let a = &mut node_input_ancestry[current_input_ancestry];
+        println!("{a:?}");
         let mut is_unary = false;
         if let Some(ref overlaps) = current_overlaps {
             if a.right > overlaps.left && overlaps.right > a.left {
@@ -514,6 +518,7 @@ fn process_node(
                 }
                 println!("mapped_node = {mapped_node:?}",);
 
+                println!("current_input_ancestry = {current_input_ancestry:?}");
                 current_input_ancestry += update_ancestry(
                     node,
                     overlaps.left,
@@ -527,7 +532,9 @@ fn process_node(
                 );
                 println!("current_input_ancestry = {current_input_ancestry:?}");
                 current_overlaps = overlapper.calculate_next_overlap_set();
+                println!("updated to {current_overlaps:?}");
             } else {
+                println!("here");
                 if let Some(parent) = node_input_ancestry[current_input_ancestry].parent {
                     node_heap.insert(parent, birth_time[parent.as_index()])
                 }
