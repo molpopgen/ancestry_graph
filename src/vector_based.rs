@@ -793,9 +793,6 @@ fn liftover_unchanged_data(
             &mut graph.output_node_map,
         );
     } else {
-        // FIXME: this is wrong.
-        // And node whose value is > 0 implies
-        // that something needs to be done here.
         next_output_node = liftover_ancestry_from_start(
             node,
             next_output_node,
@@ -811,14 +808,6 @@ fn liftover_unchanged_data(
         );
     }
     println!("output anc = {:?}", graph.simplified_ancestry);
-    // Here, we need to copy all previous edges
-    // and ancestry where the anscestry slice is > 0.
-    // Have to be carefuly and allow for multiple
-    // empty ancestry ranges separated by non-empty.
-    // todo!("this block is wrong so far");
-    // if range.start > 0 {
-    //     todo!("lift from the beginning");
-    // }
     next_output_node
 }
 
