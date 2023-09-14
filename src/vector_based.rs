@@ -617,10 +617,6 @@ fn liftover_ancestry_since_last_node(
             }
             start += i + 1;
         } else {
-                
-               
-               
-            
             //todo!(
             //    "have to copy over the rest?, {:?}, for node {} ({last:?})",
             //    &ranges[start..],
@@ -1504,39 +1500,22 @@ mod multistep_tests {
         }
         setup_output_node_map(&mut graph);
 
-        // Add the output ancestry & edges for the "surviving" nodes
-        // This procedure is WRONG and should be handled by LIFTOVER
-        // for (i, &node) in [0, 1].iter().enumerate() {
-        //     graph.output_node_map[node] = Some(Node(i));
-        //     let range = graph.ancestry.ranges[node];
-        //     let current = graph.simplified_ancestry.ancestry.len();
-        //     graph
-        //         .simplified_ancestry
-        //         .ancestry
-        //         .extend_from_slice(&graph.ancestry.ancestry[range.start..range.stop]);
-        //     graph.simplified_ancestry.ranges.push(Range {
-        //         start: current,
-        //         stop: graph.simplified_ancestry.ancestry.len(),
-        //     });
-        //     graph.simplified_edges.ranges.push(Range::default());
-        // }
         propagate_ancestry_changes(&mut graph, None);
         println!("{:?}", graph.output_node_map);
         println!("{:?}", graph.simplified_edges);
         println!("{:?}", graph.simplified_ancestry);
-        todo!("the validation steps below are wrong");
+        validate_edges(6, vec![], &graph.output_node_map, &graph.simplified_edges);
         validate_edges(
-            1,
-            vec![(0, 1, 3), (0, 1, 4)],
+            5,
+            vec![(0, 1, 0), (0, 1, 1)],
             &graph.output_node_map,
             &graph.simplified_edges,
         );
         validate_edges(
-            2,
-            vec![(2, 3, 3), (2, 3, 4)],
+            4,
+            vec![(2, 3, 0), (2, 3, 1)],
             &graph.output_node_map,
             &graph.simplified_edges,
         );
-        validate_edges(0, vec![], &graph.output_node_map, &graph.simplified_edges);
     }
 }
