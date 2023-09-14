@@ -625,8 +625,11 @@ fn liftover_edges_from_start(
 ) {
     let mut start = 0_usize;
     let mut ranges = &input_edges.ranges[start..node.as_index()];
+    println!("input edge ranges: {:?}", input_edges.ranges);
     while start < ranges.len() {
+        println!("current ranges = {ranges:?}");
         if let Some(i) = ranges[start..].iter().position(|r| r.start == r.stop) {
+            println!("i = {i:?}, start = {start}");
             let current_len = output_edges.edges.len();
             let current_ranges_len = output_edges.ranges.len();
             start += i + 1;
@@ -786,6 +789,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             &mut queue,
         );
         println!("q = {queue:?}");
+        println!("current node map = {:?} | {}", graph.output_node_map, next_output_node);
         if let Some(edges) = graph.new_parent_edges.get(&node) {
             println!("birth edges for {node:?} = {edges:?}");
             for edge in edges {
@@ -861,7 +865,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             });
             assert_eq!(
                 graph.simplified_edges.ranges.len(),
-                graph.output_node_map[node.as_index()].unwrap().as_index() + 1
+                graph.output_node_map[node.as_index()].unwrap().as_index()
             );
             graph
                 .simplified_ancestry
