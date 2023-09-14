@@ -1345,6 +1345,31 @@ mod multistep_tests {
         }
     }
 
+    fn validate_ancestry(
+        node: usize,
+        expected: Vec<(i64, i64, Option<usize>, usize)>,
+        output_node_map: &[Option<Node>],
+        simplified_ancestry: &Ancestry,
+    ) {
+        let output_node = output_node_map[node].unwrap().as_index();
+        assert!(
+            output_node < simplified_ancestry.ranges.len(),
+            "{node:?} -> {output_node:} out of range"
+        );
+        let range = simplified_ancestry.ranges[output_node];
+        let ancestry = &simplified_ancestry.ancestry[range.start..range.stop];
+        for (left, right, parent, mapped_node) in expected {
+            let parent = parent.map(Node);
+            let seg = AncestrySegment {
+                left,
+                right,
+                parent,
+                mapped_node: output_node_map[mapped_node].unwrap(),
+            };
+            assert!(ancestry.contains(&seg), "{seg:?} not in {ancestry:?}");
+        }
+    }
+
     //  Note: the PARENTAL nodes
     //  are indexed in order of birth time,
     //  PRESENT to PAST.
@@ -1505,17 +1530,36 @@ mod multistep_tests {
         println!("{:?}", graph.simplified_edges);
         println!("{:?}", graph.simplified_ancestry);
         validate_edges(6, vec![], &graph.output_node_map, &graph.simplified_edges);
+        println!("{:?}", graph.output_node_map);
+        validate_ancestry(
+            6,
+            vec![(0, 1, None, 5), (2, 3, None, 4)],
+            &graph.output_node_map,
+            &graph.simplified_ancestry,
+        );
         validate_edges(
             5,
             vec![(0, 1, 0), (0, 1, 1)],
             &graph.output_node_map,
             &graph.simplified_edges,
         );
+        validate_ancestry(
+            5,
+            vec![(0, 1, None, 5)],
+            &graph.output_node_map,
+            &graph.simplified_ancestry,
+        );
         validate_edges(
             4,
             vec![(2, 3, 0), (2, 3, 1)],
             &graph.output_node_map,
             &graph.simplified_edges,
+        );
+        validate_ancestry(
+            4,
+            vec![(2, 3, None, 4)],
+            &graph.output_node_map,
+            &graph.simplified_ancestry,
         );
     }
 }
