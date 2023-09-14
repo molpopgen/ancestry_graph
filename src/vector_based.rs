@@ -605,9 +605,10 @@ fn liftover_ancestry_from_start(
                 offset += i.stop;
             }
         } else {
+            todo!("have to copy over the rest?, {:?}", &ranges[start..]);
             start += ranges.len();
         }
-        ranges = &input_ancestry.ranges[start..];
+        ranges = &ranges[start..];
     }
     next_output_node
 }
@@ -618,7 +619,43 @@ fn liftover_edges_from_start(
     output_node_map: &[Option<Node>],
     output_edges: &mut Edges,
 ) {
-    todo!()
+    let mut start = 0_usize;
+    let mut ranges = &input_edges.ranges[start..node.as_index()];
+    while start < ranges.len() {
+        if let Some(i) = ranges[start..].iter().position(|r| r.start == r.stop) {
+            let current_len = output_edges.edges.len();
+            let current_ranges_len = output_edges.ranges.len();
+            start += i + 1;
+            let j = ranges[0].start;
+            let k = ranges[start - 1].start;
+            println!("copying edges: {:?}", &input_edges.edges[j..k]);
+            output_edges
+                .edges
+                .extend_from_slice(&input_edges.edges[j..k]);
+            for i in output_edges.edges.iter_mut().skip(current_len) {
+                if let Some(child) = output_node_map[i.child.as_index()] {
+                    i.child = child;
+                } else {
+                    panic!()
+                }
+            }
+            println!("copying ranges {:?}", &input_edges.ranges[..start - 1]);
+            output_edges
+                .ranges
+                .extend_from_slice(&input_edges.ranges[..start - 1]);
+            let mut offset = current_len;
+            for i in &mut output_edges.ranges[current_ranges_len..] {
+                let delta = i.stop - i.start;
+                i.start = offset;
+                i.stop = i.start + delta;
+                offset += i.stop;
+            }
+        } else {
+            todo!("have to copy over the rest?, {ranges:?}");
+            start += ranges.len();
+        }
+        ranges = &ranges[start..];
+    }
 }
 
 // This function needs to:
