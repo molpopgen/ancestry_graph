@@ -562,8 +562,9 @@ fn liftover_ancestry_since_last_node(
     output_ancestry: &mut Ancestry,
     output_node_map: &mut [Option<Node>],
 ) -> usize {
+    println!("since last");
     let mut start = last.as_index();
-    let mut ranges = &input_ancestry.ranges[start..node.as_index()];
+    let ranges = &input_ancestry.ranges[start..node.as_index()];
     println!(
         "the anc range of this node = {:?}",
         input_ancestry.ranges[node.as_index()]
@@ -609,7 +610,15 @@ fn liftover_ancestry_since_last_node(
             }
             start += i + 1;
         } else {
-            todo!("have to copy over the rest?, {:?}", &ranges[start..]);
+                
+               
+               
+            
+            //todo!(
+            //    "have to copy over the rest?, {:?}, for node {} ({last:?})",
+            //    &ranges[start..],
+            //    last.as_index() + start
+            //);
             start += ranges.len();
         }
         //ranges = &ranges[start..];
