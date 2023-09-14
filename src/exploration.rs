@@ -670,7 +670,7 @@ fn update_ancestry(
         left,
         right,
         mapped_node,
-        ..current
+        parent: None,
     };
     println!("out = {out_seg:?}");
     // TODO: API fn to replace.
@@ -831,7 +831,7 @@ fn process_queued_node(
                             "anc seg = {:?}",
                             graph.ancestry.data[o.child_ancestry_segment.0]
                         );
-                        // graph.ancestry.data[o.ancestry_segment.0].parent = Some(queued_parent);
+                        graph.ancestry.data[o.child_ancestry_segment.0].parent = Some(queued_parent);
                     }
                 }
                 last_ancestry_index = ahead;
@@ -1720,7 +1720,7 @@ mod multistep_tests {
         // This expected result is purely an internal detail:
         // 2 is unary, and we will have no overlaps to it ancestral to 1,
         // so its parent field stops updating
-        validate_ancestry(2, &[(0, 2, Some(1), 4)], &graph);
+        validate_ancestry(2, &[(0, 2, None, 4)], &graph);
 
         for node in [4, 5] {
             validate_ancestry(node, &[(0, 2, Some(0), node)], &graph)
