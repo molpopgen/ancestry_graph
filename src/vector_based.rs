@@ -554,10 +554,6 @@ fn setup_output_node_map(graph: &mut Graph) {
     graph.output_node_map.resize(graph.birth_time.len(), None);
 }
 
-// NOTE: the fns for lifting over ancestry and edges
-// are nearly identical except for how to handle modification
-// of the input data.
-// Presumably, we can do all of this work with a generic + a callback.
 fn liftover_ancestry_from_start(
     node: Node,
     mut next_output_node: usize,
@@ -577,9 +573,8 @@ fn liftover_ancestry_from_start(
             println!("node {} has no ancestry", start + i);
             let current_len = output_ancestry.ancestry.len();
             let current_ranges_len = output_ancestry.ranges.len();
-            start += i + 1;
-            let j = ranges[0].start;
-            let k = ranges[start - 1].start;
+            let j = ranges[start].start;
+            let k = ranges[start + i].start;
             println!("copying ancestry: {:?}", &input_ancestry.ancestry[j..k]);
             output_ancestry
                 .ancestry
@@ -597,10 +592,13 @@ fn liftover_ancestry_from_start(
                     output_node_map[i.mapped_node.as_index()]
                 );
             }
-            println!("copying ranges {:?}", &input_ancestry.ranges[..start - 1]);
+            println!(
+                "copying ranges {:?}",
+                &input_ancestry.ranges[start..start + i]
+            );
             output_ancestry
                 .ranges
-                .extend_from_slice(&input_ancestry.ranges[..start - 1]);
+                .extend_from_slice(&input_ancestry.ranges[start..start + i]);
             let mut offset = current_len;
             for i in &mut output_ancestry.ranges[current_ranges_len..] {
                 let delta = i.stop - i.start;
@@ -608,11 +606,12 @@ fn liftover_ancestry_from_start(
                 i.stop = i.start + delta;
                 offset += i.stop;
             }
+            start += i + 1;
         } else {
             todo!("have to copy over the rest?, {:?}", &ranges[start..]);
             start += ranges.len();
         }
-        ranges = &ranges[start..];
+        //ranges = &ranges[start..];
     }
     next_output_node
 }
@@ -629,39 +628,47 @@ fn liftover_edges_from_start(
     while start < ranges.len() {
         println!("current ranges = {ranges:?}");
         if let Some(i) = ranges[start..].iter().position(|r| r.start == r.stop) {
-            println!("i = {i:?}, start = {start}");
-            let current_len = output_edges.edges.len();
-            let current_ranges_len = output_edges.ranges.len();
-            start += i + 1;
-            let j = ranges[0].start;
-            let k = ranges[start - 1].start;
-            println!("copying edges: {:?}", &input_edges.edges[j..k]);
-            output_edges
-                .edges
-                .extend_from_slice(&input_edges.edges[j..k]);
-            for i in output_edges.edges.iter_mut().skip(current_len) {
-                if let Some(child) = output_node_map[i.child.as_index()] {
-                    i.child = child;
-                } else {
-                    panic!()
+            println!(
+                "i = {i:?}, start = {start}, output id = {:?}",
+                output_node_map[start + i]
+            );
+            if output_node_map[start + i].is_some() {
+                let current_len = output_edges.edges.len();
+                let current_ranges_len = output_edges.ranges.len();
+                let j = ranges[start].start;
+                let k = ranges[start + i].start;
+                println!("copying edges: {:?}", &input_edges.edges[j..k]);
+                output_edges
+                    .edges
+                    .extend_from_slice(&input_edges.edges[j..k]);
+                for i in output_edges.edges.iter_mut().skip(current_len) {
+                    if let Some(child) = output_node_map[i.child.as_index()] {
+                        i.child = child;
+                    } else {
+                        panic!()
+                    }
+                }
+                println!(
+                    "copying ranges {:?}",
+                    &input_edges.ranges[start..start + i + 1]
+                );
+                output_edges
+                    .ranges
+                    .extend_from_slice(&input_edges.ranges[start..start + i + 1]);
+                let mut offset = current_len;
+                for i in &mut output_edges.ranges[current_ranges_len..] {
+                    let delta = i.stop - i.start;
+                    i.start = offset;
+                    i.stop = i.start + delta;
+                    offset += i.stop;
                 }
             }
-            println!("copying ranges {:?}", &input_edges.ranges[..start - 1]);
-            output_edges
-                .ranges
-                .extend_from_slice(&input_edges.ranges[..start - 1]);
-            let mut offset = current_len;
-            for i in &mut output_edges.ranges[current_ranges_len..] {
-                let delta = i.stop - i.start;
-                i.start = offset;
-                i.stop = i.start + delta;
-                offset += i.stop;
-            }
+            start += i + 1;
         } else {
             todo!("have to copy over the rest?, {ranges:?}");
             start += ranges.len();
         }
-        ranges = &ranges[start..];
+        //ranges = &ranges[start..];
     }
 }
 
@@ -789,7 +796,10 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             &mut queue,
         );
         println!("q = {queue:?}");
-        println!("current node map = {:?} | {}", graph.output_node_map, next_output_node);
+        println!(
+            "current node map = {:?} | {}",
+            graph.output_node_map, next_output_node
+        );
         if let Some(edges) = graph.new_parent_edges.get(&node) {
             println!("birth edges for {node:?} = {edges:?}");
             for edge in edges {
@@ -866,7 +876,8 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             assert_eq!(
                 graph.simplified_edges.ranges.len(),
                 graph.output_node_map[node.as_index()].unwrap().as_index() + 1,
-                "{:?}", graph.simplified_edges.ranges,
+                "{:?}",
+                graph.simplified_edges.ranges,
             );
             graph
                 .simplified_ancestry
