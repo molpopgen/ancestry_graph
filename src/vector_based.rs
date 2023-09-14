@@ -436,7 +436,7 @@ fn update_ancestry(
         left,
         right,
         mapped_node,
-        parent: current_ancestry.parent,
+        parent: None,
     };
     println!("output = {output_segment:?}");
     temp_ancestry.push(output_segment);
