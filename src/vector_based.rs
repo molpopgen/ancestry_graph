@@ -654,7 +654,7 @@ fn liftover_since_last(
         } else {
             liftover(
                 start,
-                ancestry_ranges.len() - 1,
+                ancestry_ranges.len(),
                 ancestry_ranges,
                 input_ancestry,
                 output_ancestry,
@@ -676,7 +676,7 @@ fn liftover_since_last(
             );
             liftover(
                 start,
-                ancestry_ranges.len() - 1,
+                ancestry_ranges.len(),
                 edge_ranges,
                 input_edges,
                 output_edges,
@@ -780,7 +780,15 @@ fn liftover<T, F>(
     F: FnMut(&T) -> T,
 {
     let k = ranges[i].start;
-    let l = ranges[j].start;
+    let l = if j < ranges.len() {
+        ranges[j].start
+    } else {
+        if let Some(r) = ranges.last() {
+            r.stop
+        } else {
+            k
+        }
+    };
     let mut offset = output.data.len();
     output.data.extend(input.data[k..l].iter().map(f));
     output.ranges.extend(ranges[i..j].iter().map(|&r| {
