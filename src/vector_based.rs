@@ -1120,6 +1120,81 @@ mod multistep_tests {
         assert!(graph.node_heap.is_empty());
     }
 
+    // Tests propagation of parent status thru unary transmission
+    //
+    //     5
+    //   -----
+    //   |   |
+    //   |   4
+    //   |   |
+    //   |   3
+    //   |   |
+    //   |  ---
+    //   0  1 2
+    //
+    // 1 will "die", resulting in (5,(0,2)) being the remaining topo.
+    #[test]
+    fn test2() {
+        let initial_edges = vec![
+            vec![],
+            vec![],
+            vec![],
+            vec![(0, 5, 1), (0, 5, 2)],
+            vec![(0, 5, 3)],
+            vec![(0, 5, 0), (0, 5, 4)],
+        ];
+        let initial_ancestry = vec![
+            vec![(0, 5, 0, Some(5))],
+            vec![], // This node has "lost all ancestry"
+            vec![(0, 5, 2, Some(3))],
+            vec![(0, 5, 3, Some(4))],
+            vec![(0, 5, 4, Some(5))],
+            vec![(0, 5, 5, None)],
+        ];
+        let initial_birth_times = vec![3, 3, 3, 2, 1, 0];
+        let mut graph = setup_graph(initial_edges, initial_ancestry, initial_birth_times);
+        graph.node_heap.insert(Node(3), graph.birth_time[3]);
+        setup_output_node_map(&mut graph);
+        propagate_ancestry_changes(&mut graph, None);
+
+        for node in [3, 4] {
+            assert!(graph.output_node_map[node].is_some());
+            validate_edges(
+                node,
+                vec![],
+                &graph.output_node_map,
+                &graph.simplified_edges,
+            );
+            validate_ancestry(
+                node,
+                vec![(0, 5, None, 2)],
+                &graph.output_node_map,
+                &graph.simplified_ancestry,
+            );
+        }
+        for node in [0, 2] {
+            assert!(graph.output_node_map[node].is_some());
+            validate_ancestry(
+                node,
+                vec![(0, 5, Some(5), node)],
+                &graph.output_node_map,
+                &graph.simplified_ancestry,
+            )
+        }
+        validate_ancestry(
+            5,
+            vec![(0, 5, None, 5)],
+            &graph.output_node_map,
+            &graph.simplified_ancestry,
+        );
+        validate_edges(
+            5,
+            vec![(0, 5, 0), (0, 5, 2)],
+            &graph.output_node_map,
+            &graph.simplified_edges,
+        );
+    }
+
     // Tree 1 on [0,1):
     //
     //    6
