@@ -338,6 +338,7 @@ fn ancestry_intersection_part_deux(
 ) {
     for edge in parent_edges {
         if let Some(output_node) = output_node_map[edge.child.as_index()] {
+            println!("{ancestry:?}");
             let range = ancestry.ranges[output_node.as_index()];
             let child_ancestry = &ancestry.data[range.start..range.stop];
             println!(
@@ -672,7 +673,7 @@ fn liftover<T, F>(
         let delta = r.stop - r.start;
         let start = offset;
         let stop = start + delta;
-        offset += stop;
+        offset = stop;
         Range { start, stop }
     }));
 }
