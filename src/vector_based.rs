@@ -655,15 +655,15 @@ fn liftover<T, F>(
     i: usize,
     j: usize,
     ranges: &[Range],
-    input_data: &[T],
-    output_data: &mut Vec<T>,
+    input: &RangeTable<T>,
+    output: &mut RangeTable<T>,
     f: &mut F,
 ) where
     F: FnMut(&T) -> T,
 {
     let k = ranges[i].start;
     let l = ranges[j].start;
-    output_data.extend(input_data[k..l].iter().map(f));
+    output.data.extend(input.data[k..l].iter().map(f));
     todo!("handle ranges updating")
 }
 
@@ -694,8 +694,8 @@ fn liftover_from_start(
                 start,
                 start + i,
                 ancestry_ranges,
-                &input_ancestry.data,
-                &mut output_ancestry.data,
+                input_ancestry,
+                output_ancestry,
                 &mut |&a| {
                     let mapped_node = if let Some(mn) = output_node_map[a.mapped_node.as_index()] {
                         mn
@@ -716,8 +716,8 @@ fn liftover_from_start(
                 start,
                 start + i,
                 edge_ranges,
-                &input_edges.data,
-                &mut output_edges.data,
+                input_edges,
+                output_edges,
                 &mut |&e| Edge {
                     child: output_node_map[e.child.as_index()].unwrap(),
                     ..e
