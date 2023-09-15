@@ -712,12 +712,10 @@ fn liftover<T, F>(
     let k = ranges[i].start;
     let l = if j < ranges.len() {
         ranges[j].start
+    } else if let Some(r) = ranges.last() {
+        r.stop
     } else {
-        if let Some(r) = ranges.last() {
-            r.stop
-        } else {
-            k
-        }
+        k
     };
     let mut offset = output.data.len();
     output.data.extend(input.data[k..l].iter().map(f));
