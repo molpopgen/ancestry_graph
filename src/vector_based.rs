@@ -587,6 +587,79 @@ fn setup_output_node_map(graph: &mut Graph) {
     graph.output_node_map.resize(graph.birth_time.len(), None);
 }
 
+fn liftover_since_last(
+    node: Node,
+    last: Node,
+    mut next_output_node: usize,
+    input_ancestry: &Ancestry,
+    input_edges: &Edges,
+    output_ancestry: &mut Ancestry,
+    output_edges: &mut Edges,
+    output_node_map: &mut [Option<Node>],
+) -> usize {
+    assert!(node.as_index() > last.as_index());
+    let ancestry_ranges = &input_ancestry.ranges[last.as_index() + 1..node.as_index()];
+    let edge_ranges = &input_edges.ranges[last.as_index() + 1..node.as_index()];
+
+    let mut start = 0;
+    while start < ancestry_ranges.len() {
+        if let Some(i) = ancestry_ranges[start..]
+            .iter()
+            .position(|r| r.start == r.stop)
+        {
+            println!("update anc");
+            liftover(
+                start,
+                start + i,
+                ancestry_ranges,
+                input_ancestry,
+                output_ancestry,
+                &mut |&a| {
+                    let mapped_node = if let Some(mn) = output_node_map[a.mapped_node.as_index()] {
+                        mn
+                    } else {
+                        let rv = Node(next_output_node);
+                        output_node_map[a.mapped_node.as_index()] = Some(rv);
+                        next_output_node += 1;
+                        rv
+                    };
+                    AncestrySegment {
+                        parent: None,
+                        mapped_node,
+                        ..a
+                    }
+                },
+            );
+            println!("node map now = {output_node_map:?}");
+            println!("update edges");
+            liftover(
+                start,
+                start + i,
+                edge_ranges,
+                input_edges,
+                output_edges,
+                &mut |&e| {
+                    println!(
+                        "mapping {:?} to {:?}",
+                        e.child,
+                        output_node_map[e.child.as_index()]
+                    );
+                    Edge {
+                        child: output_node_map[e.child.as_index()].unwrap(),
+                        ..e
+                    }
+                },
+            );
+            start += i + 1;
+        } else {
+            todo!("no coverage yet");
+            start = ancestry_ranges.len();
+        }
+    }
+
+    next_output_node
+}
+
 fn liftover_ancestry_since_last_node(
     node: Node,
     last: Node,
@@ -603,7 +676,7 @@ fn liftover_ancestry_since_last_node(
         input_ancestry.ranges[node.as_index()]
     );
     println!("ar = {ranges:?}");
-    start=0;
+    start = 0;
     while start < ranges.len() {
         if let Some(i) = ranges[start..].iter().position(|r| r.start == r.stop) {
             println!("node {} has no ancestry", start + i);
@@ -785,12 +858,14 @@ fn liftover_unchanged_data(
         }
         println!("{last_range:?} <=> {range:?}");
         //todo!("need to lift since the last node")
-        next_output_node = liftover_ancestry_since_last_node(
+        next_output_node = liftover_since_last(
             node,
             last,
             next_output_node,
             &graph.ancestry,
+            &graph.edges,
             &mut graph.simplified_ancestry,
+            &mut graph.simplified_edges,
             &mut graph.output_node_map,
         );
     } else {
