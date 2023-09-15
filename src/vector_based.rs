@@ -1385,5 +1385,18 @@ mod multistep_tests {
         graph.node_heap.insert(Node(6), graph.birth_time[6]);
         setup_output_node_map(&mut graph);
         propagate_ancestry_changes(&mut graph, None);
+
+        assert!(graph.output_node_map[5].is_none());
+
+        // All input nodes other than 5
+        // should have an output mapping
+        // NOTE: node 6 is unary, but has an output
+        // mapping b/c we have to know that it is extinct, etc..
+        for node in [0, 1, 2, 3, 4, 6, 7, 8, 9] {
+            assert!(
+                graph.output_node_map[node].is_some(),
+                "{node} has no output mapping"
+            );
+        }
     }
 }
