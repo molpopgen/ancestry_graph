@@ -818,30 +818,6 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
         );
         println!("temp_edges = {temp_edges:?}");
 
-        //if !temp_edges.is_empty() {
-        //    assert!(output_node_map[node.as_index()].is_none());
-        //    output_node_map[node.as_index()] = Some(Node(next_output_node));
-        //    next_output_node += 1;
-        //}
-        //todo!("logic in the next section is totally wrong");
-        // Formal possibilities
-        // 1. No ancestry intersection -- no output data, no remapping of the node.
-        // 2. Ancestry, no edges -- node is extinct: no output edges, output ancestry, node is
-        // remapped. Example: all unary transmission
-        // 3. Edges and ancestry -- output the data, the node should already be remapped.
-
-        //if !temp_edges.is_empty() {
-        //    debug_assert!(!temp_ancestry.is_empty());
-        //    graph.simplified_edges.edges.extend_from_slice(&temp_edges);
-        //    graph.simplified_edges.ranges.push(Range {
-        //        start: graph.simplified_edges.edges.len() - temp_edges.len(),
-        //        stop: graph.simplified_edges.edges.len(),
-        //    });
-        //    assert_eq!(
-        //        graph.simplified_edges.ranges.len(),
-        //        graph.output_node_map[node.as_index()].unwrap().as_index() + 1
-        //    );
-        //}
         if !temp_ancestry.is_empty() {
             debug_assert!(!temp_ancestry.is_empty());
             graph.simplified_edges.data.extend_from_slice(&temp_edges);
