@@ -652,7 +652,46 @@ fn liftover_since_last(
             );
             start += i + 1;
         } else {
-            todo!("no coverage yet");
+            liftover(
+                start,
+                ancestry_ranges.len() - 1,
+                ancestry_ranges,
+                input_ancestry,
+                output_ancestry,
+                &mut |&a| {
+                    let mapped_node = if let Some(mn) = output_node_map[a.mapped_node.as_index()] {
+                        mn
+                    } else {
+                        let rv = Node(next_output_node);
+                        output_node_map[a.mapped_node.as_index()] = Some(rv);
+                        next_output_node += 1;
+                        rv
+                    };
+                    AncestrySegment {
+                        parent: None,
+                        mapped_node,
+                        ..a
+                    }
+                },
+            );
+            liftover(
+                start,
+                ancestry_ranges.len() - 1,
+                edge_ranges,
+                input_edges,
+                output_edges,
+                &mut |&e| {
+                    println!(
+                        "mapping {:?} to {:?}",
+                        e.child,
+                        output_node_map[e.child.as_index()]
+                    );
+                    Edge {
+                        child: output_node_map[e.child.as_index()].unwrap(),
+                        ..e
+                    }
+                },
+            );
             start = ancestry_ranges.len();
         }
     }
