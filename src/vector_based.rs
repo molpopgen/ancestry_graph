@@ -1338,4 +1338,51 @@ mod multistep_tests {
             &graph.simplified_ancestry,
         );
     }
+
+    //        9
+    //     --------
+    //     |   |  |
+    //     8   |  |
+    //     |   7  |
+    //     |   |  6
+    //  ----  --- ---
+    //  0  1  2 3 4 5
+    //
+    //  5 dies, making 6 unary, forcing evaluation of node 9.
+    //  This test stresses our liftover code for non-tip nodes.
+    #[test]
+    fn test6() {
+        let initial_edges = vec![
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![(0, 5, 4), (0, 5, 5)],
+            vec![(0, 5, 2), (0, 5, 3)],
+            vec![(0, 5, 0), (0, 5, 1)],
+            vec![(0, 5, 6), (0, 5, 7), (0, 5, 8)],
+        ];
+
+        let initial_ancestry = vec![
+            vec![(0, 5, 0, Some(8))],
+            vec![(0, 5, 1, Some(8))],
+            vec![(0, 5, 2, Some(7))],
+            vec![(0, 5, 3, Some(7))],
+            vec![(0, 5, 4, Some(6))],
+            vec![], // loss of ancestry
+            vec![(0, 5, 6, Some(9))],
+            vec![(0, 5, 7, Some(9))],
+            vec![(0, 5, 8, Some(9))],
+            vec![(0, 5, 9, None)],
+        ];
+        let initial_birth_times = vec![4, 4, 4, 4, 4, 4, 3, 2, 1, 0];
+        assert_eq!(initial_edges.len(), initial_ancestry.len());
+        assert_eq!(initial_ancestry.len(), initial_birth_times.len());
+        let mut graph = setup_graph(initial_edges, initial_ancestry, initial_birth_times);
+        graph.node_heap.insert(Node(6), graph.birth_time[6]);
+        setup_output_node_map(&mut graph);
+        propagate_ancestry_changes(&mut graph, None);
+    }
 }
