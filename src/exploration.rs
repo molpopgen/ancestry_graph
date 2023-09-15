@@ -831,7 +831,8 @@ fn process_queued_node(
                             "anc seg = {:?}",
                             graph.ancestry.data[o.child_ancestry_segment.0]
                         );
-                        graph.ancestry.data[o.child_ancestry_segment.0].parent = Some(queued_parent);
+                        graph.ancestry.data[o.child_ancestry_segment.0].parent =
+                            Some(queued_parent);
                     }
                 }
                 last_ancestry_index = ahead;
@@ -860,45 +861,40 @@ fn process_queued_node(
                 if !ahead.is_sentinel() {
                     println!("next seg = {:?}", graph.ancestry.get(ahead));
                 }
-            } else {
-                if last_ancestry_index == ahead {
-                    println!("gotta shift left");
-                    let next = graph.ancestry.next_raw(ahead);
-                    if !next.is_sentinel() {
-                        if let Some(parent) = graph.ancestry.get(next).parent {
-                            graph
-                                .node_heap
-                                .insert(parent, graph.birth_time[parent.as_index()])
-                        }
-                        println!("next is not a sentinel: {:?}", graph.ancestry.get(next));
-                        graph.ancestry.data.swap(ahead.0, next.0);
-                        graph.ancestry.next[ahead.0] = graph.ancestry.next[next.0];
-                        graph.ancestry.free_list.push(next.0);
-                    }
-                    //last_ancestry_index = ahead;
-                    println!("free list = {:?}", graph.ancestry.free_list);
-                } else {
-                    println!("gotta excise the current thing");
-                    // Will panic if ahead is sentinel, which is desired b/c
-                    // it'll let us know when we get test coverrage here.
-                    if let Some(parent) = graph.ancestry.get(ahead).parent {
+            } else if last_ancestry_index == ahead {
+                println!("gotta shift left");
+                let next = graph.ancestry.next_raw(ahead);
+                if !next.is_sentinel() {
+                    if let Some(parent) = graph.ancestry.get(next).parent {
                         graph
                             .node_heap
                             .insert(parent, graph.birth_time[parent.as_index()])
                     }
-                    todo!("no coverage until now!");
-                    ahead = graph.ancestry.excise_next(last_ancestry_index);
-                    let next = graph.ancestry.next_raw(ahead);
-                    println!("current = {:?}", graph.ancestry.get(ahead));
-                    println!("prev = {:?}", graph.ancestry.get(last_ancestry_index));
-                    println!("here");
-                    graph.ancestry.next[last_ancestry_index.0] = next.0;
-                    graph.ancestry.free_list.push(ahead.0);
-                    ahead = next;
-                    //println!("{ahead:?}");
+                    println!("next is not a sentinel: {:?}", graph.ancestry.get(next));
+                    graph.ancestry.data.swap(ahead.0, next.0);
+                    graph.ancestry.next[ahead.0] = graph.ancestry.next[next.0];
+                    graph.ancestry.free_list.push(next.0);
                 }
                 //last_ancestry_index = ahead;
-                //ahead = graph.ancestry.next_raw(ahead)
+                println!("free list = {:?}", graph.ancestry.free_list);
+            } else {
+                println!("gotta excise the current thing");
+                // Will panic if ahead is sentinel, which is desired b/c
+                // it'll let us know when we get test coverrage here.
+                if let Some(parent) = graph.ancestry.get(ahead).parent {
+                    graph
+                        .node_heap
+                        .insert(parent, graph.birth_time[parent.as_index()])
+                }
+                todo!("no coverage until now!");
+                ahead = graph.ancestry.excise_next(last_ancestry_index);
+                let next = graph.ancestry.next_raw(ahead);
+                println!("current = {:?}", graph.ancestry.get(ahead));
+                println!("prev = {:?}", graph.ancestry.get(last_ancestry_index));
+                println!("here");
+                graph.ancestry.next[last_ancestry_index.0] = next.0;
+                graph.ancestry.free_list.push(ahead.0);
+                ahead = next;
             }
         } else {
             break;
