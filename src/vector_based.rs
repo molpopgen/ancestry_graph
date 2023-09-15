@@ -340,7 +340,10 @@ fn ancestry_intersection_part_deux(
         if let Some(output_node) = output_node_map[edge.child.as_index()] {
             let range = ancestry.ranges[output_node.as_index()];
             let child_ancestry = &ancestry.data[range.start..range.stop];
-            println!("ancestry of child {output_node:?} = {child_ancestry:?}");
+            println!(
+                "ancestry of child {:?}->{output_node:?} = {child_ancestry:?}, range = {range:?}",
+                edge.child
+            );
             update_ancestry_intersection(edge, child_ancestry, queue);
         }
         //let child_ancestry = {
@@ -663,8 +666,15 @@ fn liftover<T, F>(
 {
     let k = ranges[i].start;
     let l = ranges[j].start;
+    let mut offset = output.data.len();
     output.data.extend(input.data[k..l].iter().map(f));
-    todo!("handle ranges updating")
+    output.ranges.extend(ranges[i..j].iter().map(|&r| {
+        let delta = r.stop - r.start;
+        let start = offset;
+        let stop = start + delta;
+        offset += stop;
+        Range { start, stop }
+    }));
 }
 
 fn liftover_from_start(
@@ -681,15 +691,17 @@ fn liftover_from_start(
     let mut start = 0_usize;
     let ancestry_ranges = &input_ancestry.ranges[start..node.as_index()];
     let edge_ranges = &input_edges.ranges[start..node.as_index()];
-    println!("{ancestry_ranges:?}");
-    println!("{edge_ranges:?}");
+    println!("ancestry ranges {ancestry_ranges:?}");
+    println!("edge ranges {edge_ranges:?}");
+    println!("anc before: {:?}", output_ancestry.ranges);
+    println!("edge before: {:?}", output_edges.ranges);
+    println!("node map before = {output_node_map:?}");
     while start < ancestry_ranges.len() {
         if let Some(i) = ancestry_ranges[start..]
             .iter()
             .position(|r| r.start == r.stop)
         {
-            let num_output_ancestry = output_ancestry.data.len();
-            let num_output_edges = output_edges.data.len();
+            println!("update anc");
             liftover(
                 start,
                 start + i,
@@ -712,15 +724,24 @@ fn liftover_from_start(
                     }
                 },
             );
+            println!("node map now = {output_node_map:?}");
+            println!("update edges");
             liftover(
                 start,
                 start + i,
                 edge_ranges,
                 input_edges,
                 output_edges,
-                &mut |&e| Edge {
-                    child: output_node_map[e.child.as_index()].unwrap(),
-                    ..e
+                &mut |&e| {
+                    println!(
+                        "mapping {:?} to {:?}",
+                        e.child,
+                        output_node_map[e.child.as_index()]
+                    );
+                    Edge {
+                        child: output_node_map[e.child.as_index()].unwrap(),
+                        ..e
+                    }
                 },
             );
             start += i + 1;
@@ -728,6 +749,8 @@ fn liftover_from_start(
             start = ancestry_ranges.len();
         }
     }
+    println!("anc done: {:?}", output_ancestry.ranges);
+    println!("edge done: {:?}", output_edges.ranges);
     next_output_node
 }
 
@@ -1201,9 +1224,13 @@ mod multistep_tests {
         let range = simplified_edges.ranges[output_node];
         let edges = &simplified_edges.data[range.start..range.stop];
         for (left, right, child) in expected {
+            println!("child remaps to {:?}", output_node_map[child]);
             let child = output_node_map[child].unwrap();
             let edge = Edge { left, right, child };
-            assert!(edges.contains(&edge), "{edge:?} not in {edges:?}");
+            assert!(
+                edges.contains(&edge),
+                "node {node}: {edge:?} not in {edges:?}"
+            );
         }
     }
 
@@ -1388,6 +1415,10 @@ mod multistep_tests {
         setup_output_node_map(&mut graph);
 
         propagate_ancestry_changes(&mut graph, None);
+        assert_eq!(
+            graph.simplified_edges.ranges.len(),
+            graph.simplified_ancestry.ranges.len()
+        );
         println!("{:?}", graph.output_node_map);
         println!("{:?}", graph.simplified_edges);
         println!("{:?}", graph.simplified_ancestry);
