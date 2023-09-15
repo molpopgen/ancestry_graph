@@ -799,19 +799,6 @@ fn liftover_unchanged_data(
             &mut graph.simplified_edges,
             &mut graph.output_node_map,
         );
-        //next_output_node = liftover_ancestry_from_start(
-        //    node,
-        //    next_output_node,
-        //    &graph.ancestry,
-        //    &mut graph.simplified_ancestry,
-        //    &mut graph.output_node_map,
-        //);
-        //liftover_edges_from_start(
-        //    node,
-        //    &graph.edges,
-        //    &graph.output_node_map,
-        //    &mut graph.simplified_edges,
-        //);
     }
     println!("output anc = {:?}", graph.simplified_ancestry);
     next_output_node
