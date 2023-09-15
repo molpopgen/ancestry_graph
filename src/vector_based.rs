@@ -648,97 +648,57 @@ fn liftover_unchanged_node_data(
 
     let mut start = 0;
     while start < ancestry_ranges.len() {
-        if let Some(i) = ancestry_ranges[start..]
+        let (end, next_start) = if let Some(i) = ancestry_ranges[start..]
             .iter()
             .position(|r| r.start == r.stop)
         {
-            println!("update anc");
-            liftover(
-                start,
-                start + i,
-                ancestry_ranges,
-                input_ancestry,
-                output_ancestry,
-                &mut |&a| {
-                    let mapped_node = if let Some(mn) = output_node_map[a.mapped_node.as_index()] {
-                        mn
-                    } else {
-                        let rv = Node(next_output_node);
-                        output_node_map[a.mapped_node.as_index()] = Some(rv);
-                        next_output_node += 1;
-                        rv
-                    };
-                    AncestrySegment {
-                        parent: None,
-                        mapped_node,
-                        ..a
-                    }
-                },
-            );
-            println!("node map now = {output_node_map:?}");
-            println!("update edges");
-            liftover(
-                start,
-                start + i,
-                edge_ranges,
-                input_edges,
-                output_edges,
-                &mut |&e| {
-                    println!(
-                        "mapping {:?} to {:?}",
-                        e.child,
-                        output_node_map[e.child.as_index()]
-                    );
-                    Edge {
-                        child: output_node_map[e.child.as_index()].unwrap(),
-                        ..e
-                    }
-                },
-            );
-            start += i + 1;
+            (start + i, start + i + 1)
         } else {
-            liftover(
-                start,
-                ancestry_ranges.len(),
-                ancestry_ranges,
-                input_ancestry,
-                output_ancestry,
-                &mut |&a| {
-                    let mapped_node = if let Some(mn) = output_node_map[a.mapped_node.as_index()] {
-                        mn
-                    } else {
-                        let rv = Node(next_output_node);
-                        output_node_map[a.mapped_node.as_index()] = Some(rv);
-                        next_output_node += 1;
-                        rv
-                    };
-                    AncestrySegment {
-                        parent: None,
-                        mapped_node,
-                        ..a
-                    }
-                },
-            );
-            liftover(
-                start,
-                ancestry_ranges.len(),
-                edge_ranges,
-                input_edges,
-                output_edges,
-                &mut |&e| {
-                    println!(
-                        "mapping {:?} to {:?}",
-                        e.child,
-                        output_node_map[e.child.as_index()]
-                    );
-                    Edge {
-                        child: output_node_map[e.child.as_index()].unwrap(),
-                        ..e
-                    }
-                },
-            );
-            start = ancestry_ranges.len();
-        }
+            (ancestry_ranges.len(), ancestry_ranges.len())
+        };
+        liftover(
+            start,
+            end,
+            ancestry_ranges,
+            input_ancestry,
+            output_ancestry,
+            &mut |&a| {
+                let mapped_node = if let Some(mn) = output_node_map[a.mapped_node.as_index()] {
+                    mn
+                } else {
+                    let rv = Node(next_output_node);
+                    output_node_map[a.mapped_node.as_index()] = Some(rv);
+                    next_output_node += 1;
+                    rv
+                };
+                AncestrySegment {
+                    parent: None,
+                    mapped_node,
+                    ..a
+                }
+            },
+        );
+        println!("node map now = {output_node_map:?}");
+        println!("update edges");
+        liftover(
+            start,
+            end,
+            edge_ranges,
+            input_edges,
+            output_edges,
+            &mut |&e| {
+                println!(
+                    "mapping {:?} to {:?}",
+                    e.child,
+                    output_node_map[e.child.as_index()]
+                );
+                Edge {
+                    child: output_node_map[e.child.as_index()].unwrap(),
+                    ..e
+                }
+            },
+        );
+        start = next_start;
     }
     next_output_node
 }
