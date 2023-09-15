@@ -587,9 +587,46 @@ fn setup_output_node_map(graph: &mut Graph) {
     graph.output_node_map.resize(graph.birth_time.len(), None);
 }
 
-fn liftover_since_last(
+fn liftover<T, F>(
+    i: usize,
+    j: usize,
+    ranges: &[Range],
+    input: &RangeTable<T>,
+    output: &mut RangeTable<T>,
+    f: &mut F,
+) where
+    F: FnMut(&T) -> T,
+{
+    let k = ranges[i].start;
+    let l = if j < ranges.len() {
+        ranges[j].start
+    } else {
+        ranges[j - 1].stop
+    };
+    let mut offset = output.data.len();
+    output.data.extend(input.data[k..l].iter().map(f));
+    output.ranges.extend(ranges[i..j].iter().map(|&r| {
+        let delta = r.stop - r.start;
+        let start = offset;
+        let stop = start + delta;
+        offset = stop;
+        Range { start, stop }
+    }));
+}
+
+// This function needs to:
+// 1. Copy input ancestry ranges into the output.
+// 2. The copied ancestry ranges need to be updated
+//    with respect to their new coordinates in the output.
+// 3. Copy input edge ranges into the output.
+// 4. The copied edge ranges need to be updated
+//    with respect to their new coordinates in the output.
+// 5. For copied ancestry segments, remap their mapped_node field.
+// 6. For copied edges, remap their child field.
+// 7. Remap output nodes (at least in some cases?)
+fn liftover_unchanged_node_data(
     node: Node,
-    last: Node,
+    last: Option<Node>,
     mut next_output_node: usize,
     input_ancestry: &Ancestry,
     input_edges: &Edges,
@@ -597,9 +634,17 @@ fn liftover_since_last(
     output_edges: &mut Edges,
     output_node_map: &mut [Option<Node>],
 ) -> usize {
-    assert!(node.as_index() > last.as_index());
-    let ancestry_ranges = &input_ancestry.ranges[last.as_index() + 1..node.as_index()];
-    let edge_ranges = &input_edges.ranges[last.as_index() + 1..node.as_index()];
+    let (ancestry_ranges, edge_ranges) = {
+        let x = if let Some(l) = last {
+            assert!(node.as_index() > l.as_index());
+            l.as_index() + 1
+        } else {
+            0
+        };
+        let ancestry_ranges = &input_ancestry.ranges[x..node.as_index()];
+        let edge_ranges = &input_edges.ranges[x..node.as_index()];
+        (ancestry_ranges, edge_ranges)
+    };
 
     let mut start = 0;
     while start < ancestry_ranges.len() {
@@ -695,164 +740,6 @@ fn liftover_since_last(
             start = ancestry_ranges.len();
         }
     }
-
-    next_output_node
-}
-
-fn liftover<T, F>(
-    i: usize,
-    j: usize,
-    ranges: &[Range],
-    input: &RangeTable<T>,
-    output: &mut RangeTable<T>,
-    f: &mut F,
-) where
-    F: FnMut(&T) -> T,
-{
-    let k = ranges[i].start;
-    let l = if j < ranges.len() {
-        ranges[j].start
-    } else {
-        ranges[j - 1].stop
-    };
-    let mut offset = output.data.len();
-    output.data.extend(input.data[k..l].iter().map(f));
-    output.ranges.extend(ranges[i..j].iter().map(|&r| {
-        let delta = r.stop - r.start;
-        let start = offset;
-        let stop = start + delta;
-        offset = stop;
-        Range { start, stop }
-    }));
-}
-
-fn liftover_from_start(
-    node: Node,
-    mut next_output_node: usize,
-    input_ancestry: &Ancestry,
-    input_edges: &Edges,
-    output_ancestry: &mut Ancestry,
-    output_edges: &mut Edges,
-    output_node_map: &mut [Option<Node>],
-) -> usize {
-    assert_eq!(input_ancestry.ranges.len(), input_edges.ranges.len());
-
-    let mut start = 0_usize;
-    let ancestry_ranges = &input_ancestry.ranges[start..node.as_index()];
-    let edge_ranges = &input_edges.ranges[start..node.as_index()];
-    println!("ancestry ranges {ancestry_ranges:?}");
-    println!("edge ranges {edge_ranges:?}");
-    println!("anc before: {:?}", output_ancestry.ranges);
-    println!("edge before: {:?}", output_edges.ranges);
-    println!("node map before = {output_node_map:?}");
-    while start < ancestry_ranges.len() {
-        if let Some(i) = ancestry_ranges[start..]
-            .iter()
-            .position(|r| r.start == r.stop)
-        {
-            println!("update anc");
-            liftover(
-                start,
-                start + i,
-                ancestry_ranges,
-                input_ancestry,
-                output_ancestry,
-                &mut |&a| {
-                    let mapped_node = if let Some(mn) = output_node_map[a.mapped_node.as_index()] {
-                        mn
-                    } else {
-                        let rv = Node(next_output_node);
-                        output_node_map[a.mapped_node.as_index()] = Some(rv);
-                        next_output_node += 1;
-                        rv
-                    };
-                    AncestrySegment {
-                        parent: None,
-                        mapped_node,
-                        ..a
-                    }
-                },
-            );
-            println!("node map now = {output_node_map:?}");
-            println!("update edges");
-            liftover(
-                start,
-                start + i,
-                edge_ranges,
-                input_edges,
-                output_edges,
-                &mut |&e| {
-                    println!(
-                        "mapping {:?} to {:?}",
-                        e.child,
-                        output_node_map[e.child.as_index()]
-                    );
-                    Edge {
-                        child: output_node_map[e.child.as_index()].unwrap(),
-                        ..e
-                    }
-                },
-            );
-            start += i + 1;
-        } else {
-            todo!("no coverage yet");
-            start = ancestry_ranges.len();
-        }
-    }
-    println!("anc done: {:?}", output_ancestry.ranges);
-    println!("edge done: {:?}", output_edges.ranges);
-    next_output_node
-}
-
-// This function needs to:
-// 1. Copy input ancestry ranges into the output.
-// 2. The copied ancestry ranges need to be updated
-//    with respect to their new coordinates in the output.
-// 3. Copy input edge ranges into the output.
-// 4. The copied edge ranges need to be updated
-//    with respect to their new coordinates in the output.
-// 5. For copied ancestry segments, remap their mapped_node field.
-// 6. For copied edges, remap their child field.
-// 7. Remap output nodes (at least in some cases?)
-fn liftover_unchanged_data(
-    node: Node,
-    last_processed_node: Option<Node>,
-    mut next_output_node: usize,
-    graph: &mut Graph,
-) -> usize {
-    let range = graph.ancestry.ranges[node.as_index()];
-    println!("range = {range:?}");
-    if let Some(last) = last_processed_node {
-        // liftover
-        let last_range = graph.edges.ranges[last.as_index()];
-        // TODO: remove this assert or put it all in a debug block
-        if last_range.stop == range.start {
-            assert_eq!(node.as_index() - last.as_index(), 1);
-        }
-        println!("{last_range:?} <=> {range:?}");
-        //todo!("need to lift since the last node")
-        next_output_node = liftover_since_last(
-            node,
-            last,
-            next_output_node,
-            &graph.ancestry,
-            &graph.edges,
-            &mut graph.simplified_ancestry,
-            &mut graph.simplified_edges,
-            &mut graph.output_node_map,
-        );
-    } else {
-        next_output_node = liftover_from_start(
-            node,
-            next_output_node,
-            &graph.ancestry,
-            &graph.edges,
-            &mut graph.simplified_ancestry,
-            &mut graph.simplified_edges,
-            &mut graph.output_node_map,
-        );
-    }
-    println!("output anc = {:?}", graph.simplified_ancestry);
     next_output_node
 }
 
@@ -899,8 +786,16 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             "{node:?}, birth time = {:?}",
             graph.birth_time[node.as_index()]
         );
-        next_output_node =
-            liftover_unchanged_data(node, last_processed_node, next_output_node, graph);
+        next_output_node = liftover_unchanged_node_data(
+            node,
+            last_processed_node,
+            next_output_node,
+            &graph.ancestry,
+            &graph.edges,
+            &mut graph.simplified_ancestry,
+            &mut graph.simplified_edges,
+            &mut graph.output_node_map,
+        );
         let range = graph.edges.ranges[node.as_index()];
         let parent_edges = &graph.edges.data[range.start..range.stop];
         let range = graph.ancestry.ranges[node.as_index()];
