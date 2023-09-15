@@ -1523,5 +1523,56 @@ mod multistep_tests {
                 "{node} has no output mapping"
             );
         }
+
+        validate_edges(6, vec![], &graph.output_node_map, &graph.simplified_edges);
+        validate_edges(
+            7,
+            vec![(0, 5, 2), (0, 5, 3)],
+            &graph.output_node_map,
+            &graph.simplified_edges,
+        );
+        validate_edges(
+            8,
+            vec![(0, 5, 0), (0, 5, 1)],
+            &graph.output_node_map,
+            &graph.simplified_edges,
+        );
+        validate_edges(
+            9,
+            vec![(0, 5, 8), (0, 5, 7), (0, 5, 4)],
+            &graph.output_node_map,
+            &graph.simplified_edges,
+        );
+
+        validate_ancestry(
+            9,
+            vec![(0, 5, None, 9)],
+            &graph.output_node_map,
+            &graph.simplified_ancestry,
+        );
+        validate_ancestry(
+            8,
+            vec![(0, 5, Some(9), 8)],
+            &graph.output_node_map,
+            &graph.simplified_ancestry,
+        );
+        validate_ancestry(
+            7,
+            vec![(0, 5, Some(9), 7)],
+            &graph.output_node_map,
+            &graph.simplified_ancestry,
+        );
+        validate_ancestry(
+            6,
+            vec![(0, 5, None, 4)],
+            &graph.output_node_map,
+            &graph.simplified_ancestry,
+        );
+        validate_ancestry(
+            4,
+            vec![(0, 5, Some(9), 4)],
+            &graph.output_node_map,
+            &graph.simplified_ancestry,
+        );
     }
 }
