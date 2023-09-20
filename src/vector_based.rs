@@ -136,7 +136,7 @@ pub struct Graph {
     // TODO: this should go right into
     // the simplified ancestry:
     // * Track a mapping of birth node -> output node
-    // * Do the valiation in "real time"
+    // * Do the validation in "real time"
     birth_ancestry: BirthAncestry,
 }
 
