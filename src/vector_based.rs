@@ -479,8 +479,9 @@ fn process_node(
     queue: &[AncestryIntersection],
     output_node_map: &mut [Option<Node>],
     next_output_node: usize,
-    birth_time: &[i64],
+    input_nodes: &Nodes,
     output_ancestry: &mut Ancestry,
+    output_nodes: &mut Nodes,
     node_heap: &mut NodeHeap,
     temp_edges: &mut Vec<Edge>,
     temp_ancestry: &mut Vec<AncestrySegment>,
@@ -517,6 +518,12 @@ fn process_node(
                     );
                     if output_node_id.is_none() {
                         output_node_map[node.as_index()] = Some(Node(next_output_node));
+                        output_nodes
+                            .birth_time
+                            .push(input_nodes.birth_time[node.as_index()]);
+                        output_nodes
+                            .status
+                            .push(input_nodes.status[node.as_index()]);
                         output_node_id = Some(Node(next_output_node));
                         rv += 1;
                     }
@@ -532,6 +539,12 @@ fn process_node(
                         mapped_node = output;
                     } else {
                         output_node_map[node.as_index()] = Some(Node(next_output_node));
+                        output_nodes
+                            .birth_time
+                            .push(input_nodes.birth_time[node.as_index()]);
+                        output_nodes
+                            .status
+                            .push(input_nodes.status[node.as_index()]);
                         mapped_node = Node(next_output_node);
                         rv += 1;
                     }
@@ -560,7 +573,7 @@ fn process_node(
                     overlaps.right,
                     is_unary,
                     mapped_node,
-                    birth_time,
+                    &input_nodes.birth_time,
                     a,
                     node_heap,
                     temp_ancestry,
@@ -571,7 +584,7 @@ fn process_node(
             } else {
                 println!("here");
                 if let Some(parent) = node_input_ancestry[current_input_ancestry].parent {
-                    node_heap.insert(parent, birth_time[parent.as_index()])
+                    node_heap.insert(parent, input_nodes.birth_time[parent.as_index()])
                 }
                 current_input_ancestry += 1;
             }
@@ -584,7 +597,7 @@ fn process_node(
     // lost. Add those segment parents to the heap.
     for i in node_input_ancestry[current_input_ancestry..].iter() {
         if let Some(parent) = i.parent {
-            node_heap.insert(parent, birth_time[parent.as_index()])
+            node_heap.insert(parent, input_nodes.birth_time[parent.as_index()])
         }
     }
     debug_assert!(current_overlaps.is_none());
@@ -641,8 +654,10 @@ fn liftover_unchanged_node_data(
     mut next_output_node: usize,
     input_ancestry: &Ancestry,
     input_edges: &Edges,
+    input_nodes: &Nodes,
     output_ancestry: &mut Ancestry,
     output_edges: &mut Edges,
+    output_nodes: &mut Nodes,
     output_node_map: &mut [Option<Node>],
 ) -> usize {
     let (ancestry_ranges, edge_ranges) = {
@@ -679,6 +694,12 @@ fn liftover_unchanged_node_data(
                 } else {
                     let rv = Node(next_output_node);
                     output_node_map[a.mapped_node.as_index()] = Some(rv);
+                    output_nodes
+                        .birth_time
+                        .push(input_nodes.birth_time[a.mapped_node.as_index()]);
+                    output_nodes
+                        .status
+                        .push(input_nodes.status[a.mapped_node.as_index()]);
                     next_output_node += 1;
                     rv
                 };
@@ -718,6 +739,14 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
     let mut next_output_node = if let Some(x) = next_output_node { x } else { 0 };
     for (node, ancestry) in graph.birth_ancestry.iter_mut() {
         graph.output_node_map[node.as_index()] = Some(Node(next_output_node));
+        graph
+            .simplified_nodes
+            .birth_time
+            .push(graph.nodes.birth_time[node.as_index()]);
+        graph
+            .simplified_nodes
+            .status
+            .push(graph.nodes.status[node.as_index()]);
         println!("mapped birth {node:?} to output {next_output_node}");
         // Remap our birth node mapped ancestry.
         // In theory, we should be able to avoid this
@@ -763,8 +792,10 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             next_output_node,
             &graph.ancestry,
             &graph.edges,
+            &graph.nodes,
             &mut graph.simplified_ancestry,
             &mut graph.simplified_edges,
+            &mut graph.simplified_nodes,
             &mut graph.output_node_map,
         );
         let range = graph.edges.ranges[node.as_index()];
@@ -817,8 +848,9 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             &queue,
             &mut graph.output_node_map,
             next_output_node,
-            &graph.nodes.birth_time,
+            &graph.nodes,
             &mut graph.simplified_ancestry,
+            &mut graph.simplified_nodes,
             &mut graph.node_heap,
             &mut temp_edges,
             &mut temp_ancestry,
@@ -1072,6 +1104,7 @@ mod multistep_tests {
         graph.edges = edges;
         graph.ancestry = ancestry;
         graph.nodes.birth_time = birth_time;
+        graph.nodes.status = vec![NodeStatus::Ancestor; graph.nodes.birth_time.len()];
         // Manually deal with the births
         graph.new_parent_edges.insert(
             Node(1),
