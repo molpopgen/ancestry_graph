@@ -110,6 +110,12 @@ impl Edges {
     }
 }
 
+#[derive(Default)]
+struct Nodes {
+    birth_time: Vec<i64>,
+    status: Vec<NodeStatus>,
+}
+
 type NewParentEdges = HashMap<Node, Vec<Edge>, BuildNoHashHasher<usize>>;
 type BirthAncestry = HashMap<Node, Vec<AncestrySegment>, BuildNoHashHasher<usize>>;
 
@@ -117,8 +123,7 @@ type BirthAncestry = HashMap<Node, Vec<AncestrySegment>, BuildNoHashHasher<usize
 pub struct Graph {
     current_time: i64,
     genome_length: i64,
-    birth_time: Vec<i64>,
-    node_status: Vec<NodeStatus>,
+    nodes: Nodes,
     output_node_map: Vec<Option<Node>>,
 
     node_heap: NodeHeap,
@@ -126,6 +131,7 @@ pub struct Graph {
     ancestry: Ancestry,
     simplified_edges: Edges,
     simplified_ancestry: Ancestry,
+    simplified_nodes: Nodes,
 
     // This could also be an encapsulated edge table:
     // If we require that all birth edges be generated at once:
@@ -152,8 +158,10 @@ impl Graph {
     pub fn with_initial_nodes(num_nodes: usize, genome_length: i64) -> Self {
         Self {
             genome_length,
-            birth_time: vec![0; num_nodes],
-            node_status: vec![NodeStatus::Ancestor; num_nodes],
+            nodes: Nodes {
+                birth_time: vec![0; num_nodes],
+                status: vec![NodeStatus::Ancestor; num_nodes],
+            },
             edges: Edges::with_initial_nodes(num_nodes),
             ancestry: Ancestry::with_initial_nodes(num_nodes),
             ..Default::default()
@@ -161,9 +169,9 @@ impl Graph {
     }
 
     pub fn add_birth(&mut self) -> Node {
-        self.birth_time.push(self.current_time);
-        self.node_status.push(NodeStatus::Birth);
-        let node = Node(self.birth_time.len() - 1);
+        self.nodes.birth_time.push(self.current_time);
+        self.nodes.status.push(NodeStatus::Birth);
+        let node = Node(self.nodes.birth_time.len() - 1);
         let inserted = self.birth_ancestry.insert(node, vec![]);
         assert!(inserted.is_none());
         node
@@ -189,7 +197,7 @@ impl Graph {
         parent: Node,
         child: Node,
     ) -> Result<(), ()> {
-        assert!(validate_birth_order(parent, child, &self.birth_time));
+        assert!(validate_birth_order(parent, child, &self.nodes.birth_time));
         update_birth_ancestry(left, right, parent, child, &mut self.birth_ancestry);
         add_parent_edge(left, right, parent, child, &mut self.new_parent_edges);
         Ok(())
@@ -585,7 +593,9 @@ fn process_node(
 
 fn setup_output_node_map(graph: &mut Graph) {
     graph.output_node_map.fill(None);
-    graph.output_node_map.resize(graph.birth_time.len(), None);
+    graph
+        .output_node_map
+        .resize(graph.nodes.birth_time.len(), None);
 }
 
 fn liftover<T, F>(
@@ -737,7 +747,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
     for parent in graph.new_parent_edges.keys() {
         graph
             .node_heap
-            .insert(*parent, graph.birth_time[parent.as_index()]);
+            .insert(*parent, graph.nodes.birth_time[parent.as_index()]);
     }
     let mut temp_edges = vec![];
     let mut temp_ancestry = vec![];
@@ -745,7 +755,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
     while let Some(node) = graph.node_heap.pop() {
         println!(
             "{node:?}, birth time = {:?}",
-            graph.birth_time[node.as_index()]
+            graph.nodes.birth_time[node.as_index()]
         );
         next_output_node = liftover_unchanged_node_data(
             node,
@@ -807,7 +817,7 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
             &queue,
             &mut graph.output_node_map,
             next_output_node,
-            &graph.birth_time,
+            &graph.nodes.birth_time,
             &mut graph.simplified_ancestry,
             &mut graph.node_heap,
             &mut temp_edges,
@@ -858,8 +868,8 @@ fn propagate_ancestry_changes(graph: &mut Graph, next_output_node: Option<usize>
 #[test]
 fn test_with_initial_nodes() {
     let g = Graph::with_initial_nodes(10, 20);
-    assert_eq!(g.birth_time.len(), 10);
-    assert_eq!(g.node_status.len(), 10);
+    assert_eq!(g.nodes.birth_time.len(), 10);
+    assert_eq!(g.nodes.status.len(), 10);
     assert_eq!(g.edges.ranges.len(), 10);
     assert_eq!(g.ancestry.ranges.len(), 10);
 }
@@ -956,10 +966,11 @@ mod multistep_tests {
     ) -> Graph {
         let edges = setup_input_edges(edges);
         let ancestry = setup_input_ancestry(ancestry);
+        let status = vec![NodeStatus::Ancestor; birth_time.len()];
         Graph {
             edges,
             ancestry,
-            birth_time,
+            nodes: Nodes { birth_time, status },
             ..Default::default()
         }
     }
@@ -1060,7 +1071,7 @@ mod multistep_tests {
         let mut graph = Graph::new(2);
         graph.edges = edges;
         graph.ancestry = ancestry;
-        graph.birth_time = birth_time;
+        graph.nodes.birth_time = birth_time;
         // Manually deal with the births
         graph.new_parent_edges.insert(
             Node(1),
@@ -1119,6 +1130,11 @@ mod multistep_tests {
         assert!(graph.new_parent_edges.is_empty());
         assert!(graph.birth_ancestry.is_empty());
         assert!(graph.node_heap.is_empty());
+
+        assert_eq!(
+            graph.simplified_nodes.birth_time.len(),
+            graph.output_node_map.iter().filter(|x| x.is_some()).count()
+        );
     }
 
     // Tests propagation of parent status thru unary transmission
@@ -1154,7 +1170,7 @@ mod multistep_tests {
         ];
         let initial_birth_times = vec![3, 3, 3, 2, 1, 0];
         let mut graph = setup_graph(initial_edges, initial_ancestry, initial_birth_times);
-        graph.node_heap.insert(Node(3), graph.birth_time[3]);
+        graph.node_heap.insert(Node(3), graph.nodes.birth_time[3]);
         setup_output_node_map(&mut graph);
         propagate_ancestry_changes(&mut graph, None);
 
@@ -1193,6 +1209,10 @@ mod multistep_tests {
             vec![(0, 5, 0), (0, 5, 2)],
             &graph.output_node_map,
             &graph.simplified_edges,
+        );
+        assert_eq!(
+            graph.simplified_nodes.birth_time.len(),
+            graph.output_node_map.iter().filter(|x| x.is_some()).count()
         );
     }
 
@@ -1239,7 +1259,9 @@ mod multistep_tests {
         let initial_birth_times = vec![3, 3, 3, 3, 2, 1, 0];
         let mut graph = setup_graph(initial_edges, initial_ancestry, initial_birth_times);
         for node in [5, 4] {
-            graph.node_heap.insert(Node(node), graph.birth_time[node]);
+            graph
+                .node_heap
+                .insert(Node(node), graph.nodes.birth_time[node]);
         }
         setup_output_node_map(&mut graph);
 
@@ -1340,7 +1362,7 @@ mod multistep_tests {
         assert_eq!(initial_edges.len(), initial_ancestry.len());
         assert_eq!(initial_ancestry.len(), initial_birth_times.len());
         let mut graph = setup_graph(initial_edges, initial_ancestry, initial_birth_times);
-        graph.node_heap.insert(Node(6), graph.birth_time[6]);
+        graph.node_heap.insert(Node(6), graph.nodes.birth_time[6]);
         setup_output_node_map(&mut graph);
         propagate_ancestry_changes(&mut graph, None);
 
