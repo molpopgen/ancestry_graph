@@ -544,6 +544,7 @@ impl Graph {
         parent: Node,
         child: Node,
     ) -> Result<(), ()> {
+        println!("parent = {parent:?}");
         self.validate_record_transmission_input(left, right, parent, child)?;
         update_cursor_list(
             parent.0,
@@ -571,6 +572,7 @@ impl Graph {
     }
 
     pub fn mark_node_death(&mut self, node: Node) {
+        println!("marking {node:?} dead");
         self.node_status[node.as_index()] = NodeStatus::Death;
         self.node_heap
             .insert(node, self.birth_time[node.as_index()]);
@@ -578,12 +580,15 @@ impl Graph {
 }
 
 fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryIntersection>) {
-    //todo!("this function is inf loop in prop tests -- issue likely elsewhere");
     queue.clear();
-    assert!(!graph.edge_head[node.as_index()].is_sentinel());
-    let mut current_edge = Some(graph.edge_head[node.as_index()]);
+
+    let mut current_edge = if let Some(&index) = graph.edge_head.get(node.as_index()) {
+        Some(index)
+    } else {
+        None
+    };
+
     while let Some(edge_index) = current_edge {
-        //assert!(graph.edges.next(graph.edge_tail[node.as_index()]).is_none());
         let edge_ref = graph.edges.get(edge_index);
         let mut child_ancestry = {
             let a = graph.ancestry_head[edge_ref.child.as_index()];
@@ -1094,10 +1099,11 @@ mod sim_test {
     use super::haploid_wf;
     use proptest::prelude::*;
 
-    //fn test_2_individuals() {
-    //    let graph = haploid_wf(125125155, 2, 100, 100);
-    //    //validate_reachable(&graph)
-    //}
+    #[test]
+    fn foo_test_2_individuals() {
+        let graph = haploid_wf(709617927814905890, 2, 100, 100);
+        //validate_reachable(&graph)
+    }
 
     proptest! {
         #[test]
