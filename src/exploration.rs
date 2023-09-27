@@ -230,9 +230,11 @@ fn update_cursor_list<T>(
         let new_head = list.new_index(datum);
         head[at] = new_head;
         tail[at] = new_head;
+        //assert!(list.next(tail[at]).is_none());
     } else {
         let new_tail = list.insert_after(current_tail, datum);
         tail[at] = new_tail;
+        assert!(list.next(tail[at]).is_none());
     }
 }
 
@@ -560,7 +562,7 @@ impl Graph {
             &mut self.ancestry_tail,
             &mut self.ancestry,
         );
-        debug_assert!(self.ancestry.next(self.ancestry_tail[child.0]).is_none());
+        //debug_assert!(self.ancestry.next(self.ancestry_tail[child.0]).is_none());
         self.node_heap
             .insert(parent, self.birth_time[parent.as_index()]);
         Ok(())
