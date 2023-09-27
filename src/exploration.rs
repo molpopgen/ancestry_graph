@@ -999,6 +999,24 @@ fn process_queued_node(
         .next(graph.ancestry_tail[queued_parent.as_index()])
         .is_none());
     println!("{:?}", graph.ancestry.next_raw(last_ancestry_index));
+
+    #[cfg(debug_assertions)]
+    {
+        if !graph.edge_tail[queued_parent.as_index()].is_sentinel() {
+            assert!(graph
+                .edges
+                .next(graph.edge_tail[queued_parent.as_index()])
+                .is_none());
+            assert!(!graph.edge_head[queued_parent.as_index()].is_sentinel());
+        }
+        if !graph.ancestry_tail[queued_parent.as_index()].is_sentinel() {
+            assert!(graph
+                .ancestry
+                .next(graph.ancestry_tail[queued_parent.as_index()])
+                .is_none());
+            assert!(!graph.ancestry_head[queued_parent.as_index()].is_sentinel());
+        }
+    }
 }
 
 // returns the value of the last (oldest, ignoring ties) Node processed
