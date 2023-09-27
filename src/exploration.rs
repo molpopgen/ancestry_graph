@@ -1650,6 +1650,56 @@ mod propagation_tests {
             }));
         }
     }
+
+    // Tree 1:
+    //
+    //  0
+    // ---
+    // | |
+    // 1 3
+    //
+    // Tree 2:
+    //
+    //  0
+    //  |
+    //  |
+    //  2
+    //
+    // Tree 3:
+    //
+    //  0
+    // ---
+    // | |
+    // 1 3
+    #[test]
+    fn propagation_test2() {
+        let initial_birth_times = vec![0, 1, 1, 1];
+        let num_births = 0;
+        let transmissions = vec![];
+        let initial_edges = vec![
+            vec![(0, 1, 1), (0, 1, 3), (1, 2, 2), (2, 3, 1), (2, 3, 3)],
+            vec![],
+            vec![],
+            vec![],
+        ];
+        let initial_ancestry = vec![
+            vec![(0, 1, None, 0), (1, 2, None, 2), (2, 3, None, 0)],
+            vec![(0, 1, Some(0), 1), (2, 3, Some(0), 1)],
+            vec![],
+            vec![(0, 1, Some(0), 3), (2, 3, Some(0), 3)],
+        ];
+        let (mut graph, birth_nodes) = setup_graph(
+            initial_birth_times.len(),
+            3,
+            num_births,
+            initial_birth_times,
+            initial_edges,
+            initial_ancestry,
+            transmissions,
+        );
+        graph.node_heap.insert(Node(0), graph.birth_time[0]);
+        let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+    }
 }
 
 #[cfg(test)]
