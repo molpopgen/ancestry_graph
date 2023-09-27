@@ -582,10 +582,9 @@ impl Graph {
 fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryIntersection>) {
     queue.clear();
 
-    let mut current_edge = if let Some(&index) = graph.edge_head.get(node.as_index()) {
-        Some(index)
-    } else {
-        None
+    let mut current_edge = match graph.edge_head.get(node.as_index()) {
+        Some(&index) if !index.is_sentinel() => Some(index),
+        _ => None,
     };
 
     while let Some(edge_index) = current_edge {
