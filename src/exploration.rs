@@ -175,14 +175,16 @@ impl<T> CursorList<T> {
     ///
     /// * If `from` is out of range
     fn eliminate(&mut self, from: Index) {
-        assert!(from.0 < self.next.len());
-        let mut next = self.excise_next(from);
-        while !next.is_sentinel() {
-            println!("next = {next:?}");
-            next = self.excise_next(next);
+        if !from.is_sentinel() {
+            assert!(from.0 < self.next.len(), "{from:?} => {}", self.next.len());
+            let mut next = self.excise_next(from);
+            while !next.is_sentinel() {
+                println!("next = {next:?}");
+                next = self.excise_next(next);
+            }
+            self.next[from.0] = usize::MAX;
+            self.free_list.push(from.0)
         }
-        self.next[from.0] = usize::MAX;
-        self.free_list.push(from.0)
     }
 
     fn eliminate_and<F: FnMut(&T)>(&mut self, from: Index, mut f: F) {
