@@ -371,8 +371,7 @@ pub struct Graph {
     num_births: usize,
     // This effectively is just a place to hold
     // new births
-    cached_extant_nodes: Vec<Node>,
-
+    // cached_extant_nodes: Vec<Node>,
     node_heap: NodeHeap,
 
     // "Tables"
@@ -392,7 +391,7 @@ impl Graph {
         }
         let current_time = 0;
         let num_births = 0;
-        let cached_extant_nodes = vec![];
+        // let cached_extant_nodes = vec![];
         let birth_time = vec![];
         let node_status = vec![];
         let free_nodes = vec![];
@@ -411,7 +410,7 @@ impl Graph {
             node_status,
             free_nodes,
             num_births,
-            cached_extant_nodes,
+            // cached_extant_nodes,
             edges,
             edge_head,
             edge_tail,
@@ -481,7 +480,7 @@ impl Graph {
         let rv = self.add_node(NodeStatus::Birth, birth_time);
         debug_assert_eq!(self.birth_time[rv.as_index()], birth_time);
         self.num_births += 1;
-        self.cached_extant_nodes.push(rv);
+        // self.cached_extant_nodes.push(rv);
         Ok(rv)
     }
 
@@ -880,7 +879,7 @@ fn process_queued_node(
             } else {
                 println!("gotta excise the current thing");
                 // Will panic if ahead is sentinel, which is desired b/c
-                // it'll let us know when we get test coverrage here.
+                // it'll let us know when we get // test coverrage here.
                 if let Some(parent) = graph.ancestry.get(ahead).parent {
                     graph
                         .node_heap
@@ -1019,6 +1018,55 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
 
     debug_assert!(graph.node_heap.is_empty());
     rv
+}
+
+#[cfg(test)]
+fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i64) -> Graph {
+    use rand::Rng;
+    use rand::SeedableRng;
+    let (mut graph, mut parents) = Graph::with_initial_nodes(popsize, genome_length).unwrap();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+    let sample_parent = rand::distributions::Uniform::new(0, popsize);
+    let sample_breakpoint = rand::distributions::Uniform::new(1, genome_length);
+    let mut children: Vec<Node> = vec![];
+
+    for _ in 0..num_generations {
+        children.clear();
+        // Advance time
+        graph.advance_time().unwrap();
+        #[cfg(debug_assertions)]
+        println!("CTIME {}", graph.current_time);
+        // Mark parents as dead in the graph
+        // TODO: mark_node_death needs testing in lib.rs!
+        parents.iter().for_each(|&node| graph.mark_node_death(node));
+        // Add births
+        for _ in 0..popsize {
+            let left_parent = parents[rng.sample(sample_parent)];
+            let right_parent = parents[rng.sample(sample_parent)];
+            let breakpoint = rng.sample(sample_breakpoint);
+            let child = graph.add_birth(graph.current_time).unwrap();
+            // NOTE: we may not need the argument now?
+            assert!(breakpoint > 0);
+            assert!(breakpoint < graph.genome_length);
+            graph
+                .record_transmission(0, breakpoint, left_parent, child)
+                .unwrap();
+            graph
+                .record_transmission(breakpoint, graph.genome_length, right_parent, child)
+                .unwrap();
+            children.push(child);
+        }
+        // simplify
+        propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+
+        // Invariants that "should" be held
+        // FIXME: this vector shouldn't exist...
+        assert_eq!(graph.num_births, 0);
+
+        std::mem::swap(&mut parents, &mut children);
+    }
+
+    graph
 }
 
 #[cfg(test)]
