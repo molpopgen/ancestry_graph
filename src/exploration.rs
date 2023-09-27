@@ -573,6 +573,7 @@ impl Graph {
 }
 
 fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryIntersection>) {
+    todo!("this function is inf loop in prop tests -- issue likely elsewhere");
     queue.clear();
     assert!(!graph.edge_head[node.as_index()].is_sentinel());
     let mut current_edge = Some(graph.edge_head[node.as_index()]);
