@@ -1463,4 +1463,57 @@ mod multistep_tests {
             &graph.simplified_ancestry,
         );
     }
+
+    // Tree 1:
+    //
+    //  3
+    // ---
+    // | |
+    // 0 2
+    //
+    // Tree 2:
+    //
+    //  3
+    //  |
+    //  |
+    //  1
+    //
+    // Tree 3:
+    //
+    //  3
+    // ---
+    // | |
+    // 0 2
+    #[test]
+    fn propagation_test2() {
+        let initial_birth_times = vec![1, 1, 1, 0];
+        let initial_edges = vec![
+            vec![],
+            vec![],
+            vec![],
+            vec![(0, 1, 0), (0, 1, 2), (1, 2, 1), (2, 3, 0), (2, 3, 2)],
+        ];
+        let initial_ancestry = vec![
+            vec![(0, 1, 0, Some(0)), (2, 3, 0, Some(0))],
+            vec![],
+            vec![(0, 1, 2, Some(0)), (2, 3, 2, Some(0))],
+            vec![(0, 1, 3, None), (1, 2, 2, None), (2, 3, 3, None)],
+        ];
+        let mut graph = setup_graph(initial_edges, initial_ancestry, initial_birth_times);
+        graph.node_heap.insert(Node(3), graph.nodes.birth_time[3]);
+        setup_output_node_map(&mut graph);
+        propagate_ancestry_changes(&mut graph, None);
+        validate_ancestry(
+            3,
+            vec![(0, 1, None, 3), (2, 3, None, 3)],
+            &graph.output_node_map,
+            &graph.simplified_ancestry,
+        );
+        validate_edges(
+            3,
+            vec![(0, 1, 0), (2, 3, 0), (0, 1, 2), (2, 3, 2)],
+            &graph.output_node_map,
+            &graph.simplified_edges,
+        );
+    }
 }
