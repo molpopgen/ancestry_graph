@@ -560,6 +560,7 @@ impl Graph {
             &mut self.ancestry_tail,
             &mut self.ancestry,
         );
+        debug_assert!(self.ancestry.next(self.ancestry_tail[child.0]).is_none());
         self.node_heap
             .insert(parent, self.birth_time[parent.as_index()]);
         Ok(())
@@ -573,11 +574,12 @@ impl Graph {
 }
 
 fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryIntersection>) {
-    todo!("this function is inf loop in prop tests -- issue likely elsewhere");
+    //todo!("this function is inf loop in prop tests -- issue likely elsewhere");
     queue.clear();
     assert!(!graph.edge_head[node.as_index()].is_sentinel());
     let mut current_edge = Some(graph.edge_head[node.as_index()]);
     while let Some(edge_index) = current_edge {
+        //assert!(graph.edges.next(graph.edge_tail[node.as_index()]).is_none());
         let edge_ref = graph.edges.get(edge_index);
         let mut child_ancestry = {
             let a = graph.ancestry_head[edge_ref.child.as_index()];
@@ -587,6 +589,12 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
                 Some(a)
             }
         };
+        //if child_ancestry.is_some() {
+        //    assert!(graph
+        //        .ancestry
+        //        .next(graph.ancestry_tail[edge_ref.child.as_index()])
+        //        .is_none())
+        //}
         println!("{edge_ref:?}, {child_ancestry:?}");
         while let Some(child_ancestry_index) = child_ancestry {
             let anc_ref = graph.ancestry.get(child_ancestry_index);
@@ -976,6 +984,10 @@ fn process_queued_node(
     }
 
     graph.ancestry_tail[queued_parent.as_index()] = last_ancestry_index;
+    debug_assert!(graph
+        .ancestry
+        .next(graph.ancestry_tail[queued_parent.as_index()])
+        .is_none());
     println!("{:?}", graph.ancestry.next_raw(last_ancestry_index));
 }
 
