@@ -230,11 +230,13 @@ fn update_cursor_list<T>(
         let new_head = list.new_index(datum);
         head[at] = new_head;
         tail[at] = new_head;
-        //assert!(list.next(tail[at]).is_none());
     } else {
+        // NOTE: insert_after does not terminate a list,
+        // so we have to manually set the next value after
+        // the tail to be a sentinel.
         let new_tail = list.insert_after(current_tail, datum);
         tail[at] = new_tail;
-        assert!(list.next(tail[at]).is_none());
+        list.next[tail[at].0] = Index::sentinel().0;
     }
 }
 
