@@ -1070,6 +1070,36 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
 }
 
 #[cfg(test)]
+mod sim_test {
+    use proptest::prelude::*;
+    use super::haploid_wf;
+
+    proptest! {
+        #[test]
+        fn test_2_individuals(seed in 0..u64::MAX) {
+            let graph = haploid_wf(seed, 2, 100, 10);
+            //validate_reachable(&graph)
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_3_individuals(seed in 0..u64::MAX) {
+            let graph = haploid_wf(seed, 3, 100, 10);
+            //validate_reachable(&graph)
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_5_individuals(seed in 0..u64::MAX) {
+            let graph = haploid_wf(seed, 5, 100, 10);
+            //validate_reachable(&graph)
+        }
+    }
+}
+
+#[cfg(test)]
 mod test_utils {
     use super::*;
 
