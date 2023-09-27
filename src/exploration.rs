@@ -892,8 +892,10 @@ fn process_queued_node(
                     graph.ancestry.data.swap(ahead.0, next.0);
                     graph.ancestry.next[ahead.0] = graph.ancestry.next[next.0];
                     graph.ancestry.free_list.push(next.0);
+                } else {
+                    last_ancestry_index = ahead;
+                    ahead = next;
                 }
-                //last_ancestry_index = ahead;
                 println!("free list = {:?}", graph.ancestry.free_list);
             } else {
                 println!("gotta excise the current thing");
@@ -922,7 +924,7 @@ fn process_queued_node(
 
     println!(
         "done {ahead:?}, {last_ancestry_index:?}, {:?}",
-        graph.ancestry.next_raw(last_ancestry_index)
+        graph.ancestry.next(last_ancestry_index)
     );
 
     if !ahead.is_sentinel() {
@@ -998,7 +1000,7 @@ fn process_queued_node(
         .ancestry
         .next(graph.ancestry_tail[queued_parent.as_index()])
         .is_none());
-    println!("{:?}", graph.ancestry.next_raw(last_ancestry_index));
+    println!("{:?}", graph.ancestry.next(last_ancestry_index));
 
     #[cfg(debug_assertions)]
     {
@@ -1397,7 +1399,13 @@ mod test_utils {
 
     pub(super) fn validate_edges(node: usize, expected: &[(i64, i64, usize)], graph: &Graph) {
         let edges = extract_edges(Node(node), graph);
-        assert_eq!(edges.len(), expected.len());
+        assert_eq!(
+            edges.len(),
+            expected.len(),
+            "unexpected number of edges for node {node}: {} != {}",
+            edges.len(),
+            expected.len()
+        );
         for e in expected {
             let edge = Edge {
                 left: e.0,
