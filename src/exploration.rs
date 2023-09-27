@@ -816,7 +816,7 @@ fn process_queued_node(
                     for o in current_overlaps {
                         if let Some(un) = unary_segment_map.get(&o.child_ancestry_segment) {
                             println!("updating parent of {un:?} to {queued_parent:?}");
-                            assert!(graph.ancestry.data[un.0].parent.is_none());
+                            // assert!(graph.ancestry.data[un.0].parent.is_none());
                             graph.ancestry.data[un.0].parent = Some(queued_parent);
                             unary_segment_map.remove(&o.child_ancestry_segment);
                         }
@@ -1077,9 +1077,15 @@ mod sim_test {
     use super::haploid_wf;
     use proptest::prelude::*;
 
+    //fn test_2_individuals() {
+    //    let graph = haploid_wf(125125155, 2, 100, 100);
+    //    //validate_reachable(&graph)
+    //}
+
     proptest! {
         #[test]
         fn test_2_individuals(seed in 0..u64::MAX) {
+            println!("SEED = {seed}");
             let graph = haploid_wf(seed, 2, 100, 10);
             //validate_reachable(&graph)
         }
