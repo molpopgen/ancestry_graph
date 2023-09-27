@@ -1016,6 +1016,9 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
         temp_edges.clear();
     }
 
+    // TODO: this should be some "post simplify cleanup" step
+    graph.num_births = 0;
+
     debug_assert!(graph.node_heap.is_empty());
     rv
 }
@@ -1071,8 +1074,8 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
 
 #[cfg(test)]
 mod sim_test {
-    use proptest::prelude::*;
     use super::haploid_wf;
+    use proptest::prelude::*;
 
     proptest! {
         #[test]
