@@ -904,7 +904,7 @@ fn process_queued_node(
                         .node_heap
                         .insert(parent, graph.birth_time[parent.as_index()])
                 }
-                todo!("no coverage until now!");
+                //todo!("no coverage until now!");
                 ahead = graph.ancestry.excise_next(last_ancestry_index);
                 let next = graph.ancestry.next_raw(ahead);
                 println!("current = {:?}", graph.ancestry.get(ahead));
@@ -1698,7 +1698,14 @@ mod propagation_tests {
             transmissions,
         );
         graph.node_heap.insert(Node(0), graph.birth_time[0]);
+        validate_ancestry(
+            0,
+            &[(0, 1, None, 0), (1, 2, None, 2), (2, 3, None, 0)],
+            &graph,
+        );
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
+        validate_ancestry(0, &[(0, 1, None, 0), (2, 3, None, 0)], &graph);
+        validate_edges(0, &[(0, 1, 1), (2, 3, 1), (0, 1, 3), (2, 3, 3)], &graph);
     }
 }
 
