@@ -1012,9 +1012,21 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
 
     for gen in 0..num_generations {
         println!(
-            "{gen}, {}, {}",
+            "{gen}, {}, {}, {}|{}",
             graph.node_status.len(),
-            graph.free_nodes.len()
+            graph.free_nodes.len(),
+            graph
+                .birth_time
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| { !graph.edge_head[*i].is_sentinel() })
+                .count(),
+            graph
+                .birth_time
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| { !graph.ancestry_head[*i].is_sentinel() })
+                .count()
         );
         children.clear();
         // Advance time
