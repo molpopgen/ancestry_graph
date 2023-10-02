@@ -1132,6 +1132,12 @@ mod sim_test {
         //validate_reachable(&graph)
     }
 
+    #[test]
+    fn foo_foo_test_2_individuals() {
+        let graph = haploid_wf(5402151571545481800, 2, 100, 100);
+        //validate_reachable(&graph)
+    }
+
     proptest! {
         #[test]
         fn test_2_individuals(seed in 0..u64::MAX) {
