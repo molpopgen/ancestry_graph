@@ -202,6 +202,13 @@ impl Graph {
         add_parent_edge(left, right, parent, child, &mut self.new_parent_edges);
         Ok(())
     }
+
+    pub fn mark_node_death(&mut self, node: Node) {
+        println!("marking {node:?} dead");
+        self.nodes.status[node.as_index()] = NodeStatus::Death;
+        self.node_heap
+            .insert(node, self.nodes.birth_time[node.as_index()]);
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
