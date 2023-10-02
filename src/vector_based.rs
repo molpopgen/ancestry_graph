@@ -599,6 +599,17 @@ fn process_node(
             break;
         }
     }
+    if let Some(id) = output_node_id {
+        match output_nodes.status[id.as_index()] {
+            NodeStatus::Death => {
+                if !node_input_ancestry.is_empty() {
+                    output_nodes.status[id.as_index()] = NodeStatus::Ancestor;
+                }
+            }
+            NodeStatus::Extinct => panic!(),
+            _ => (),
+        }
+    }
 
     // Any remaining input ancestry had no overlaps, and is therefore
     // lost. Add those segment parents to the heap.
