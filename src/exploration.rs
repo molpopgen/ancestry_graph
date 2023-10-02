@@ -188,7 +188,7 @@ impl<T> CursorList<T> {
     }
 
     fn eliminate_and<F: FnMut(&T)>(&mut self, from: Index, mut f: F) {
-        assert!(from.0 < self.next.len());
+        assert!(from.0 < self.next.len(), "{from:?} >= {}", self.next.len());
         f(self.get(from));
         let mut next = self.excise_next(from);
         while !next.is_sentinel() {
@@ -765,6 +765,11 @@ fn record_total_loss_of_ancestry(queued_parent: Node, graph: &mut Graph) {
     graph.edge_head[queued_parent.as_index()] = Index::sentinel();
     graph.edge_tail[queued_parent.as_index()] = Index::sentinel();
 
+    println!(
+        "{:?} {:?}",
+        graph.ancestry_head[queued_parent.as_index()],
+        graph.ancestry_tail[queued_parent.as_index()]
+    );
     graph.ancestry.eliminate_and(
         graph.ancestry_head[queued_parent.as_index()],
         |a: &AncestrySegment| {
@@ -1037,6 +1042,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
             // There are no overlaps with children.
             // The current node loses all ancestry
             // and any parents are added to the node heap.
+            println!("empty queue for {queued_node:?}");
             record_total_loss_of_ancestry(queued_node, graph);
         } else {
             println!("our node heap = {:?}", graph.node_heap);
