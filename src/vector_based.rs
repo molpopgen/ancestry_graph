@@ -1243,14 +1243,10 @@ mod multistep_tests {
                 &graph.output_node_map,
                 &graph.simplified_ancestry,
             );
-            assert!(
-                matches!(
-                    graph.simplified_nodes.status[graph.output_node_map[node].unwrap().as_index()],
-                    NodeStatus::Extinct
-                ),
-                "{:?}",
-                graph.output_node_map
-            );
+            assert!(matches!(
+                graph.simplified_nodes.status[graph.output_node_map[node].unwrap().as_index()],
+                NodeStatus::Extinct
+            ),);
         }
         for node in [0, 2] {
             assert!(graph.output_node_map[node].is_some());
