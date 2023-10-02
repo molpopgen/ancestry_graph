@@ -112,8 +112,7 @@ impl<T> CursorList<T> {
         T: std::fmt::Debug,
     {
         if let Some(index) = self.free_list.pop() {
-            println!("recycling {index} with {datum:?}");
-            assert!(
+            debug_assert!(
                 !self.free_list.contains(&index),
                 "{index:?} in {:?}",
                 self.free_list
@@ -195,10 +194,9 @@ impl<T> CursorList<T> {
     /// * If `from` is out of range
     fn eliminate(&mut self, from: Index) {
         if !from.is_sentinel() {
-            assert!(from.0 < self.next.len(), "{from:?} => {}", self.next.len());
+            debug_assert!(from.0 < self.next.len(), "{from:?} => {}", self.next.len());
             let mut next = self.excise_next(from);
             while !next.is_sentinel() {
-                println!("next = {next:?}");
                 next = self.excise_next(next);
             }
             self.next[from.0] = usize::MAX;
@@ -213,7 +211,6 @@ impl<T> CursorList<T> {
         let mut next = self.excise_next(from);
         while !next.is_sentinel() {
             f(self.get(next));
-            println!("next = {next:?}");
             next = self.excise_next(next);
         }
         self.next[from.0] = usize::MAX;
@@ -569,7 +566,6 @@ impl Graph {
         parent: Node,
         child: Node,
     ) -> Result<(), ()> {
-        println!("parent = {parent:?}");
         self.validate_record_transmission_input(left, right, parent, child)?;
         update_cursor_list(
             parent.0,
@@ -597,7 +593,6 @@ impl Graph {
     }
 
     pub fn mark_node_death(&mut self, node: Node) {
-        println!("marking {node:?} dead");
         self.node_status[node.as_index()] = NodeStatus::Death;
         self.node_heap
             .insert(node, self.birth_time[node.as_index()]);
@@ -628,14 +623,11 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
         //        .next(graph.ancestry_tail[edge_ref.child.as_index()])
         //        .is_none())
         //}
-        println!("{edge_ref:?}, {child_ancestry:?}");
         while let Some(child_ancestry_index) = child_ancestry {
             let anc_ref = graph.ancestry.get(child_ancestry_index);
-            println!("{anc_ref:?}");
             if edge_ref.overlaps(anc_ref) {
                 let left = std::cmp::max(edge_ref.left, anc_ref.left);
                 let right = std::cmp::min(edge_ref.right, anc_ref.right);
-                println!("overlap!!!");
                 queue.push(AncestryIntersection {
                     left,
                     right,
@@ -674,11 +666,9 @@ fn update_ancestry(
     let current = *ancestry.get(current_ancestry_index);
     let temp_left = std::cmp::max(current.left, left);
     let temp_right = std::cmp::min(current.right, right);
-    println!("{:?} {temp_left} {temp_right}", current_ancestry_index);
     let mut rv = ancestry.next_raw(current_ancestry_index);
     if current.left != temp_left {
         assert!(current.left < temp_left);
-        println!("we have a left dangle on {}, {temp_left}", current.left);
         if let Some(parent) = current.parent {
             node_heap.insert(parent, birth_time[parent.as_index()]);
         }
@@ -687,7 +677,6 @@ fn update_ancestry(
         if let Some(parent) = current.parent {
             node_heap.insert(parent, birth_time[parent.as_index()]);
         }
-        println!("right dangle: {:?}, {temp_right}", current.right);
         {
             let current = ancestry.get_mut(current_ancestry_index);
             current.left = temp_right;
@@ -701,7 +690,6 @@ fn update_ancestry(
     if mapped_node != current.mapped_node {
         // This is a change from "coalescent" to "unary" on this
         // segment, which is a change we must propagate.
-        println!("unary change in the house: {:?}", current.parent);
         if let Some(parent) = current.parent {
             node_heap.insert(parent, birth_time[parent.as_index()]);
         }
@@ -713,70 +701,15 @@ fn update_ancestry(
         mapped_node,
         parent: None,
     };
-    println!("out = {out_seg:?}");
     // TODO: API fn to replace.
     *ancestry.get_mut(current_ancestry_index) = out_seg;
-    //if left == current_left && right == current_right {
-    //    // perfect overlap, all we need to do is update
-    //    // the mapped node...
-    //    let current = ancestry.get_mut(current_ancestry_index);
-    //    println!(
-    //        "update mapping from {:?} to {:?}",
-    //        current.mapped_node, out_seg.mapped_node
-    //    );
-    //    current.mapped_node = out_seg.mapped_node;
-    //    // ... but if the mapping has changed, then this
-    //    // segment is possibly a CHANGE TO UNARY that we
-    //    // must record
-    //} else {
-    //    *ancestry.get_mut(current_ancestry_index) = out_seg;
-    //    // rv = ancestry.next_raw(current_ancestry_index);
-    //    //println!("insert out");
-    //    //// We insert out_seg at current_ancestry_index
-    //    //if current_ancestry_index == last_ancestry_index {
-    //    //    println!("case A");
-    //    //    // replace current with out_seg and insert the
-    //    //    // current value next
-    //    //    let current = *ancestry.get(current_ancestry_index);
-    //    //    let next = ancestry.next_raw(current_ancestry_index);
-    //    //    let new_index = ancestry.new_index(current);
-    //    //    println!("new_index = {new_index:?}");
-    //    //    ancestry.next[new_index.0] = next.0;
-    //    //    let _ = std::mem::replace(&mut ancestry.data[current_ancestry_index.0], out_seg);
-    //    //    ancestry.next[current_ancestry_index.0] = new_index.0;
-    //    //    // Needed for handling right_seg below
-    //    //    current_ancestry_index = new_index;
-    //    //    rv = current_ancestry_index;
-    //    //    println!("rv = {rv:?}");
-    //    //} else {
-    //    //    println!("case B");
-    //    //    let next = ancestry.next_raw(last_ancestry_index);
-    //    //    let new_index = ancestry.new_index(out_seg);
-    //    //    ancestry.next[last_ancestry_index.0] = new_index.0;
-    //    //    ancestry.next[new_index.0] = next.0;
-    //    //    rv = new_index;
-    //    //}
-    //}
 
     if let Some(right_seg) = seg_right {
-        println!("seg_right = {right_seg:?}");
-        //if right_seg.left == current_left && right_seg.right == current_right {
-        //    let current = ancestry.get_mut(current_ancestry_index);
-        //    println!(
-        //        "updating node from {:?} to {:?}",
-        //        current.mapped_node, right_seg.mapped_node
-        //    );
-        //    // Could be an ancestry change!
-        //    current.mapped_node = right_seg.mapped_node;
-        //} else {
-        println!("inserting seg_right");
         let next = ancestry.next_raw(current_ancestry_index);
         let new_index = ancestry.new_index(right_seg);
-        println!("new_index = {new_index:?}");
         ancestry.next[current_ancestry_index.0] = new_index.0;
         ancestry.next[new_index.0] = next.0;
         rv = new_index;
-        //}
     }
     rv
 }
@@ -788,11 +721,6 @@ fn record_total_loss_of_ancestry(queued_parent: Node, graph: &mut Graph) {
     graph.edge_head[queued_parent.as_index()] = Index::sentinel();
     graph.edge_tail[queued_parent.as_index()] = Index::sentinel();
 
-    println!(
-        "{:?} {:?}",
-        graph.ancestry_head[queued_parent.as_index()],
-        graph.ancestry_tail[queued_parent.as_index()]
-    );
     graph.ancestry.eliminate_and(
         graph.ancestry_head[queued_parent.as_index()],
         |a: &AncestrySegment| {
@@ -818,27 +746,14 @@ fn process_queued_node(
     unary_segment_map: &mut UnarySegmentMap,
 ) {
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
-    while !ahead.is_sentinel() {
-        println!("input {:?}", graph.ancestry.get(ahead));
-        ahead = graph.ancestry.next_raw(ahead);
-    }
-    println!("PROCESSING {queued_parent:?} => {queue:?}");
-    let mut ahead = graph.ancestry_head[queued_parent.as_index()];
     let mut last_ancestry_index = ahead;
 
-    println!("ahead = {ahead:?}");
-
     let mut overlapper = AncestryOverlapper::new(queued_parent, queue);
-    println!("{overlapper:?}");
 
     let mut overlaps = overlapper.calculate_next_overlap_set();
 
-    println!("ancestry free list is {:?}", graph.ancestry.free_list);
-
     while !ahead.is_sentinel() {
         if let Some((left, right, current_overlaps)) = overlaps {
-            println!("current = {:?}", graph.ancestry.get(ahead));
-            println!("overlaps = {current_overlaps:?}");
             let (current_left, current_right) = {
                 let current = graph.ancestry.get(ahead);
                 (current.left, current.right)
@@ -864,21 +779,14 @@ fn process_queued_node(
                     mapped_node = queued_parent;
                     for o in current_overlaps {
                         if let Some(un) = unary_segment_map.get(&o.child_ancestry_segment) {
-                            println!("updating parent of {un:?} to {queued_parent:?}");
-                            // assert!(graph.ancestry.data[un.0].parent.is_none());
                             graph.ancestry.data[un.0].parent = Some(queued_parent);
                             unary_segment_map.remove(&o.child_ancestry_segment);
                         }
-                        println!("child node = {:?}", o.mapped_node);
                         temp_edges.push(Edge {
                             left,
                             right,
                             child: o.mapped_node,
                         });
-                        println!(
-                            "anc seg = {:?}",
-                            graph.ancestry.data[o.child_ancestry_segment.0]
-                        );
                         graph.ancestry.data[o.child_ancestry_segment.0].parent =
                             Some(queued_parent);
                     }
@@ -893,9 +801,7 @@ fn process_queued_node(
                     &mut graph.ancestry,
                     &mut graph.node_heap,
                 );
-                println!("we think {:?}", graph.ancestry.get(last_ancestry_index));
                 if let Some(useg) = unary_segment {
-                    println!("adding {:?}", graph.ancestry.get(last_ancestry_index));
                     debug_assert!(!unary_segment_map.contains_key(&last_ancestry_index));
                     unary_segment_map.insert(last_ancestry_index, useg);
                 }
@@ -905,12 +811,7 @@ fn process_queued_node(
                     }
                 }
                 overlaps = overlapper.calculate_next_overlap_set();
-                println!("overlaps updated to {overlaps:?}");
-                if !ahead.is_sentinel() {
-                    println!("next seg = {:?}", graph.ancestry.get(ahead));
-                }
             } else if last_ancestry_index == ahead {
-                println!("gotta shift left");
                 let next = graph.ancestry.next_raw(ahead);
                 if !next.is_sentinel() {
                     if let Some(parent) = graph.ancestry.get(next).parent {
@@ -918,7 +819,6 @@ fn process_queued_node(
                             .node_heap
                             .insert(parent, graph.birth_time[parent.as_index()])
                     }
-                    println!("next is not a sentinel: {:?}", graph.ancestry.get(next));
                     graph.ancestry.data.swap(ahead.0, next.0);
                     graph.ancestry.next[ahead.0] = graph.ancestry.next[next.0];
                     debug_assert!(!graph.ancestry.free_list.contains(&next.0));
@@ -927,9 +827,7 @@ fn process_queued_node(
                     last_ancestry_index = ahead;
                     ahead = next;
                 }
-                println!("free list = {:?}", graph.ancestry.free_list);
             } else {
-                println!("gotta excise the current thing, which is {ahead:?}");
                 debug_assert!(
                     !graph.ancestry.free_list.contains(&ahead.0),
                     "{ahead:?} in {:?}",
@@ -942,41 +840,21 @@ fn process_queued_node(
                         .node_heap
                         .insert(parent, graph.birth_time[parent.as_index()])
                 }
-                //todo!("no coverage until now!");
                 ahead = graph.ancestry.excise_next(last_ancestry_index);
                 let next = graph.ancestry.next_raw(ahead);
-                println!("current = {:?}, {ahead:?}", graph.ancestry.get(ahead));
-                println!(
-                    "prev = {:?}, {last_ancestry_index:?}",
-                    graph.ancestry.get(last_ancestry_index)
-                );
-                println!("here");
                 graph.ancestry.next[last_ancestry_index.0] = next.0;
-                //debug_assert!(
-                //    !graph.ancestry.free_list.contains(&ahead.0),
-                //    "{ahead:?} in {:?}",
-                //    graph.ancestry.free_list
-                //);
-                //graph.ancestry.free_list.push(ahead.0);
                 ahead = next;
             }
         } else {
             break;
         }
-        println!("temp_edges = {temp_edges:?}");
     }
-
-    println!(
-        "done {ahead:?}, {last_ancestry_index:?}, {:?}",
-        graph.ancestry.next(last_ancestry_index)
-    );
 
     if !ahead.is_sentinel() {
         let mut z = graph.ancestry.next(last_ancestry_index);
         // TODO: each of these is a right overhang
         // that we need to reckon with.
         while let Some(index) = z {
-            println!("removing trailing segment {:?}", graph.ancestry.get(index));
             if let Some(parent) = graph.ancestry.get(index).parent {
                 graph
                     .node_heap
@@ -993,10 +871,7 @@ fn process_queued_node(
 
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
     while !ahead.is_sentinel() {
-        println!("output {:?}", graph.ancestry.get(ahead));
-
         if ahead == last_ancestry_index {
-            println!("breaking");
             break;
         }
 
@@ -1006,7 +881,6 @@ fn process_queued_node(
     if temp_edges.is_empty() {
         let mut e = graph.edge_head[queued_parent.as_index()];
         while !e.is_sentinel() {
-            println!("deleting edge {e:?}");
             let next = graph.edges.next_raw(e);
             graph.edges.next[e.0] = usize::MAX;
             debug_assert!(!graph.edges.free_list.contains(&e.0));
@@ -1029,40 +903,18 @@ fn process_queued_node(
         let mut e = graph.edge_head[queued_parent.as_index()];
         let mut last_e = e;
         for edge in temp_edges.iter() {
-            println!("adding edge: {edge:?}, {e:?}, {last_e:?}");
             if !e.is_sentinel() {
-                println!("adding at {e:?}");
                 *graph.edges.get_mut(e) = *edge;
                 last_e = e;
                 e = graph.edges.next_raw(e);
             } else {
                 last_e = graph.edges.insert_after(last_e, *edge);
-                println!("adding 2 at {last_e:?}");
-            }
-        }
-        println!(
-            "last Index for new edges = {last_e:?}, next is {:?}",
-            graph.edges.next(last_e)
-        );
-
-        println!("our new edges are:");
-        #[cfg(debug_assertions)]
-        {
-            let mut ee = graph.edge_head[queued_parent.as_index()];
-            loop {
-                println!("{:?} at {ee:?}", graph.edges.get(ee));
-                if ee == last_e {
-                    break;
-                }
-                ee = graph.edges.next_raw(ee);
             }
         }
         // Recycle extraneous edges
         if !graph.edges.next_raw(last_e).is_sentinel() {
             let mut z = graph.edges.next(last_e);
-            println!("free list = {:?}", graph.edges.free_list);
             while let Some(index) = z {
-                println!("will recycle {index:?}");
                 z = graph.edges.next(index);
                 graph.edges.next[index.0] = usize::MAX;
                 debug_assert!(
@@ -1082,7 +934,6 @@ fn process_queued_node(
         .ancestry
         .next(graph.ancestry_tail[queued_parent.as_index()])
         .is_none());
-    println!("{:?}", graph.ancestry.next(last_ancestry_index));
 
     #[cfg(debug_assertions)]
     {
@@ -1119,14 +970,8 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
             // There are no overlaps with children.
             // The current node loses all ancestry
             // and any parents are added to the node heap.
-            println!("empty queue for {queued_node:?}");
             record_total_loss_of_ancestry(queued_node, graph);
         } else {
-            println!("our node heap = {:?}", graph.node_heap);
-            println!("our useg map = {:?}", unary_segment_map);
-            for (k, v) in unary_segment_map.iter() {
-                println!("{k:?} => {:?}", graph.ancestry.data[v.0])
-            }
             process_queued_node(
                 options,
                 queued_node,
@@ -1163,8 +1008,6 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
         children.clear();
         // Advance time
         graph.advance_time().unwrap();
-        #[cfg(debug_assertions)]
-        println!("CTIME {}", graph.current_time);
         // Mark parents as dead in the graph
         // TODO: mark_node_death needs testing in lib.rs!
         parents.iter().for_each(|&node| graph.mark_node_death(node));
@@ -1218,7 +1061,6 @@ mod sim_test {
     proptest! {
         #[test]
         fn test_2_individuals(seed in 0..u64::MAX) {
-            println!("SEED = {seed}");
             let graph = haploid_wf(seed, 2, 100, 10);
             //validate_reachable(&graph)
         }
@@ -1398,11 +1240,9 @@ mod test_utils {
             assert!(head[i].is_sentinel());
             assert!(tail[i].is_sentinel());
             if !e.is_empty() {
-                println!("added {:?} for node {i}", e[0]);
                 let mut index = list.new_index(f(e[0]));
                 head[i] = index;
                 for &j in &e[1..] {
-                    println!("added {:?} for node {i}", j);
                     index = list.insert_after(index, f(j))
                 }
                 tail[i] = index;
@@ -1465,9 +1305,6 @@ mod test_utils {
                 &mut graph.ancestry_tail,
                 &mut graph.ancestry,
             );
-            println!("{:?}", graph.ancestry);
-            println!("{:?}", graph.ancestry_head);
-            println!("{:?}", graph.ancestry_tail);
         }
 
         graph.advance_time_by(max_time + 1);
@@ -1481,7 +1318,6 @@ mod test_utils {
                 .record_transmission(t.0, t.1, Node(t.2), birth_nodes[t.3])
                 .unwrap();
         }
-        println!("{:?}", graph.node_heap);
 
         (graph, birth_nodes)
     }
@@ -1637,7 +1473,6 @@ mod graph_tests {
 
         while overlapper.calculate_next_overlap_set().is_some() {
             num_iters += 1;
-            println!("{:?}", overlapper.overlaps);
             if num_iters > 2 {
                 panic!("there are only 2 overlaps")
             }
@@ -1717,11 +1552,9 @@ mod propagation_tests {
             transmissions,
         );
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
-        println!("{birth_nodes:?}");
         for (node, b) in [(1, birth_nodes[0]), (2, birth_nodes[1])] {
             let anc = extract_ancestry(Node(node), &graph);
             assert_eq!(anc.len(), 1);
-            println!("{node:?} -> {anc:?}");
             assert!(anc.contains(&AncestrySegment {
                 left: 5,
                 right: 10,
@@ -1854,13 +1687,8 @@ mod multistep_tests {
             transmissions,
         );
         let edges = extract_edges(Node(0), &graph);
-        println!("input edges for node 0: {:?}", edges);
         let ancestry = extract_ancestry(Node(1), &graph);
-        println!("input ancestry for node 1: {:?}", ancestry);
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
-
-        println!("{:?}", graph.ancestry_head);
-        println!("{:?}", graph.ancestry);
 
         // node 1
         validate_edges(1, &[(0, 2, 2), (0, 2, 3)], &graph);
