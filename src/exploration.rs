@@ -177,6 +177,7 @@ impl<T> CursorList<T> {
         let next = self.next_raw(at);
         self.next[at.0] = next.0;
         if !next.is_sentinel() {
+            debug_assert!(!(self.free_list.contains(&next.0)));
             self.free_list.push(next.0);
         }
         next
@@ -196,6 +197,7 @@ impl<T> CursorList<T> {
                 next = self.excise_next(next);
             }
             self.next[from.0] = usize::MAX;
+            debug_assert!(!(self.free_list.contains(&from.0)));
             self.free_list.push(from.0)
         }
     }
@@ -210,6 +212,7 @@ impl<T> CursorList<T> {
             next = self.excise_next(next);
         }
         self.next[from.0] = usize::MAX;
+        debug_assert!(!(self.free_list.contains(&from.0)));
         self.free_list.push(from.0)
     }
 
@@ -911,6 +914,7 @@ fn process_queued_node(
                     println!("next is not a sentinel: {:?}", graph.ancestry.get(next));
                     graph.ancestry.data.swap(ahead.0, next.0);
                     graph.ancestry.next[ahead.0] = graph.ancestry.next[next.0];
+                    debug_assert!(!(graph.ancestry.free_list.contains(&next.0)));
                     graph.ancestry.free_list.push(next.0);
                 } else {
                     last_ancestry_index = ahead;
@@ -933,6 +937,7 @@ fn process_queued_node(
                 println!("prev = {:?}", graph.ancestry.get(last_ancestry_index));
                 println!("here");
                 graph.ancestry.next[last_ancestry_index.0] = next.0;
+                debug_assert!(!(graph.ancestry.free_list.contains(&ahead.0)));
                 graph.ancestry.free_list.push(ahead.0);
                 ahead = next;
             }
