@@ -828,6 +828,8 @@ fn process_queued_node(
 
     let mut overlaps = overlapper.calculate_next_overlap_set();
 
+    println!("ancestry free list is {:?}", graph.ancestry.free_list);
+
     while !ahead.is_sentinel() {
         if let Some((left, right, current_overlaps)) = overlaps {
             println!("current = {:?}", graph.ancestry.get(ahead));
@@ -922,7 +924,7 @@ fn process_queued_node(
                 }
                 println!("free list = {:?}", graph.ancestry.free_list);
             } else {
-                println!("gotta excise the current thing");
+                println!("gotta excise the current thing, which is {ahead:?}");
                 // Will panic if ahead is sentinel, which is desired b/c
                 // it'll let us know when we get // test coverrage here.
                 if let Some(parent) = graph.ancestry.get(ahead).parent {
@@ -933,11 +935,18 @@ fn process_queued_node(
                 //todo!("no coverage until now!");
                 ahead = graph.ancestry.excise_next(last_ancestry_index);
                 let next = graph.ancestry.next_raw(ahead);
-                println!("current = {:?}", graph.ancestry.get(ahead));
-                println!("prev = {:?}", graph.ancestry.get(last_ancestry_index));
+                println!("current = {:?}, {ahead:?}", graph.ancestry.get(ahead));
+                println!(
+                    "prev = {:?}, {last_ancestry_index:?}",
+                    graph.ancestry.get(last_ancestry_index)
+                );
                 println!("here");
                 graph.ancestry.next[last_ancestry_index.0] = next.0;
-                debug_assert!(!graph.ancestry.free_list.contains(&ahead.0));
+                debug_assert!(
+                    !graph.ancestry.free_list.contains(&ahead.0),
+                    "{ahead:?} in {:?}",
+                    graph.ancestry.free_list
+                );
                 graph.ancestry.free_list.push(ahead.0);
                 ahead = next;
             }
