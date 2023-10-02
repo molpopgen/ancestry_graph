@@ -113,7 +113,11 @@ impl<T> CursorList<T> {
     {
         if let Some(index) = self.free_list.pop() {
             println!("recycling {index} with {datum:?}");
-            assert!(!self.free_list.contains(&index));
+            assert!(
+                !self.free_list.contains(&index),
+                "{index:?} in {:?}",
+                self.free_list
+            );
             let _ = std::mem::replace(&mut self.data[index], datum);
             Index(index)
         } else {
@@ -925,6 +929,11 @@ fn process_queued_node(
                 println!("free list = {:?}", graph.ancestry.free_list);
             } else {
                 println!("gotta excise the current thing, which is {ahead:?}");
+                debug_assert!(
+                    !graph.ancestry.free_list.contains(&ahead.0),
+                    "{ahead:?} in {:?}",
+                    graph.ancestry.free_list
+                );
                 // Will panic if ahead is sentinel, which is desired b/c
                 // it'll let us know when we get // test coverrage here.
                 if let Some(parent) = graph.ancestry.get(ahead).parent {
