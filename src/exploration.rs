@@ -107,10 +107,14 @@ impl<T> CursorList<T> {
         &mut self.data[at.0]
     }
 
-    pub fn new_index(&mut self, datum: T) -> Index {
+    pub fn new_index(&mut self, datum: T) -> Index
+    where
+        T: std::fmt::Debug,
+    {
         if let Some(index) = self.free_list.pop() {
+            println!("recycling {index} with {datum:?}");
+            assert!(!self.free_list.contains(&index));
             let _ = std::mem::replace(&mut self.data[index], datum);
-            println!("recycling {index}");
             Index(index)
         } else {
             self.next.push(Index::sentinel().0);
@@ -119,7 +123,10 @@ impl<T> CursorList<T> {
         }
     }
 
-    fn setup_insertion(&mut self, at: Index, datum: T) -> (Index, Index) {
+    fn setup_insertion(&mut self, at: Index, datum: T) -> (Index, Index)
+    where
+        T: std::fmt::Debug,
+    {
         let new_index = self.new_index(datum);
         (new_index, at)
     }
@@ -132,7 +139,10 @@ impl<T> CursorList<T> {
         self.next[at.0] = value.0
     }
 
-    pub fn add_list(&mut self, datum: T) -> Index {
+    pub fn add_list(&mut self, datum: T) -> Index
+    where
+        T: std::fmt::Debug,
+    {
         self.new_index(datum)
     }
 
@@ -148,7 +158,10 @@ impl<T> CursorList<T> {
         Index(self.next[at.0])
     }
 
-    pub fn insert_after(&mut self, at: Index, datum: T) -> Index {
+    pub fn insert_after(&mut self, at: Index, datum: T) -> Index
+    where
+        T: std::fmt::Debug,
+    {
         let (new_index, index_at) = self.setup_insertion(at, datum);
         if let Some(next) = self.next(at) {
             self.set_next(new_index, next);
@@ -226,7 +239,9 @@ fn update_cursor_list<T>(
     head: &mut [Index],
     tail: &mut [Index],
     list: &mut CursorList<T>,
-) {
+) where
+    T: std::fmt::Debug,
+{
     let current_tail = tail[at];
     if current_tail.is_sentinel() {
         let new_head = list.new_index(datum);
