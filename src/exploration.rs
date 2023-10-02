@@ -889,6 +889,7 @@ fn process_queued_node(
         }
         graph.edge_head[queued_parent.as_index()] = Index::sentinel();
         graph.edge_tail[queued_parent.as_index()] = Index::sentinel();
+        graph.free_nodes.push(queued_parent.as_index());
     } else {
         #[cfg(debug_assertions)]
         {
@@ -963,7 +964,9 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     let mut queue = vec![];
     let mut rv = None;
     let mut unary_segment_map = UnarySegmentMap::default();
+    let mut visited = 0;
     while let Some(queued_node) = graph.node_heap.pop() {
+        visited += 1;
         rv = Some(queued_node);
         ancestry_intersection(queued_node, graph, &mut queue);
         if queue.is_empty() {
@@ -988,6 +991,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     }
 
     // TODO: this should be some "post simplify cleanup" step
+    println!("{} {visited}", graph.num_births);
     graph.num_births = 0;
 
     debug_assert!(graph.node_heap.is_empty());
@@ -1004,7 +1008,12 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
     let sample_breakpoint = rand::distributions::Uniform::new(1, genome_length);
     let mut children: Vec<Node> = vec![];
 
-    for _ in 0..num_generations {
+    for gen in 0..num_generations {
+        println!(
+            "{gen}, {}, {}",
+            graph.node_status.len(),
+            graph.free_nodes.len()
+        );
         children.clear();
         // Advance time
         graph.advance_time().unwrap();
@@ -1080,6 +1089,13 @@ mod sim_test {
             let graph = haploid_wf(seed, 5, 100, 10);
             //validate_reachable(&graph)
         }
+    }
+
+    #[test]
+    fn test_5_individuals_fixed() {
+        let graph = haploid_wf(1235125152, 1000, 100000000, 100);
+        println!("{} {}", graph.edges.data.len(), graph.ancestry.data.len());
+        //validate_reachable(&graph)
     }
 }
 
