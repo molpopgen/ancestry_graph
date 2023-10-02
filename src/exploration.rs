@@ -1030,10 +1030,15 @@ fn process_queued_node(
         // Recycle extraneous edges
         if !graph.edges.next_raw(last_e).is_sentinel() {
             let mut z = graph.edges.next(last_e);
+            println!("free list = {:?}", graph.edges.free_list);
             while let Some(index) = z {
                 z = graph.edges.next(index);
                 graph.edges.next[index.0] = usize::MAX;
-                debug_assert!(!graph.edges.free_list.contains(&index.0));
+                debug_assert!(
+                    !graph.edges.free_list.contains(&index.0),
+                    "{index:?} in {:?}",
+                    graph.edges.free_list
+                );
                 graph.edges.free_list.push(index.0);
             }
             graph.edges.next[last_e.0] = usize::MAX;
