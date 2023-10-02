@@ -118,6 +118,7 @@ impl<T> CursorList<T> {
                 "{index:?} in {:?}",
                 self.free_list
             );
+            self.next[index] = usize::MAX;
             let _ = std::mem::replace(&mut self.data[index], datum);
             Index(index)
         } else {
@@ -1015,16 +1016,45 @@ fn process_queued_node(
         graph.edge_head[queued_parent.as_index()] = Index::sentinel();
         graph.edge_tail[queued_parent.as_index()] = Index::sentinel();
     } else {
+        #[cfg(debug_assertions)]
+        {
+            let mut e = graph.edge_head[queued_parent.as_index()];
+            let mut v = vec![];
+            while !e.is_sentinel() {
+                assert!(!v.contains(&e));
+                v.push(e);
+                e = graph.edges.next_raw(e);
+            }
+        }
         let mut e = graph.edge_head[queued_parent.as_index()];
         let mut last_e = e;
         for edge in temp_edges.iter() {
             println!("adding edge: {edge:?}, {e:?}, {last_e:?}");
             if !e.is_sentinel() {
+                println!("adding at {e:?}");
                 *graph.edges.get_mut(e) = *edge;
                 last_e = e;
                 e = graph.edges.next_raw(e);
             } else {
                 last_e = graph.edges.insert_after(last_e, *edge);
+                println!("adding 2 at {last_e:?}");
+            }
+        }
+        println!(
+            "last Index for new edges = {last_e:?}, next is {:?}",
+            graph.edges.next(last_e)
+        );
+
+        println!("our new edges are:");
+        #[cfg(debug_assertions)]
+        {
+            let mut ee = graph.edge_head[queued_parent.as_index()];
+            loop {
+                println!("{:?} at {ee:?}", graph.edges.get(ee));
+                if ee == last_e {
+                    break;
+                }
+                ee = graph.edges.next_raw(ee);
             }
         }
         // Recycle extraneous edges
@@ -1032,6 +1062,7 @@ fn process_queued_node(
             let mut z = graph.edges.next(last_e);
             println!("free list = {:?}", graph.edges.free_list);
             while let Some(index) = z {
+                println!("will recycle {index:?}");
                 z = graph.edges.next(index);
                 graph.edges.next[index.0] = usize::MAX;
                 debug_assert!(
