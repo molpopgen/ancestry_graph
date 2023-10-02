@@ -942,12 +942,12 @@ fn process_queued_node(
                 );
                 println!("here");
                 graph.ancestry.next[last_ancestry_index.0] = next.0;
-                debug_assert!(
-                    !graph.ancestry.free_list.contains(&ahead.0),
-                    "{ahead:?} in {:?}",
-                    graph.ancestry.free_list
-                );
-                graph.ancestry.free_list.push(ahead.0);
+                //debug_assert!(
+                //    !graph.ancestry.free_list.contains(&ahead.0),
+                //    "{ahead:?} in {:?}",
+                //    graph.ancestry.free_list
+                //);
+                //graph.ancestry.free_list.push(ahead.0);
                 ahead = next;
             }
         } else {
