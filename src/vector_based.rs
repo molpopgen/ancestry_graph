@@ -110,7 +110,7 @@ impl Edges {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct Nodes {
     birth_time: Vec<i64>,
     status: Vec<NodeStatus>,
@@ -599,6 +599,15 @@ fn process_node(
             break;
         }
     }
+
+    // Any remaining input ancestry had no overlaps, and is therefore
+    // lost. Add those segment parents to the heap.
+    for i in node_input_ancestry[current_input_ancestry..].iter() {
+        if let Some(parent) = i.parent {
+            node_heap.insert(parent, input_nodes.birth_time[parent.as_index()])
+        }
+    }
+
     if let Some(id) = output_node_id {
         match output_nodes.status[id.as_index()] {
             NodeStatus::Death => {
@@ -609,14 +618,9 @@ fn process_node(
             NodeStatus::Extinct => panic!(),
             _ => (),
         }
-    }
-
-    // Any remaining input ancestry had no overlaps, and is therefore
-    // lost. Add those segment parents to the heap.
-    for i in node_input_ancestry[current_input_ancestry..].iter() {
-        if let Some(parent) = i.parent {
-            node_heap.insert(parent, input_nodes.birth_time[parent.as_index()])
-        }
+        if temp_edges.is_empty() {
+            output_nodes.status[id.as_index()] = NodeStatus::Extinct;
+        } // node has gone extinct
     }
     debug_assert!(current_overlaps.is_none());
     rv
@@ -1238,6 +1242,14 @@ mod multistep_tests {
                 vec![(0, 5, None, 2)],
                 &graph.output_node_map,
                 &graph.simplified_ancestry,
+            );
+            assert!(
+                matches!(
+                    graph.simplified_nodes.status[graph.output_node_map[node].unwrap().as_index()],
+                    NodeStatus::Extinct
+                ),
+                "{:?}",
+                graph.output_node_map
             );
         }
         for node in [0, 2] {
