@@ -181,7 +181,7 @@ impl<T> CursorList<T> {
         let next = self.next_raw(at);
         self.next[at.0] = next.0;
         if !next.is_sentinel() {
-            debug_assert!(!(self.free_list.contains(&next.0)));
+            debug_assert!(!self.free_list.contains(&next.0));
             self.free_list.push(next.0);
         }
         next
@@ -201,7 +201,7 @@ impl<T> CursorList<T> {
                 next = self.excise_next(next);
             }
             self.next[from.0] = usize::MAX;
-            debug_assert!(!(self.free_list.contains(&from.0)));
+            debug_assert!(!self.free_list.contains(&from.0));
             self.free_list.push(from.0)
         }
     }
@@ -216,7 +216,7 @@ impl<T> CursorList<T> {
             next = self.excise_next(next);
         }
         self.next[from.0] = usize::MAX;
-        debug_assert!(!(self.free_list.contains(&from.0)));
+        debug_assert!(!self.free_list.contains(&from.0));
         self.free_list.push(from.0)
     }
 
@@ -920,7 +920,7 @@ fn process_queued_node(
                     println!("next is not a sentinel: {:?}", graph.ancestry.get(next));
                     graph.ancestry.data.swap(ahead.0, next.0);
                     graph.ancestry.next[ahead.0] = graph.ancestry.next[next.0];
-                    debug_assert!(!(graph.ancestry.free_list.contains(&next.0)));
+                    debug_assert!(!graph.ancestry.free_list.contains(&next.0));
                     graph.ancestry.free_list.push(next.0);
                 } else {
                     last_ancestry_index = ahead;
@@ -984,6 +984,7 @@ fn process_queued_node(
 
             z = graph.ancestry.next(index);
             graph.ancestry.next[index.0] = usize::MAX;
+            debug_assert!(!graph.ancestry.free_list.contains(&index.0));
             graph.ancestry.free_list.push(index.0);
         }
         graph.ancestry.next[last_ancestry_index.0] = usize::MAX;
@@ -1007,6 +1008,7 @@ fn process_queued_node(
             println!("deleting edge {e:?}");
             let next = graph.edges.next_raw(e);
             graph.edges.next[e.0] = usize::MAX;
+            debug_assert!(!graph.edges.free_list.contains(&e.0));
             graph.edges.free_list.push(e.0);
             e = next;
         }
@@ -1031,6 +1033,7 @@ fn process_queued_node(
             while let Some(index) = z {
                 z = graph.edges.next(index);
                 graph.edges.next[index.0] = usize::MAX;
+                debug_assert!(!graph.edges.free_list.contains(&index.0));
                 graph.edges.free_list.push(index.0);
             }
             graph.edges.next[last_e.0] = usize::MAX;
