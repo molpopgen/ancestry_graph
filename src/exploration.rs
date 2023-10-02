@@ -733,6 +733,7 @@ fn record_total_loss_of_ancestry(queued_parent: Node, graph: &mut Graph) {
     );
     graph.ancestry_head[queued_parent.as_index()] = Index::sentinel();
     graph.ancestry_tail[queued_parent.as_index()] = Index::sentinel();
+    assert!(!graph.free_nodes.contains(&queued_parent.as_index()));
     graph.free_nodes.push(queued_parent.as_index());
 }
 
@@ -889,6 +890,7 @@ fn process_queued_node(
         }
         graph.edge_head[queued_parent.as_index()] = Index::sentinel();
         graph.edge_tail[queued_parent.as_index()] = Index::sentinel();
+        assert!(!graph.free_nodes.contains(&queued_parent.as_index()));
         graph.free_nodes.push(queued_parent.as_index());
     } else {
         #[cfg(debug_assertions)]
