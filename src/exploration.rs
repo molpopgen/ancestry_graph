@@ -937,7 +937,7 @@ fn process_queued_node(
                 println!("prev = {:?}", graph.ancestry.get(last_ancestry_index));
                 println!("here");
                 graph.ancestry.next[last_ancestry_index.0] = next.0;
-                debug_assert!(!(graph.ancestry.free_list.contains(&ahead.0)));
+                debug_assert!(!graph.ancestry.free_list.contains(&ahead.0));
                 graph.ancestry.free_list.push(ahead.0);
                 ahead = next;
             }
