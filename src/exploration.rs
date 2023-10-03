@@ -1106,9 +1106,32 @@ mod sim_test {
     }
 
     #[test]
-    fn test_5_individuals_fixed() {
+    fn test_1000_individuals_fixed() {
         let graph = haploid_wf(1235125152, 1000, 100000000, 100);
         println!("{} {}", graph.edges.data.len(), graph.ancestry.data.len());
+        let mut mean_e = 0;
+        let mut mean_a = 0;
+        let mut n = 0;
+        for i in 0..graph.birth_time.len() {
+            if !graph.ancestry_head[i].is_sentinel() {
+                let mut a = graph.ancestry_head[i];
+                while !a.is_sentinel() {
+                    mean_a += 1;
+                    a = graph.ancestry.next_raw(a);
+                }
+                let mut e = graph.edge_head[i];
+                while !e.is_sentinel() {
+                    mean_e += 1;
+                    e = graph.edges.next_raw(e);
+                }
+                n += 1;
+            }
+        }
+        println!(
+            "{}, {} | {n}",
+            (mean_a as f64) / (n as f64),
+            (mean_e as f64) / (n as f64)
+        );
         //validate_reachable(&graph)
     }
 }
