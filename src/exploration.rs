@@ -1070,6 +1070,33 @@ mod sim_test {
     use proptest::prelude::*;
 
     #[test]
+    fn manual_test_0() {
+        let (mut graph, parents) = super::Graph::with_initial_nodes(2, 100).unwrap();
+        graph.advance_time().unwrap();
+        parents.iter().for_each(|&node| graph.mark_node_death(node));
+        let c0 = graph.add_birth(graph.current_time).unwrap();
+        graph
+            .record_transmission(0, 45, super::Node(1), c0)
+            .unwrap();
+        graph
+            .record_transmission(45, graph.genome_length, super::Node(0), c0)
+            .unwrap();
+        let c1 = graph.add_birth(graph.current_time).unwrap();
+        graph
+            .record_transmission(0, 73, super::Node(0), c1)
+            .unwrap();
+        graph
+            .record_transmission(73, graph.genome_length, super::Node(1), c1)
+            .unwrap();
+        super::propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+        super::test_utils::validate_ancestry(
+            0,
+            &[(0, 45, None, 2), (45, 73, None, 0), (73, 100, None, 3)],
+            &graph,
+        );
+    }
+
+    #[test]
     fn foo_test_2_individuals() {
         let graph = haploid_wf(709617927814905890, 2, 100, 100);
         //validate_reachable(&graph)
