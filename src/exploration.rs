@@ -339,6 +339,7 @@ impl<'q> AncestryOverlapper<'q> {
     }
 
     fn calculate_next_overlap_set(&mut self) -> Option<(i64, i64, &[AncestryIntersection])> {
+        todo!("this is not working");
         // NOTE: this if statement hides from the compiler
         // that current_overlap is always < queue.len().
         // We should be able to check current_overlap + 1 <
