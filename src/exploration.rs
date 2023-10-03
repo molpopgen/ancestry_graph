@@ -1090,6 +1090,51 @@ mod sim_test {
         graph
             .record_transmission(73, graph.genome_length, super::Node(1), c1)
             .unwrap();
+
+        for node in [0, 1] {
+            let mut q = vec![];
+            super::ancestry_intersection(super::Node(node), &graph, &mut q);
+            let n = super::test_utils::naive_ancestry_intersection(super::Node(node), &graph);
+            for (i, j) in q.iter().zip(n.iter()) {
+                assert_eq!(i.left, j.left);
+                assert_eq!(i.right, j.right);
+                assert_eq!(i.mapped_node, j.mapped_node);
+            }
+            println!("confirming {node}");
+            println!("{q:?}");
+            println!("{n:?}");
+        }
+
+        // The stuff below should be a new test.
+        let v = vec![
+            super::AncestryIntersection {
+                left: 0,
+                right: 73,
+                mapped_node: super::Node(3),
+                child: super::Node(3),
+                child_ancestry_segment: super::Index(4),
+            },
+            super::AncestryIntersection {
+                left: 45,
+                right: 100,
+                mapped_node: super::Node(2),
+                child: super::Node(2),
+                child_ancestry_segment: super::Index(3),
+            },
+            super::AncestryIntersection {
+                left: 9223372036854775807,
+                right: 9223372036854775807,
+                mapped_node: super::Node(18446744073709551615),
+                child: super::Node(18446744073709551615),
+                child_ancestry_segment: super::Index(18446744073709551615),
+            },
+        ];
+
+        let mut overlapper = super::AncestryOverlapper::new(super::Node(0), &v);
+        while let Some((l,r,o)) = overlapper.calculate_next_overlap_set() {
+            println!("v = {l} {r} {o:?}");
+        }
+
         super::propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
         super::test_utils::validate_ancestry(
             0,
