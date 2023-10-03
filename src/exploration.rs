@@ -339,7 +339,6 @@ impl<'q> AncestryOverlapper<'q> {
     }
 
     fn calculate_next_overlap_set(&mut self) -> Option<(i64, i64, &[AncestryIntersection])> {
-        todo!("this is not working");
         // NOTE: this if statement hides from the compiler
         // that current_overlap is always < queue.len().
         // We should be able to check current_overlap + 1 <
@@ -1106,36 +1105,6 @@ mod sim_test {
             println!("{n:?}");
         }
 
-        // The stuff below should be a new test.
-        let v = vec![
-            super::AncestryIntersection {
-                left: 0,
-                right: 73,
-                mapped_node: super::Node(3),
-                child: super::Node(3),
-                child_ancestry_segment: super::Index(4),
-            },
-            super::AncestryIntersection {
-                left: 45,
-                right: 100,
-                mapped_node: super::Node(2),
-                child: super::Node(2),
-                child_ancestry_segment: super::Index(3),
-            },
-            super::AncestryIntersection {
-                left: 9223372036854775807,
-                right: 9223372036854775807,
-                mapped_node: super::Node(18446744073709551615),
-                child: super::Node(18446744073709551615),
-                child_ancestry_segment: super::Index(18446744073709551615),
-            },
-        ];
-
-        let mut overlapper = super::AncestryOverlapper::new(super::Node(0), &v);
-        while let Some((l,r,o)) = overlapper.calculate_next_overlap_set() {
-            println!("v = {l} {r} {o:?}");
-        }
-
         super::propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
         super::test_utils::validate_ancestry(
             0,
@@ -1606,6 +1575,42 @@ mod graph_tests {
             }
         }
         assert_eq!(num_iters, 2);
+    }
+
+    #[test]
+    fn ancestry_intersection_test2() {
+        // The stuff below should be a new test.
+        let v = vec![
+            super::AncestryIntersection {
+                left: 0,
+                right: 73,
+                mapped_node: super::Node(3),
+                child: super::Node(3),
+                child_ancestry_segment: super::Index(4),
+            },
+            super::AncestryIntersection {
+                left: 45,
+                right: 100,
+                mapped_node: super::Node(2),
+                child: super::Node(2),
+                child_ancestry_segment: super::Index(3),
+            },
+            super::AncestryIntersection {
+                left: 9223372036854775807,
+                right: 9223372036854775807,
+                mapped_node: super::Node(18446744073709551615),
+                child: super::Node(18446744073709551615),
+                child_ancestry_segment: super::Index(18446744073709551615),
+            },
+        ];
+
+        let mut overlapper = super::AncestryOverlapper::new(super::Node(0), &v);
+        let mut n = 0;
+        while let Some((l, r, o)) = overlapper.calculate_next_overlap_set() {
+            println!("v = {l} {r} {o:?}");
+            n += 1;
+        }
+        assert_eq!(n, 3);
     }
 
     #[test]
