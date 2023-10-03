@@ -753,6 +753,7 @@ fn process_queued_node(
 
     let mut overlaps = overlapper.calculate_next_overlap_set();
 
+    println!("node {queued_parent:?}");
     while !ahead.is_sentinel() {
         if let Some((left, right, current_overlaps)) = overlaps {
             let (current_left, current_right) = {
