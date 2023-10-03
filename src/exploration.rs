@@ -756,6 +756,7 @@ fn process_queued_node(
     println!("node {queued_parent:?}");
     while !ahead.is_sentinel() {
         if let Some((left, right, current_overlaps)) = overlaps {
+            println!("[{left}, {right}), {current_overlaps:?}");
             let (current_left, current_right) = {
                 let current = graph.ancestry.get(ahead);
                 (current.left, current.right)
