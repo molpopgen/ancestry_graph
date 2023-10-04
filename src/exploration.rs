@@ -1598,7 +1598,6 @@ mod graph_tests {
 
     #[test]
     fn ancestry_intersection_test2() {
-        // The stuff below should be a new test.
         let v = vec![
             super::AncestryIntersection {
                 left: 0,
