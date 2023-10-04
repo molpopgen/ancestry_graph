@@ -349,11 +349,18 @@ impl<'q> AncestryOverlapper<'q> {
             if self.overlaps.is_empty() {
                 self.left = self.queue[self.current_overlap].left;
             }
-            let mut new_right = i64::MAX;
+            // NOTE: we should be able to get this 
+            // from the "retain" step.
+            // As is, we are going over (part of) overlaps
+            // 2x.
+            self.right = match self.overlaps.iter().map(|&overlap| overlap.right).min() {
+                Some(r) => r,
+                None => i64::MAX
+            };
             for segment in &self.queue[self.current_overlap..] {
                 if segment.left == self.left {
                     self.current_overlap += 1;
-                    new_right = std::cmp::min(new_right, segment.right);
+                    self.right = std::cmp::min(self.right, segment.right);
                     self.overlaps.push(*segment)
                 } else {
                     break;
@@ -362,7 +369,6 @@ impl<'q> AncestryOverlapper<'q> {
             // NOTE: we can track the left value while
             // traversing the overlaps, setting it to MAX
             // initially, and dodge another bounds check
-            self.right = new_right;
             self.right = std::cmp::min(self.right, self.queue[self.current_overlap].left);
             Some((self.left, self.right, &self.overlaps))
         } else {
