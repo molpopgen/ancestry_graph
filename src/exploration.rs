@@ -1107,6 +1107,16 @@ mod sim_test {
             println!("{q:?}");
             println!("{n:?}");
         }
+        super::test_utils::validate_ancestry(
+            2,
+            &[(0, 45, Some(1), 2), (45, 100, Some(0), 2)],
+            &graph,
+        );
+        super::test_utils::validate_ancestry(
+            3,
+            &[(0, 73, Some(0), 3), (73, 100, Some(1), 3)],
+            &graph,
+        );
 
         super::propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
         for node in [0, 1] {
@@ -1139,6 +1149,16 @@ mod sim_test {
         super::test_utils::validate_ancestry(
             1,
             &[(0, 45, None, c0.as_index()), (73, 100, None, c1.as_index())],
+            &graph,
+        );
+        super::test_utils::validate_ancestry(
+            2,
+            &[(0, 45, Some(1), 2), (45, 100, Some(0), 2)],
+            &graph,
+        );
+        super::test_utils::validate_ancestry(
+            3,
+            &[(0, 73, Some(0), 3), (73, 100, Some(1), 3)],
             &graph,
         );
     }
