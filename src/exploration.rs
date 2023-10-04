@@ -1140,6 +1140,14 @@ mod sim_test {
             ],
             &graph,
         );
+        super::test_utils::validate_ancestry(
+            1,
+            &[
+                (0, 45, None, c0.as_index()),
+                (73, 100, None, c1.as_index()),
+            ],
+            &graph,
+        );
     }
 
     #[test]
