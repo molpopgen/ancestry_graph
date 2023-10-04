@@ -952,6 +952,8 @@ fn process_queued_node(
                 .next(graph.edge_tail[queued_parent.as_index()])
                 .is_none());
             assert!(!graph.edge_head[queued_parent.as_index()].is_sentinel());
+        } else {
+            assert!(graph.free_nodes.contains(&queued_parent.as_index()))
         }
         if !graph.ancestry_tail[queued_parent.as_index()].is_sentinel() {
             assert!(graph
@@ -972,9 +974,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     let mut queue = vec![];
     let mut rv = None;
     let mut unary_segment_map = UnarySegmentMap::default();
-    let mut visited = 0;
     while let Some(queued_node) = graph.node_heap.pop() {
-        visited += 1;
         rv = Some(queued_node);
         ancestry_intersection(queued_node, graph, &mut queue);
         if queue.is_empty() {
@@ -1138,10 +1138,7 @@ mod sim_test {
         );
         super::test_utils::validate_ancestry(
             1,
-            &[
-                (0, 45, None, c0.as_index()),
-                (73, 100, None, c1.as_index()),
-            ],
+            &[(0, 45, None, c0.as_index()), (73, 100, None, c1.as_index())],
             &graph,
         );
     }
