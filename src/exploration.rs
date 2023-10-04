@@ -1107,6 +1107,22 @@ mod sim_test {
         }
 
         super::propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+        for node in [0, 1] {
+            let mut q = vec![];
+            super::ancestry_intersection(super::Node(node), &graph, &mut q);
+            let n = super::test_utils::naive_ancestry_intersection(super::Node(node), &graph);
+            for (i, j) in q.iter().zip(n.iter()) {
+                assert_eq!(i.left, j.left);
+                assert_eq!(i.right, j.right);
+                assert_eq!(i.mapped_node, j.mapped_node);
+            }
+            println!("confirming {node} after propagation");
+            println!("{q:?}");
+            println!("{n:?}");
+            for i in q {
+                println!("{:?}", graph.ancestry.get(i.child_ancestry_segment));
+            }
+        }
         super::test_utils::validate_ancestry(
             0,
             &[(0, 45, None, 2), (45, 73, None, 0), (73, 100, None, 3)],
