@@ -759,10 +759,8 @@ fn process_queued_node(
 
     let mut overlaps = overlapper.calculate_next_overlap_set();
 
-    println!("node {queued_parent:?}");
     while !ahead.is_sentinel() {
         if let Some((left, right, current_overlaps)) = overlaps {
-            println!("[{left}, {right}), {current_overlaps:?}");
             let (current_left, current_right) = {
                 let current = graph.ancestry.get(ahead);
                 (current.left, current.right)
@@ -772,7 +770,6 @@ fn process_queued_node(
                 let mut unary_segment = None;
                 if current_overlaps.len() == 1 {
                     mapped_node = current_overlaps[0].mapped_node;
-                    println!("unary to {mapped_node:?}");
                     let aseg_index = current_overlaps[0].child_ancestry_segment;
                     if let Some(un) = unary_segment_map.get(&aseg_index) {
                         unary_segment = Some(*un);
@@ -1002,7 +999,6 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     }
 
     // TODO: this should be some "post simplify cleanup" step
-    println!("{} {visited}", graph.num_births);
     graph.num_births = 0;
 
     debug_assert!(graph.node_heap.is_empty());
@@ -1188,7 +1184,7 @@ mod sim_test {
 
     #[test]
     fn test_1000_individuals_fixed() {
-        let graph = haploid_wf(1235125152, 1000, 100000000, 100);
+        let graph = haploid_wf(1235125152, 1000, 100000000, 10000);
         println!("{} {}", graph.edges.data.len(), graph.ancestry.data.len());
         let mut mean_e = 0;
         let mut mean_a = 0;
