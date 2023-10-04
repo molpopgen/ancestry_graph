@@ -1120,6 +1120,7 @@ mod sim_test {
             println!("{q:?}");
             println!("{n:?}");
             for i in q {
+                println!("{:?}",i.child_ancestry_segment);
                 println!("{:?}", graph.ancestry.get(i.child_ancestry_segment));
             }
         }
