@@ -766,6 +766,7 @@ fn process_queued_node(
                 let mut unary_segment = None;
                 if current_overlaps.len() == 1 {
                     mapped_node = current_overlaps[0].mapped_node;
+                    println!("unary to {mapped_node:?}");
                     let aseg_index = current_overlaps[0].child_ancestry_segment;
                     if let Some(un) = unary_segment_map.get(&aseg_index) {
                         unary_segment = Some(*un);
