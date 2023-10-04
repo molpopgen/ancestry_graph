@@ -349,13 +349,13 @@ impl<'q> AncestryOverlapper<'q> {
             if self.overlaps.is_empty() {
                 self.left = self.queue[self.current_overlap].left;
             }
-            // NOTE: we should be able to get this 
+            // NOTE: we should be able to get this
             // from the "retain" step.
             // As is, we are going over (part of) overlaps
             // 2x.
             self.right = match self.overlaps.iter().map(|&overlap| overlap.right).min() {
                 Some(r) => r,
-                None => i64::MAX
+                None => i64::MAX,
             };
             for segment in &self.queue[self.current_overlap..] {
                 if segment.left == self.left {
@@ -1127,13 +1127,17 @@ mod sim_test {
             println!("{n:?}");
             for i in q {
                 if !i.child_ancestry_segment.is_sentinel() {
-                println!("{:?}", graph.ancestry.get(i.child_ancestry_segment));
+                    println!("{:?}", graph.ancestry.get(i.child_ancestry_segment));
                 }
             }
         }
         super::test_utils::validate_ancestry(
             0,
-            &[(0, 45, None, 2), (45, 73, None, 0), (73, 100, None, 3)],
+            &[
+                (0, 45, None, c1.as_index()),
+                (45, 73, None, 0),
+                (73, 100, None, c0.as_index()),
+            ],
             &graph,
         );
     }
