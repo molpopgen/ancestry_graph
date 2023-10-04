@@ -1151,6 +1151,13 @@ mod sim_test {
             &[(0, 45, None, c0.as_index()), (73, 100, None, c1.as_index())],
             &graph,
         );
+        // Commenting out the code on 815 will make these assertions pass.
+        //
+        // if !last_ancestry_index.is_sentinel() {
+        //     if let Some(useg) = unary_segment_map.get(&last_ancestry_index) {
+        //         graph.ancestry.data[useg.0].parent = None;
+        //     }
+        // }
         super::test_utils::validate_ancestry(
             2,
             &[(0, 45, Some(1), 2), (45, 100, Some(0), 2)],
