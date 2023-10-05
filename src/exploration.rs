@@ -1878,6 +1878,20 @@ mod propagation_tests {
             &graph,
         );
         super::propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+
+        // validate parent status
+        super::test_utils::validate_ancestry(
+            0,
+            &[(0, 45, None, 3), (45, 73, None, 0), (73, 100, None, 2)],
+            &graph,
+        );
+        super::test_utils::validate_edges(0, &[(45, 73, 2), (45, 73, 3)], &graph);
+        super::test_utils::validate_ancestry(1, &[(0, 45, None, 2), (73, 100, None, 3)], &graph);
+        super::test_utils::validate_edges(1, &[], &graph);
+        assert!(graph.free_nodes.contains(&1));
+
+        // validate child status
+
         super::test_utils::validate_ancestry(
             2,
             &[(0, 45, Some(1), 2), (45, 100, Some(0), 2)],
