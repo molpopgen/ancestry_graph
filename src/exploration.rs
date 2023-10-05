@@ -794,6 +794,10 @@ fn process_queued_node(
                             right,
                             child: o.mapped_node,
                         });
+                        println!(
+                            "setting parent of {:?} to {queued_parent:?}",
+                            graph.ancestry.get(o.child_ancestry_segment)
+                        );
                         graph.ancestry.data[o.child_ancestry_segment.0].parent =
                             Some(queued_parent);
                     }
@@ -814,6 +818,7 @@ fn process_queued_node(
                 }
                 if !last_ancestry_index.is_sentinel() {
                     if let Some(useg) = unary_segment_map.get(&last_ancestry_index) {
+                        println!("nullifying parent of {:?}", graph.ancestry.get(*useg));
                         graph.ancestry.data[useg.0].parent = None;
                     }
                 }
