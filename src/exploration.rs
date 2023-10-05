@@ -1074,6 +1074,7 @@ mod sim_test {
     use super::haploid_wf;
     use proptest::prelude::*;
 
+    // TODO: delete b/c propagation_test3 does this w/less setup
     #[test]
     fn manual_test_0() {
         let (mut graph, parents) = super::Graph::with_initial_nodes(2, 100).unwrap();
@@ -1843,6 +1844,50 @@ mod propagation_tests {
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
         validate_ancestry(0, &[(0, 1, None, 0), (2, 3, None, 0)], &graph);
         validate_edges(0, &[(0, 1, 1), (2, 3, 1), (0, 1, 3), (2, 3, 3)], &graph);
+    }
+
+    #[test]
+    fn propagation_test3() {
+        let initial_birth_times = vec![0, 0];
+        let num_births = 2;
+        let transmissions = vec![
+            (0, 45, 1, 0),
+            (45, 100, 0, 0),
+            (0, 73, 0, 1),
+            (73, 100, 1, 1),
+        ];
+        let initial_edges = vec![vec![], vec![]];
+        let initial_ancestry = vec![vec![(0, 100, None, 0)], vec![(0, 100, None, 1)]];
+        let (mut graph, birth_nodes) = setup_graph(
+            initial_birth_times.len(),
+            100,
+            num_births,
+            initial_birth_times,
+            initial_edges,
+            initial_ancestry,
+            transmissions,
+        );
+        super::test_utils::validate_ancestry(
+            2,
+            &[(0, 45, Some(1), 2), (45, 100, Some(0), 2)],
+            &graph,
+        );
+        super::test_utils::validate_ancestry(
+            3,
+            &[(0, 73, Some(0), 3), (73, 100, Some(1), 3)],
+            &graph,
+        );
+        super::propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+        super::test_utils::validate_ancestry(
+            2,
+            &[(0, 45, Some(1), 2), (45, 100, Some(0), 2)],
+            &graph,
+        );
+        super::test_utils::validate_ancestry(
+            3,
+            &[(0, 73, Some(0), 3), (73, 100, Some(1), 3)],
+            &graph,
+        );
     }
 }
 
