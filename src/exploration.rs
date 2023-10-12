@@ -668,7 +668,6 @@ fn update_ancestry(
     node_heap: &mut NodeHeap,
 ) -> Index {
     let mut seg_right = None;
-    let current_ancestry_index = current_ancestry_index;
     let current = *ancestry.get(current_ancestry_index);
     let temp_left = std::cmp::max(current.left, left);
     let temp_right = std::cmp::min(current.right, right);
@@ -814,11 +813,12 @@ fn process_queued_node(
                 );
                 if let Some(useg) = unary_segment {
                     debug_assert!(!unary_segment_map.contains_key(&last_ancestry_index));
+                    println!("inserting {:?}", graph.ancestry.get(useg));
                     unary_segment_map.insert(last_ancestry_index, useg);
                 }
                 if !last_ancestry_index.is_sentinel() {
                     if let Some(useg) = unary_segment_map.get(&last_ancestry_index) {
-                        println!("nullifying parent of {:?}", graph.ancestry.get(*useg));
+                        println!("nullifying parent of {:?}: {:?}", graph.ancestry.get(*useg), queued_parent);
                         graph.ancestry.data[useg.0].parent = None;
                     }
                 }
@@ -1078,103 +1078,6 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
 mod sim_test {
     use super::haploid_wf;
     use proptest::prelude::*;
-
-    // TODO: delete b/c propagation_test3 does this w/less setup
-    #[test]
-    fn manual_test_0() {
-        let (mut graph, parents) = super::Graph::with_initial_nodes(2, 100).unwrap();
-        graph.advance_time().unwrap();
-        parents.iter().for_each(|&node| graph.mark_node_death(node));
-        let c0 = graph.add_birth(graph.current_time).unwrap();
-        graph
-            .record_transmission(0, 45, super::Node(1), c0)
-            .unwrap();
-        graph
-            .record_transmission(45, graph.genome_length, super::Node(0), c0)
-            .unwrap();
-        let c1 = graph.add_birth(graph.current_time).unwrap();
-        graph
-            .record_transmission(0, 73, super::Node(0), c1)
-            .unwrap();
-        graph
-            .record_transmission(73, graph.genome_length, super::Node(1), c1)
-            .unwrap();
-
-        for node in [0, 1] {
-            let mut q = vec![];
-            super::ancestry_intersection(super::Node(node), &graph, &mut q);
-            let n = super::test_utils::naive_ancestry_intersection(super::Node(node), &graph);
-            for (i, j) in q.iter().zip(n.iter()) {
-                assert_eq!(i.left, j.left);
-                assert_eq!(i.right, j.right);
-                assert_eq!(i.mapped_node, j.mapped_node);
-            }
-            println!("confirming {node}");
-            println!("{q:?}");
-            println!("{n:?}");
-        }
-        super::test_utils::validate_ancestry(
-            2,
-            &[(0, 45, Some(1), 2), (45, 100, Some(0), 2)],
-            &graph,
-        );
-        super::test_utils::validate_ancestry(
-            3,
-            &[(0, 73, Some(0), 3), (73, 100, Some(1), 3)],
-            &graph,
-        );
-
-        super::propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
-        for node in [0, 1] {
-            let mut q = vec![];
-            super::ancestry_intersection(super::Node(node), &graph, &mut q);
-            let n = super::test_utils::naive_ancestry_intersection(super::Node(node), &graph);
-            for (i, j) in q.iter().zip(n.iter()) {
-                assert_eq!(i.left, j.left);
-                assert_eq!(i.right, j.right);
-                assert_eq!(i.mapped_node, j.mapped_node);
-            }
-            println!("confirming {node} after propagation");
-            println!("{q:?}");
-            println!("{n:?}");
-            for i in q {
-                if !i.child_ancestry_segment.is_sentinel() {
-                    println!("{:?}", graph.ancestry.get(i.child_ancestry_segment));
-                }
-            }
-        }
-        super::test_utils::validate_ancestry(
-            0,
-            &[
-                (0, 45, None, c1.as_index()),
-                (45, 73, None, 0),
-                (73, 100, None, c0.as_index()),
-            ],
-            &graph,
-        );
-        super::test_utils::validate_ancestry(
-            1,
-            &[(0, 45, None, c0.as_index()), (73, 100, None, c1.as_index())],
-            &graph,
-        );
-        // Commenting out the code on 815 will make these assertions pass.
-        //
-        // if !last_ancestry_index.is_sentinel() {
-        //     if let Some(useg) = unary_segment_map.get(&last_ancestry_index) {
-        //         graph.ancestry.data[useg.0].parent = None;
-        //     }
-        // }
-        super::test_utils::validate_ancestry(
-            2,
-            &[(0, 45, Some(1), 2), (45, 100, Some(0), 2)],
-            &graph,
-        );
-        super::test_utils::validate_ancestry(
-            3,
-            &[(0, 73, Some(0), 3), (73, 100, Some(1), 3)],
-            &graph,
-        );
-    }
 
     #[test]
     fn foo_test_2_individuals() {
@@ -1897,16 +1800,8 @@ mod propagation_tests {
 
         // validate child status
 
-        super::test_utils::validate_ancestry(
-            2,
-            &[(0, 45, Some(1), 2), (45, 100, Some(0), 2)],
-            &graph,
-        );
-        super::test_utils::validate_ancestry(
-            3,
-            &[(0, 73, Some(0), 3), (73, 100, Some(1), 3)],
-            &graph,
-        );
+        super::test_utils::validate_ancestry(2, &[(0, 45, None, 2), (45, 100, Some(0), 2)], &graph);
+        super::test_utils::validate_ancestry(3, &[(0, 73, Some(0), 3), (73, 100, None, 3)], &graph);
     }
 }
 
