@@ -112,6 +112,7 @@ impl<T> CursorList<T> {
         T: std::fmt::Debug,
     {
         if let Some(index) = self.free_list.pop() {
+            println!("recycling index {index}");
             debug_assert!(
                 !self.free_list.contains(&index),
                 "{index:?} in {:?}",
@@ -624,6 +625,11 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
                 Some(a)
             }
         };
+        let mut a = graph.ancestry_head[edge_ref.child.as_index()];
+        while !a.is_sentinel() {
+            println!("child {:?} => {a:?}", edge_ref.child);
+            a = graph.ancestry.next_raw(a);
+        }
         //if child_ancestry.is_some() {
         //    assert!(graph
         //        .ancestry
@@ -633,6 +639,7 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
         while let Some(child_ancestry_index) = child_ancestry {
             let anc_ref = graph.ancestry.get(child_ancestry_index);
             if edge_ref.overlaps(anc_ref) {
+                println!("overlap {:?} {:?}", child_ancestry_index, edge_ref.child);
                 let left = std::cmp::max(edge_ref.left, anc_ref.left);
                 let right = std::cmp::min(edge_ref.right, anc_ref.right);
                 queue.push(AncestryIntersection {
@@ -798,8 +805,18 @@ fn process_queued_node(
                             right,
                             child: o.mapped_node,
                         });
+                        println!(
+                            "setting parent of {:?}, {:?} to {:?}",
+                            o.child_ancestry_segment,
+                            graph.ancestry.data[o.child_ancestry_segment.0],
+                            queued_parent
+                        );
                         graph.ancestry.data[o.child_ancestry_segment.0].parent =
                             Some(queued_parent);
+                        println!(
+                            "set parent of {:?}",
+                            graph.ancestry.data[o.child_ancestry_segment.0]
+                        );
                         o.coalescent = true;
                     }
                 }
@@ -980,6 +997,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     let mut rv = None;
     let mut unary_segment_map = UnarySegmentMap::default();
     while let Some(queued_node) = graph.node_heap.pop() {
+        println!("visiting {queued_node:?}");
         rv = Some(queued_node);
         ancestry_intersection(queued_node, graph, &mut queue);
         if queue.is_empty() {
@@ -988,6 +1006,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
             // and any parents are added to the node heap.
             record_total_loss_of_ancestry(queued_node, graph);
         } else {
+            println!("{queue:?}");
             process_queued_node(
                 options,
                 queued_node,
@@ -997,6 +1016,23 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
                 &mut temp_edges,
                 &mut unary_segment_map,
             );
+            println!("temp edges = {temp_edges:?}");
+            for i in temp_edges.iter() {
+                let mut found = false;
+                println!("child node {:?}", i.child);
+                let mut a = graph.ancestry_head[i.child.as_index()];
+                while !a.is_sentinel() {
+                    println!("{a:?} => {:?}", graph.ancestry.get(a));
+                    if let Some(p) = graph.ancestry.get(a).parent {
+                        if p == queued_node {
+                            found = true;
+                            break;
+                        }
+                    }
+                    a = graph.ancestry.next_raw(a);
+                }
+                assert!(found)
+            }
         }
         // Clean up for next loop
         queue.clear();
