@@ -801,6 +801,7 @@ fn process_queued_node(
                         println!("overlap = {o:?}");
                         if let Some(un) = unary_segment_map.get(&o.child_ancestry_segment) {
                             graph.ancestry.data[un.0].parent = Some(queued_parent);
+                            println!("removing unary {:?}", graph.ancestry.get(o.child_ancestry_segment));
                             unary_segment_map.remove(&o.child_ancestry_segment);
                         }
                         temp_edges.push(Edge {
