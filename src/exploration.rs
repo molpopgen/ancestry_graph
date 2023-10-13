@@ -305,6 +305,7 @@ struct AncestryIntersection {
     mapped_node: Node,
     child: Node,
     child_ancestry_segment: Index,
+    coalescent: bool,
 }
 
 #[derive(Debug)]
@@ -338,7 +339,7 @@ impl<'q> AncestryOverlapper<'q> {
         }
     }
 
-    fn calculate_next_overlap_set(&mut self) -> Option<(i64, i64, &[AncestryIntersection])> {
+    fn calculate_next_overlap_set(&mut self) -> Option<(i64, i64, &mut [AncestryIntersection])> {
         // NOTE: this if statement hides from the compiler
         // that current_overlap is always < queue.len().
         // We should be able to check current_overlap + 1 <
@@ -370,7 +371,7 @@ impl<'q> AncestryOverlapper<'q> {
             // traversing the overlaps, setting it to MAX
             // initially, and dodge another bounds check
             self.right = std::cmp::min(self.right, self.queue[self.current_overlap].left);
-            Some((self.left, self.right, &self.overlaps))
+            Some((self.left, self.right, &mut self.overlaps))
         } else {
             if !self.overlaps.is_empty() {
                 self.left = self.right;
@@ -383,7 +384,7 @@ impl<'q> AncestryOverlapper<'q> {
                     None => self.right,
                 };
                 self.overlaps.retain(|o| o.right > self.left);
-                Some((self.left, self.right, &self.overlaps))
+                Some((self.left, self.right, &mut self.overlaps))
             } else {
                 None
             }
@@ -640,6 +641,7 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
                     mapped_node: anc_ref.mapped_node,
                     child: edge_ref.child,
                     child_ancestry_segment: child_ancestry_index,
+                    coalescent: false,
                 });
             }
             child_ancestry = graph.ancestry.next(child_ancestry_index);
@@ -654,6 +656,7 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
             mapped_node: Node(usize::MAX),
             child: Node(usize::MAX),
             child_ancestry_segment: Index::sentinel(),
+            coalescent: false,
         });
     }
 }
@@ -759,7 +762,7 @@ fn process_queued_node(
     let mut overlaps = overlapper.calculate_next_overlap_set();
 
     while !ahead.is_sentinel() {
-        if let Some((left, right, current_overlaps)) = overlaps {
+        if let Some((left, right, ref mut current_overlaps)) = overlaps {
             println!("co = {current_overlaps:?}");
             let (current_left, current_right) = {
                 let current = graph.ancestry.get(ahead);
@@ -770,12 +773,14 @@ fn process_queued_node(
                 let mut unary_segment = None;
                 if current_overlaps.len() == 1 {
                     mapped_node = current_overlaps[0].mapped_node;
-                    let aseg_index = current_overlaps[0].child_ancestry_segment;
-                    if let Some(un) = unary_segment_map.get(&aseg_index) {
-                        unary_segment = Some(*un);
-                        unary_segment_map.remove(&aseg_index);
-                    } else {
-                        unary_segment = Some(aseg_index);
+                    if !current_overlaps[0].coalescent {
+                        let aseg_index = current_overlaps[0].child_ancestry_segment;
+                        if let Some(un) = unary_segment_map.get(&aseg_index) {
+                            unary_segment = Some(*un);
+                            unary_segment_map.remove(&aseg_index);
+                        } else {
+                            unary_segment = Some(aseg_index);
+                        }
                     }
                     if let Some(parent) = graph.ancestry.get(ahead).parent {
                         graph
@@ -784,7 +789,7 @@ fn process_queued_node(
                     }
                 } else {
                     mapped_node = queued_parent;
-                    for o in current_overlaps {
+                    for o in current_overlaps.iter_mut() {
                         if let Some(un) = unary_segment_map.get(&o.child_ancestry_segment) {
                             graph.ancestry.data[un.0].parent = Some(queued_parent);
                             unary_segment_map.remove(&o.child_ancestry_segment);
@@ -800,6 +805,7 @@ fn process_queued_node(
                         );
                         graph.ancestry.data[o.child_ancestry_segment.0].parent =
                             Some(queued_parent);
+                        o.coalescent = true;
                     }
                 }
                 last_ancestry_index = ahead;
@@ -819,7 +825,11 @@ fn process_queued_node(
                 }
                 if !last_ancestry_index.is_sentinel() {
                     if let Some(useg) = unary_segment_map.get(&last_ancestry_index) {
-                        println!("nullifying parent of {:?}: {:?}", graph.ancestry.get(*useg), queued_parent);
+                        println!(
+                            "nullifying parent of {:?}: {:?}",
+                            graph.ancestry.get(*useg),
+                            queued_parent
+                        );
                         graph.ancestry.data[useg.0].parent = None;
                     }
                 }
@@ -1248,6 +1258,7 @@ mod test_utils {
                         mapped_node: a.mapped_node,
                         child: edge.child,
                         child_ancestry_segment: Index(i),
+                        coalescent: false,
                     });
                 }
             }
@@ -1553,6 +1564,7 @@ mod graph_tests {
                 mapped_node: super::Node(3),
                 child: super::Node(3),
                 child_ancestry_segment: super::Index(4),
+                coalescent: false,
             },
             super::AncestryIntersection {
                 left: 45,
@@ -1560,6 +1572,7 @@ mod graph_tests {
                 mapped_node: super::Node(2),
                 child: super::Node(2),
                 child_ancestry_segment: super::Index(3),
+                coalescent: false,
             },
             super::AncestryIntersection {
                 left: 9223372036854775807,
@@ -1567,6 +1580,7 @@ mod graph_tests {
                 mapped_node: super::Node(18446744073709551615),
                 child: super::Node(18446744073709551615),
                 child_ancestry_segment: super::Index(18446744073709551615),
+                coalescent: false,
             },
         ];
 
