@@ -763,7 +763,6 @@ fn process_queued_node(
 
     while !ahead.is_sentinel() {
         if let Some((left, right, ref mut current_overlaps)) = overlaps {
-            println!("co = {current_overlaps:?}");
             let (current_left, current_right) = {
                 let current = graph.ancestry.get(ahead);
                 (current.left, current.right)
@@ -799,10 +798,6 @@ fn process_queued_node(
                             right,
                             child: o.mapped_node,
                         });
-                        println!(
-                            "setting parent of {:?} to {queued_parent:?}",
-                            graph.ancestry.get(o.child_ancestry_segment)
-                        );
                         graph.ancestry.data[o.child_ancestry_segment.0].parent =
                             Some(queued_parent);
                         o.coalescent = true;
@@ -820,16 +815,10 @@ fn process_queued_node(
                 );
                 if let Some(useg) = unary_segment {
                     debug_assert!(!unary_segment_map.contains_key(&last_ancestry_index));
-                    println!("inserting {:?}", graph.ancestry.get(useg));
                     unary_segment_map.insert(last_ancestry_index, useg);
                 }
                 if !last_ancestry_index.is_sentinel() {
                     if let Some(useg) = unary_segment_map.get(&last_ancestry_index) {
-                        println!(
-                            "nullifying parent of {:?}: {:?}",
-                            graph.ancestry.get(*useg),
-                            queued_parent
-                        );
                         graph.ancestry.data[useg.0].parent = None;
                     }
                 }
@@ -1032,23 +1021,23 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
     let mut children: Vec<Node> = vec![];
 
     for gen in 0..num_generations {
-        println!(
-            "{gen}, {}, {}, {}|{}",
-            graph.node_status.len(),
-            graph.free_nodes.len(),
-            graph
-                .birth_time
-                .iter()
-                .enumerate()
-                .filter(|(i, _)| { !graph.edge_head[*i].is_sentinel() })
-                .count(),
-            graph
-                .birth_time
-                .iter()
-                .enumerate()
-                .filter(|(i, _)| { !graph.ancestry_head[*i].is_sentinel() })
-                .count()
-        );
+        //println!(
+        //    "{gen}, {}, {}, {}|{}",
+        //    graph.node_status.len(),
+        //    graph.free_nodes.len(),
+        //    graph
+        //        .birth_time
+        //        .iter()
+        //        .enumerate()
+        //        .filter(|(i, _)| { !graph.edge_head[*i].is_sentinel() })
+        //        .count(),
+        //    graph
+        //        .birth_time
+        //        .iter()
+        //        .enumerate()
+        //        .filter(|(i, _)| { !graph.ancestry_head[*i].is_sentinel() })
+        //        .count()
+        //);
         children.clear();
         // Advance time
         graph.advance_time().unwrap();
@@ -1128,7 +1117,7 @@ mod sim_test {
 
     #[test]
     fn test_1000_individuals_fixed() {
-        let graph = haploid_wf(1235125152, 1000, 100000000, 10000);
+        let graph = haploid_wf(1235125152, 1000, 100000000, 1000);
         println!("{} {}", graph.edges.data.len(), graph.ancestry.data.len());
         let mut mean_e = 0;
         let mut mean_a = 0;
