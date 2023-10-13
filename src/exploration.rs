@@ -1806,6 +1806,28 @@ mod propagation_tests {
 
         super::test_utils::validate_ancestry(2, &[(0, 45, None, 2), (45, 100, Some(0), 2)], &graph);
         super::test_utils::validate_ancestry(3, &[(0, 73, Some(0), 3), (73, 100, None, 3)], &graph);
+
+        assert_eq!(graph.free_nodes.len(), 1);
+
+        assert_eq!(
+            graph
+                .birth_time
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| { !graph.ancestry_head[*i].is_sentinel() })
+                .count(),
+            graph.birth_time.len()
+        );
+        assert_eq!(
+            graph
+                .birth_time
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| { !graph.edge_head[*i].is_sentinel() })
+                .count(),
+            1
+        );
+        assert_eq!(graph.edges.free_list.len(), 2);
     }
 }
 
