@@ -625,6 +625,8 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
                 Some(a)
             }
         };
+
+        // TODO: delete this loop. It is for debugging
         let mut a = graph.ancestry_head[edge_ref.child.as_index()];
         while !a.is_sentinel() {
             println!("child {:?} => {a:?}", edge_ref.child);
