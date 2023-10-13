@@ -1011,6 +1011,28 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
 }
 
 #[cfg(test)]
+fn validate_reachable(graph: &Graph, nodes: &[Node]) {
+    let mut reachable = vec![];
+    for n in nodes.iter() {
+        let mut a = graph.ancestry_head[n.as_index()];
+        while !a.is_sentinel() {
+            if let Some(parent) = graph.ancestry.get(a).parent {
+                if !reachable.contains(&parent) {
+                    reachable.push(parent)
+                }
+            }
+            a = graph.ancestry.next_raw(a);
+        }
+    }
+    for i in 0..graph.birth_time.len() {
+        if !graph.edge_head[i].is_sentinel() {
+            assert!(!graph.free_nodes.contains(&i));
+            assert!(reachable.contains(&Node(i)), "{i}")
+        }
+    }
+}
+
+#[cfg(test)]
 fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i64) -> Graph {
     use rand::Rng;
     use rand::SeedableRng;
@@ -1053,6 +1075,7 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
             // NOTE: we may not need the argument now?
             assert!(breakpoint > 0);
             assert!(breakpoint < graph.genome_length);
+            println!("{gen}: {left_parent:?}, {right_parent:?} => {breakpoint:?} -> {child:?}");
             graph
                 .record_transmission(0, breakpoint, left_parent, child)
                 .unwrap();
@@ -1069,6 +1092,7 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
         assert_eq!(graph.num_births, 0);
 
         std::mem::swap(&mut parents, &mut children);
+        validate_reachable(&graph, &parents)
     }
 
     graph
