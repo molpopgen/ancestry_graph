@@ -861,6 +861,12 @@ fn process_queued_node(
                     &mut graph.ancestry_mapped_node,
                     &mut graph.node_heap,
                 );
+                println!("new ahead = {ahead:?}");
+                if ahead.0 < graph.ancestry_mapped_node.len() {
+                    graph.ancestry_mapped_node[ahead.0] = ahead;
+                } else {
+                    graph.ancestry_mapped_node.push(ahead);
+                }
                 if let Some(useg) = unary_segment {
                     debug_assert!(!unary_segment_map.contains_key(&last_ancestry_index));
                     unary_segment_map.insert(last_ancestry_index, useg);
