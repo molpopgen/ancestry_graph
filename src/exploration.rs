@@ -588,7 +588,7 @@ impl Graph {
             &mut self.edge_tail,
             &mut self.edges,
         );
-        update_cursor_list(
+        let i = update_cursor_list(
             child.0,
             AncestrySegment {
                 left,
@@ -600,6 +600,12 @@ impl Graph {
             &mut self.ancestry_tail,
             &mut self.ancestry,
         );
+        if i.0 < self.ancestry_mapped_node.len() {
+            self.ancestry_mapped_node[i.0] = i;
+        } else {
+            debug_assert_eq!(i.0, self.ancestry_mapped_node.len());
+            self.ancestry_mapped_node.push(i);
+        }
         //debug_assert!(self.ancestry.next(self.ancestry_tail[child.0]).is_none());
         self.node_heap
             .insert(parent, self.birth_time[parent.as_index()]);
