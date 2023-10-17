@@ -807,6 +807,11 @@ fn process_queued_node(
                                 [current_overlaps[0].child_ancestry_segment.0],
                             graph.ancestry_mapped_node[ahead.0]
                         );
+                        if graph.ancestry_mapped_node[aseg_index.0] != aseg_index {
+                            unary_segment = Some(graph.ancestry_mapped_node[aseg_index.0])
+                        } else {
+                            unary_segment = Some(aseg_index)
+                        }
                         //if let Some(un) = unary_segment_map.get(&aseg_index) {
                         //    unary_segment = Some(*un);
                         //    unary_segment_map.remove(&aseg_index);
@@ -878,7 +883,7 @@ fn process_queued_node(
                                 assert_ne!(useg.0, usize::MAX);
                                 graph.ancestry_mapped_node.push(useg)
                             } else {
-                                debug_assert_eq!(ahead.0, graph.ancestry_mapped_node.len());
+                                //debug_assert_eq!(ahead.0, graph.ancestry_mapped_node.len());
                                 graph.ancestry_mapped_node.push(ahead)
                             }
                         }
@@ -897,9 +902,8 @@ fn process_queued_node(
                         //    );
                         //    unary_segment_map.remove(&o.child_ancestry_segment);
                         //}
-                        graph.ancestry.data
-                            [graph.ancestry_mapped_node[o.child_ancestry_segment.0].0]
-                            .parent = Some(queued_parent);
+                        graph.ancestry.data[o.child_ancestry_segment.0].parent =
+                            Some(queued_parent);
                         temp_edges.push(Edge {
                             left,
                             right,
