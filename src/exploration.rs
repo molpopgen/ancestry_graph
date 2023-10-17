@@ -692,6 +692,7 @@ fn update_ancestry(
     current_ancestry_index: Index,
     birth_time: &[i64],
     ancestry: &mut NodeAncestry,
+    ancestry_mapped_node: &mut Vec<Index>,
     node_heap: &mut NodeHeap,
 ) -> Index {
     let mut seg_right = None;
@@ -786,6 +787,7 @@ fn process_queued_node(
     let mut overlaps = overlapper.calculate_next_overlap_set();
 
     while !ahead.is_sentinel() {
+        println!("ahead = {ahead:?}");
         if let Some((left, right, ref mut current_overlaps)) = overlaps {
             let (current_left, current_right) = {
                 let current = graph.ancestry.get(ahead);
@@ -856,6 +858,7 @@ fn process_queued_node(
                     ahead,
                     &graph.birth_time,
                     &mut graph.ancestry,
+                    &mut graph.ancestry_mapped_node,
                     &mut graph.node_heap,
                 );
                 if let Some(useg) = unary_segment {
