@@ -245,7 +245,8 @@ fn update_cursor_list<T>(
     head: &mut [Index],
     tail: &mut [Index],
     list: &mut CursorList<T>,
-) where
+) -> Index
+where
     T: std::fmt::Debug,
 {
     let current_tail = tail[at];
@@ -253,6 +254,7 @@ fn update_cursor_list<T>(
         let new_head = list.new_index(datum);
         head[at] = new_head;
         tail[at] = new_head;
+        new_head
     } else {
         // NOTE: insert_after does not terminate a list,
         // so we have to manually set the next value after
@@ -260,6 +262,7 @@ fn update_cursor_list<T>(
         let new_tail = list.insert_after(current_tail, datum);
         tail[at] = new_tail;
         list.next[tail[at].0] = Index::sentinel().0;
+        new_tail
     }
 }
 
@@ -416,6 +419,7 @@ pub struct Graph {
     ancestry: CursorList<AncestrySegment>,
     ancestry_head: Vec<Index>,
     ancestry_tail: Vec<Index>,
+    ancestry_mapped_node: Vec<Index>,
 }
 
 impl Graph {
@@ -451,6 +455,7 @@ impl Graph {
             ancestry,
             ancestry_head,
             ancestry_tail,
+            ancestry_mapped_node: vec![],
             node_heap: NodeHeap::default(),
         })
     }
@@ -460,7 +465,7 @@ impl Graph {
         let mut extant_nodes = vec![];
         for _ in 0..num_nodes {
             let n = graph.add_node(NodeStatus::Ancestor, 0);
-            update_cursor_list(
+            let i = update_cursor_list(
                 n.0,
                 AncestrySegment {
                     left: 0,
@@ -473,6 +478,7 @@ impl Graph {
                 &mut graph.ancestry,
             );
             extant_nodes.push(n);
+            graph.ancestry_mapped_node.push(i);
         }
         Some((graph, extant_nodes))
     }
@@ -641,7 +647,10 @@ fn ancestry_intersection(node: Node, graph: &Graph, queue: &mut Vec<AncestryInte
         while let Some(child_ancestry_index) = child_ancestry {
             let anc_ref = graph.ancestry.get(child_ancestry_index);
             if edge_ref.overlaps(anc_ref) {
-                println!("overlap {:?} {:?} -> {:?}", child_ancestry_index, edge_ref.child, anc_ref);
+                println!(
+                    "overlap {:?} {:?} -> {:?}",
+                    child_ancestry_index, edge_ref.child, anc_ref
+                );
                 let left = std::cmp::max(edge_ref.left, anc_ref.left);
                 let right = std::cmp::min(edge_ref.right, anc_ref.right);
                 queue.push(AncestryIntersection {
@@ -801,7 +810,10 @@ fn process_queued_node(
                         println!("overlap = {o:?}");
                         if let Some(un) = unary_segment_map.get(&o.child_ancestry_segment) {
                             graph.ancestry.data[un.0].parent = Some(queued_parent);
-                            println!("removing unary {:?}", graph.ancestry.get(o.child_ancestry_segment));
+                            println!(
+                                "removing unary {:?}",
+                                graph.ancestry.get(o.child_ancestry_segment)
+                            );
                             unary_segment_map.remove(&o.child_ancestry_segment);
                         }
                         temp_edges.push(Edge {
