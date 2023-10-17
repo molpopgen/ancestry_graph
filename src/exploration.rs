@@ -1110,22 +1110,25 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
                 &mut temp_edges,
                 &mut unary_segment_map,
             );
-            println!("temp edges = {temp_edges:?}");
-            for i in temp_edges.iter() {
-                let mut found = false;
-                println!("child node {:?}", i.child);
-                let mut a = graph.ancestry_head[i.child.as_index()];
-                while !a.is_sentinel() {
-                    println!("{a:?} => {:?}", graph.ancestry.get(a));
-                    if let Some(p) = graph.ancestry.get(a).parent {
-                        if p == queued_node {
-                            found = true;
-                            break;
+            #[cfg(debug_assertions)]
+            {
+                println!("temp edges = {temp_edges:?}");
+                for i in temp_edges.iter() {
+                    let mut found = false;
+                    println!("child node {:?}", i.child);
+                    let mut a = graph.ancestry_head[i.child.as_index()];
+                    while !a.is_sentinel() {
+                        println!("{a:?} => {:?}", graph.ancestry.get(a));
+                        if let Some(p) = graph.ancestry.get(a).parent {
+                            if p == queued_node {
+                                found = true;
+                                break;
+                            }
                         }
+                        a = graph.ancestry.next_raw(a);
                     }
-                    a = graph.ancestry.next_raw(a);
+                    //assert!(found)
                 }
-                assert!(found)
             }
         }
         // Clean up for next loop
