@@ -863,8 +863,10 @@ fn process_queued_node(
                 );
                 println!("new ahead = {ahead:?}");
                 if ahead.0 < graph.ancestry_mapped_node.len() {
+                    panic!("wroong");
                     graph.ancestry_mapped_node[ahead.0] = ahead;
                 } else {
+                    panic!("wroong");
                     graph.ancestry_mapped_node.push(ahead);
                 }
                 if let Some(useg) = unary_segment {
