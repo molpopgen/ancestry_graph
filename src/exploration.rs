@@ -795,41 +795,111 @@ fn process_queued_node(
             };
             if current_right > left && right > current_left {
                 let mapped_node;
-                let mut unary_segment = None;
+                let mut unary_segment: Option<Index> = None;
                 if current_overlaps.len() == 1 {
                     mapped_node = current_overlaps[0].mapped_node;
                     if !current_overlaps[0].coalescent {
                         let aseg_index = current_overlaps[0].child_ancestry_segment;
+                        graph.ancestry.data[aseg_index.0].parent = None;
                         println!(
                             "{:?} {:?}",
                             graph.ancestry_mapped_node
                                 [current_overlaps[0].child_ancestry_segment.0],
                             graph.ancestry_mapped_node[ahead.0]
                         );
-                        if let Some(un) = unary_segment_map.get(&aseg_index) {
-                            unary_segment = Some(*un);
-                            unary_segment_map.remove(&aseg_index);
-                        } else {
-                            unary_segment = Some(aseg_index);
-                        }
+                        //if let Some(un) = unary_segment_map.get(&aseg_index) {
+                        //    unary_segment = Some(*un);
+                        //    unary_segment_map.remove(&aseg_index);
+                        //} else {
+                        //    unary_segment = Some(aseg_index);
+                        //}
                     }
                     if let Some(parent) = graph.ancestry.get(ahead).parent {
                         graph
                             .node_heap
                             .insert(parent, graph.birth_time[parent.as_index()]);
                     }
+                    last_ancestry_index = ahead;
+                    ahead = update_ancestry(
+                        left,
+                        right,
+                        mapped_node,
+                        ahead,
+                        &graph.birth_time,
+                        &mut graph.ancestry,
+                        &mut graph.ancestry_mapped_node,
+                        &mut graph.node_heap,
+                    );
+                    if !ahead.is_sentinel() {
+                        if ahead.0 < graph.ancestry_mapped_node.len() {
+                            if let Some(useg) = unary_segment {
+                                assert_ne!(useg.0, usize::MAX);
+                                graph.ancestry_mapped_node[ahead.0] = useg;
+                            } else {
+                                graph.ancestry_mapped_node[ahead.0] = ahead;
+                            }
+                        } else {
+                            if let Some(useg) = unary_segment {
+                                assert_ne!(useg.0, usize::MAX);
+                                graph.ancestry_mapped_node.push(useg)
+                            } else {
+                                debug_assert_eq!(ahead.0, graph.ancestry_mapped_node.len());
+                                graph.ancestry_mapped_node.push(ahead)
+                            }
+                        }
+                        println!(
+                            "new ahead = {ahead:?}, mapped seg = {:?}",
+                            graph.ancestry_mapped_node[ahead.0]
+                        );
+                    }
                 } else {
                     mapped_node = queued_parent;
+                    last_ancestry_index = ahead;
+                    ahead = update_ancestry(
+                        left,
+                        right,
+                        mapped_node,
+                        ahead,
+                        &graph.birth_time,
+                        &mut graph.ancestry,
+                        &mut graph.ancestry_mapped_node,
+                        &mut graph.node_heap,
+                    );
+                    if !ahead.is_sentinel() {
+                        if ahead.0 < graph.ancestry_mapped_node.len() {
+                            if let Some(useg) = unary_segment {
+                                assert_ne!(useg.0, usize::MAX);
+                                graph.ancestry_mapped_node[ahead.0] = useg;
+                            } else {
+                                graph.ancestry_mapped_node[ahead.0] = ahead;
+                            }
+                        } else {
+                            if let Some(useg) = unary_segment {
+                                assert_ne!(useg.0, usize::MAX);
+                                graph.ancestry_mapped_node.push(useg)
+                            } else {
+                                debug_assert_eq!(ahead.0, graph.ancestry_mapped_node.len());
+                                graph.ancestry_mapped_node.push(ahead)
+                            }
+                        }
+                        println!(
+                            "new ahead = {ahead:?}, mapped seg = {:?}",
+                            graph.ancestry_mapped_node[ahead.0]
+                        );
+                    }
                     for o in current_overlaps.iter_mut() {
                         println!("overlap = {o:?}");
-                        if let Some(un) = unary_segment_map.get(&o.child_ancestry_segment) {
-                            graph.ancestry.data[un.0].parent = Some(queued_parent);
-                            println!(
-                                "removing unary {:?}",
-                                graph.ancestry.get(o.child_ancestry_segment)
-                            );
-                            unary_segment_map.remove(&o.child_ancestry_segment);
-                        }
+                        //if let Some(un) = unary_segment_map.get(&o.child_ancestry_segment) {
+                        //    graph.ancestry.data[un.0].parent = Some(queued_parent);
+                        //    println!(
+                        //        "removing unary {:?}",
+                        //        graph.ancestry.get(o.child_ancestry_segment)
+                        //    );
+                        //    unary_segment_map.remove(&o.child_ancestry_segment);
+                        //}
+                        graph.ancestry.data
+                            [graph.ancestry_mapped_node[o.child_ancestry_segment.0].0]
+                            .parent = Some(queued_parent);
                         temp_edges.push(Edge {
                             left,
                             right,
@@ -850,34 +920,15 @@ fn process_queued_node(
                         o.coalescent = true;
                     }
                 }
-                last_ancestry_index = ahead;
-                ahead = update_ancestry(
-                    left,
-                    right,
-                    mapped_node,
-                    ahead,
-                    &graph.birth_time,
-                    &mut graph.ancestry,
-                    &mut graph.ancestry_mapped_node,
-                    &mut graph.node_heap,
-                );
-                println!("new ahead = {ahead:?}");
-                if ahead.0 < graph.ancestry_mapped_node.len() {
-                    panic!("wroong");
-                    graph.ancestry_mapped_node[ahead.0] = ahead;
-                } else {
-                    panic!("wroong");
-                    graph.ancestry_mapped_node.push(ahead);
-                }
-                if let Some(useg) = unary_segment {
-                    debug_assert!(!unary_segment_map.contains_key(&last_ancestry_index));
-                    unary_segment_map.insert(last_ancestry_index, useg);
-                }
-                if !last_ancestry_index.is_sentinel() {
-                    if let Some(useg) = unary_segment_map.get(&last_ancestry_index) {
-                        graph.ancestry.data[useg.0].parent = None;
-                    }
-                }
+                //if let Some(useg) = unary_segment {
+                //    debug_assert!(!unary_segment_map.contains_key(&last_ancestry_index));
+                //    unary_segment_map.insert(last_ancestry_index, useg);
+                //}
+                //if !last_ancestry_index.is_sentinel() {
+                //    if let Some(useg) = unary_segment_map.get(&last_ancestry_index) {
+                //        graph.ancestry.data[useg.0].parent = None;
+                //    }
+                //}
                 overlaps = overlapper.calculate_next_overlap_set();
             } else if last_ancestry_index == ahead {
                 let next = graph.ancestry.next_raw(ahead);
