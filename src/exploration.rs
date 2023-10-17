@@ -798,6 +798,12 @@ fn process_queued_node(
                     mapped_node = current_overlaps[0].mapped_node;
                     if !current_overlaps[0].coalescent {
                         let aseg_index = current_overlaps[0].child_ancestry_segment;
+                        println!(
+                            "{:?} {:?}",
+                            graph.ancestry_mapped_node
+                                [current_overlaps[0].child_ancestry_segment.0],
+                            graph.ancestry_mapped_node[ahead.0]
+                        );
                         if let Some(un) = unary_segment_map.get(&aseg_index) {
                             unary_segment = Some(*un);
                             unary_segment_map.remove(&aseg_index);
