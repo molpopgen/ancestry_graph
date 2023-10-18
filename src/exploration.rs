@@ -802,7 +802,7 @@ fn process_queued_node(
                         let aseg_index = current_overlaps[0].child_ancestry_segment;
                         graph.ancestry.data[aseg_index.0].parent = None;
                         println!(
-                            "{:?} {:?}",
+                            "unary: {:?} {:?}",
                             graph.ancestry_mapped_node
                                 [current_overlaps[0].child_ancestry_segment.0],
                             graph.ancestry_mapped_node[ahead.0]
