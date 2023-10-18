@@ -836,8 +836,8 @@ fn process_queued_node(
                         //    );
                         //    unary_segment_map.remove(&o.child_ancestry_segment);
                         //}
-                        graph.ancestry.data[graph.ancestry_mapped_node[o.child_ancestry_segment.0].0].parent =
-                            Some(queued_parent);
+                        let mseg = graph.ancestry_mapped_node[o.child_ancestry_segment.0].0;
+                        graph.ancestry.data[mseg].parent = Some(queued_parent);
                         temp_edges.push(Edge {
                             left,
                             right,
