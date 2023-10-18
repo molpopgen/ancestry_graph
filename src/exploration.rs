@@ -824,74 +824,8 @@ fn process_queued_node(
                             .node_heap
                             .insert(parent, graph.birth_time[parent.as_index()]);
                     }
-                    last_ancestry_index = ahead;
-                    ahead = update_ancestry(
-                        left,
-                        right,
-                        mapped_node,
-                        ahead,
-                        &graph.birth_time,
-                        &mut graph.ancestry,
-                        &mut graph.ancestry_mapped_node,
-                        &mut graph.node_heap,
-                    );
-                    if !ahead.is_sentinel() {
-                        if ahead.0 < graph.ancestry_mapped_node.len() {
-                            if let Some(useg) = unary_segment {
-                                assert_ne!(useg.0, usize::MAX);
-                                graph.ancestry_mapped_node[ahead.0] = useg;
-                            } else {
-                                graph.ancestry_mapped_node[ahead.0] = ahead;
-                            }
-                        } else {
-                            if let Some(useg) = unary_segment {
-                                assert_ne!(useg.0, usize::MAX);
-                                graph.ancestry_mapped_node.push(useg)
-                            } else {
-                                debug_assert_eq!(ahead.0, graph.ancestry_mapped_node.len());
-                                graph.ancestry_mapped_node.push(ahead)
-                            }
-                        }
-                        println!(
-                            "new ahead = {ahead:?}, mapped seg = {:?}",
-                            graph.ancestry_mapped_node[ahead.0]
-                        );
-                    }
                 } else {
                     mapped_node = queued_parent;
-                    last_ancestry_index = ahead;
-                    ahead = update_ancestry(
-                        left,
-                        right,
-                        mapped_node,
-                        ahead,
-                        &graph.birth_time,
-                        &mut graph.ancestry,
-                        &mut graph.ancestry_mapped_node,
-                        &mut graph.node_heap,
-                    );
-                    if !ahead.is_sentinel() {
-                        if ahead.0 < graph.ancestry_mapped_node.len() {
-                            if let Some(useg) = unary_segment {
-                                assert_ne!(useg.0, usize::MAX);
-                                graph.ancestry_mapped_node[ahead.0] = useg;
-                            } else {
-                                graph.ancestry_mapped_node[ahead.0] = ahead;
-                            }
-                        } else {
-                            if let Some(useg) = unary_segment {
-                                assert_ne!(useg.0, usize::MAX);
-                                graph.ancestry_mapped_node.push(useg)
-                            } else {
-                                //debug_assert_eq!(ahead.0, graph.ancestry_mapped_node.len());
-                                graph.ancestry_mapped_node.push(ahead)
-                            }
-                        }
-                        println!(
-                            "new ahead = {ahead:?}, mapped seg = {:?}",
-                            graph.ancestry_mapped_node[ahead.0]
-                        );
-                    }
                     for o in current_overlaps.iter_mut() {
                         println!("overlap = {o:?}");
                         //if let Some(un) = unary_segment_map.get(&o.child_ancestry_segment) {
@@ -923,6 +857,39 @@ fn process_queued_node(
                         );
                         o.coalescent = true;
                     }
+                }
+                last_ancestry_index = ahead;
+                ahead = update_ancestry(
+                    left,
+                    right,
+                    mapped_node,
+                    ahead,
+                    &graph.birth_time,
+                    &mut graph.ancestry,
+                    &mut graph.ancestry_mapped_node,
+                    &mut graph.node_heap,
+                );
+                if !ahead.is_sentinel() {
+                    if ahead.0 < graph.ancestry_mapped_node.len() {
+                        if let Some(useg) = unary_segment {
+                            assert_ne!(useg.0, usize::MAX);
+                            graph.ancestry_mapped_node[ahead.0] = useg;
+                        } else {
+                            graph.ancestry_mapped_node[ahead.0] = ahead;
+                        }
+                    } else {
+                        if let Some(useg) = unary_segment {
+                            assert_ne!(useg.0, usize::MAX);
+                            graph.ancestry_mapped_node.push(useg)
+                        } else {
+                            debug_assert_eq!(ahead.0, graph.ancestry_mapped_node.len());
+                            graph.ancestry_mapped_node.push(ahead)
+                        }
+                    }
+                    println!(
+                        "new ahead = {ahead:?}, mapped seg = {:?}",
+                        graph.ancestry_mapped_node[ahead.0]
+                    );
                 }
                 //if let Some(useg) = unary_segment {
                 //    debug_assert!(!unary_segment_map.contains_key(&last_ancestry_index));
