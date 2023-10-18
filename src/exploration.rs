@@ -836,7 +836,7 @@ fn process_queued_node(
                         //    );
                         //    unary_segment_map.remove(&o.child_ancestry_segment);
                         //}
-                        graph.ancestry.data[o.child_ancestry_segment.0].parent =
+                        graph.ancestry.data[graph.ancestry_mapped_node[o.child_ancestry_segment.0].0].parent =
                             Some(queued_parent);
                         temp_edges.push(Edge {
                             left,
@@ -869,26 +869,30 @@ fn process_queued_node(
                     &mut graph.ancestry_mapped_node,
                     &mut graph.node_heap,
                 );
-                if !ahead.is_sentinel() {
-                    if ahead.0 < graph.ancestry_mapped_node.len() {
+                if !last_ancestry_index.is_sentinel() {
+                    if last_ancestry_index.0 < graph.ancestry_mapped_node.len() {
                         if let Some(useg) = unary_segment {
                             assert_ne!(useg.0, usize::MAX);
-                            graph.ancestry_mapped_node[ahead.0] = useg;
+                            println!("setting unary mapping to {useg:?}");
+                            graph.ancestry_mapped_node[last_ancestry_index.0] = useg;
                         } else {
-                            graph.ancestry_mapped_node[ahead.0] = ahead;
+                            graph.ancestry_mapped_node[last_ancestry_index.0] = ahead;
                         }
                     } else {
                         if let Some(useg) = unary_segment {
                             assert_ne!(useg.0, usize::MAX);
                             graph.ancestry_mapped_node.push(useg)
                         } else {
-                            debug_assert_eq!(ahead.0, graph.ancestry_mapped_node.len());
-                            graph.ancestry_mapped_node.push(ahead)
+                            debug_assert_eq!(
+                                last_ancestry_index.0,
+                                graph.ancestry_mapped_node.len()
+                            );
+                            graph.ancestry_mapped_node.push(last_ancestry_index)
                         }
                     }
                     println!(
-                        "new ahead = {ahead:?}, mapped seg = {:?}",
-                        graph.ancestry_mapped_node[ahead.0]
+                        "new last_ancestry_index = {ahead:?}, mapped seg = {:?}",
+                        graph.ancestry_mapped_node[last_ancestry_index.0]
                     );
                 }
                 //if let Some(useg) = unary_segment {
