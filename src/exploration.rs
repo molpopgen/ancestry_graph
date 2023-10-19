@@ -797,6 +797,7 @@ fn process_queued_node(
                 let mapped_node;
                 let mut unary_segment: Option<Index> = None;
                 if current_overlaps.len() == 1 {
+                    assert_eq!(graph.ancestry.data.len(), graph.ancestry_mapped_node.len());
                     mapped_node = current_overlaps[0].mapped_node;
                     if !current_overlaps[0].coalescent {
                         let aseg_index = current_overlaps[0].child_ancestry_segment;
@@ -825,6 +826,7 @@ fn process_queued_node(
                             .insert(parent, graph.birth_time[parent.as_index()]);
                     }
                 } else {
+                    assert_eq!(graph.ancestry.data.len(), graph.ancestry_mapped_node.len());
                     mapped_node = queued_parent;
                     for o in current_overlaps.iter_mut() {
                         println!("overlap = {o:?}");
@@ -869,6 +871,7 @@ fn process_queued_node(
                     &mut graph.ancestry_mapped_node,
                     &mut graph.node_heap,
                 );
+                assert_eq!(graph.ancestry.data.len(), graph.ancestry_mapped_node.len());
                 if !last_ancestry_index.is_sentinel() {
                     if last_ancestry_index.0 < graph.ancestry_mapped_node.len() {
                         if let Some(useg) = unary_segment {
@@ -1081,6 +1084,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
                 &mut temp_edges,
                 &mut unary_segment_map,
             );
+            assert_eq!(graph.ancestry.data.len(), graph.ancestry_mapped_node.len());
             #[cfg(debug_assertions)]
             {
                 println!("temp edges = {temp_edges:?}");
@@ -1498,6 +1502,7 @@ mod test_utils {
                 &mut graph.ancestry,
             );
         }
+        assert_eq!(graph.ancestry.data.len(), graph.ancestry_mapped_node.len());
 
         graph.advance_time_by(max_time + 1);
         let mut birth_nodes = vec![];
@@ -1510,6 +1515,7 @@ mod test_utils {
                 .record_transmission(t.0, t.1, Node(t.2), birth_nodes[t.3])
                 .unwrap();
         }
+        assert_eq!(graph.ancestry.data.len(), graph.ancestry_mapped_node.len());
 
         (graph, birth_nodes)
     }
