@@ -1486,21 +1486,30 @@ mod test_utils {
             graph.ancestry_tail.fill(Index::sentinel());
             graph.ancestry.next.fill(usize::MAX);
             graph.ancestry.data.clear();
-            initialize_list(
-                initial_ancestry,
-                |e: (i64, i64, Option<usize>, usize)| {
-                    let parent = e.2.map(Node);
-                    AncestrySegment {
-                        left: e.0,
-                        right: e.1,
-                        parent,
-                        mapped_node: Node(e.3),
+            graph.ancestry_mapped_node.clear();
+            let f = |e: (i64, i64, Option<usize>, usize)| {
+                let parent = e.2.map(Node);
+                AncestrySegment {
+                    left: e.0,
+                    right: e.1,
+                    parent,
+                    mapped_node: Node(e.3),
+                }
+            };
+            for (i, e) in initial_ancestry.iter().enumerate() {
+                assert!(graph.ancestry_head[i].is_sentinel());
+                assert!(graph.ancestry_tail[i].is_sentinel());
+                if !e.is_empty() {
+                    let mut index = graph.ancestry.new_index(f(e[0]));
+                    graph.ancestry_head[i] = index;
+                    graph.ancestry_mapped_node.push(index);
+                    for &j in &e[1..] {
+                        index = graph.ancestry.insert_after(index, f(j));
+                        graph.ancestry_mapped_node.push(index);
                     }
-                },
-                &mut graph.ancestry_head,
-                &mut graph.ancestry_tail,
-                &mut graph.ancestry,
-            );
+                    graph.ancestry_tail[i] = index;
+                }
+            }
         }
         assert_eq!(graph.ancestry.data.len(), graph.ancestry_mapped_node.len());
 
