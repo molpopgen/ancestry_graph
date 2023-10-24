@@ -808,6 +808,7 @@ fn process_queued_node(
                                 [current_overlaps[0].child_ancestry_segment.0],
                             graph.ancestry_mapped_node[ahead.0]
                         );
+                        // NOTE: this if/else is almost certainly useless
                         if graph.ancestry_mapped_node[aseg_index.0] != aseg_index {
                             unary_segment = Some(graph.ancestry_mapped_node[aseg_index.0])
                         } else {
