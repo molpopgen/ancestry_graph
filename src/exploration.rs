@@ -872,32 +872,32 @@ fn process_queued_node(
                     &mut graph.node_heap,
                 );
                 assert_eq!(graph.ancestry.data.len(), graph.ancestry_mapped_node.len());
-                if !last_ancestry_index.is_sentinel() {
-                    if last_ancestry_index.0 < graph.ancestry_mapped_node.len() {
-                        if let Some(useg) = unary_segment {
-                            assert_ne!(useg.0, usize::MAX);
-                            println!("setting unary mapping to {useg:?}");
-                            graph.ancestry_mapped_node[last_ancestry_index.0] = useg;
-                        } else {
-                            graph.ancestry_mapped_node[last_ancestry_index.0] = ahead;
-                        }
-                    } else {
-                        if let Some(useg) = unary_segment {
-                            assert_ne!(useg.0, usize::MAX);
-                            graph.ancestry_mapped_node.push(useg)
-                        } else {
-                            debug_assert_eq!(
-                                last_ancestry_index.0,
-                                graph.ancestry_mapped_node.len()
-                            );
-                            graph.ancestry_mapped_node.push(last_ancestry_index)
-                        }
-                    }
-                    println!(
-                        "new last_ancestry_index = {ahead:?}, mapped seg = {:?}",
-                        graph.ancestry_mapped_node[last_ancestry_index.0]
-                    );
-                }
+                //if !last_ancestry_index.is_sentinel() {
+                //    if last_ancestry_index.0 < graph.ancestry_mapped_node.len() {
+                //        if let Some(useg) = unary_segment {
+                //            assert_ne!(useg.0, usize::MAX);
+                //            println!("setting unary mapping to {useg:?}");
+                //            graph.ancestry_mapped_node[last_ancestry_index.0] = useg;
+                //        } else {
+                //            graph.ancestry_mapped_node[last_ancestry_index.0] = ahead;
+                //        }
+                //    } else {
+                //        if let Some(useg) = unary_segment {
+                //            assert_ne!(useg.0, usize::MAX);
+                //            graph.ancestry_mapped_node.push(useg)
+                //        } else {
+                //            debug_assert_eq!(
+                //                last_ancestry_index.0,
+                //                graph.ancestry_mapped_node.len()
+                //            );
+                //            graph.ancestry_mapped_node.push(last_ancestry_index)
+                //        }
+                //    }
+                //    println!(
+                //        "new last_ancestry_index = {ahead:?}, mapped seg = {:?}",
+                //        graph.ancestry_mapped_node[last_ancestry_index.0]
+                //    );
+                //}
                 //if let Some(useg) = unary_segment {
                 //    debug_assert!(!unary_segment_map.contains_key(&last_ancestry_index));
                 //    unary_segment_map.insert(last_ancestry_index, useg);
