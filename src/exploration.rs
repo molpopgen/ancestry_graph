@@ -18,8 +18,6 @@ struct NodeHeap {
     node_queue: std::collections::BinaryHeap<QueuedNode>,
 }
 
-type UnarySegmentMap = std::collections::HashMap<Index, Index>;
-
 impl NodeHeap {
     fn insert(&mut self, node: Node, birth_time: i64) {
         if !self.queued_nodes.contains(&node) {
@@ -796,7 +794,6 @@ fn process_queued_node(
     graph: &mut Graph,
     queue: &[AncestryIntersection],
     temp_edges: &mut Vec<Edge>,
-    unary_segment_map: &mut UnarySegmentMap,
 ) {
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
     let mut last_ancestry_index = ahead;
@@ -1084,7 +1081,6 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
 
     let mut queue = vec![];
     let mut rv = None;
-    let mut unary_segment_map = UnarySegmentMap::default();
     while let Some(queued_node) = graph.node_heap.pop() {
         println!("visiting {queued_node:?}");
         rv = Some(queued_node);
@@ -1103,7 +1099,6 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
                 graph,
                 &queue,
                 &mut temp_edges,
-                &mut unary_segment_map,
             );
             assert_eq!(graph.ancestry.data.len(), graph.ancestry_mapped_node.len());
             #[cfg(debug_assertions)]
