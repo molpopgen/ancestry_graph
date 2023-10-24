@@ -1135,7 +1135,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
 }
 
 #[cfg(test)]
-fn validate_reachable(graph: &Graph, nodes: &[Node]) {
+fn validate_reachable(generation: i64, graph: &Graph, nodes: &[Node]) {
     let mut reachable = vec![];
     for n in nodes.iter() {
         let mut a = graph.ancestry_head[n.as_index()];
@@ -1151,7 +1151,7 @@ fn validate_reachable(graph: &Graph, nodes: &[Node]) {
     for i in 0..graph.birth_time.len() {
         if !graph.edge_head[i].is_sentinel() {
             assert!(!graph.free_nodes.contains(&i));
-            assert!(reachable.contains(&Node(i)), "{i}")
+            assert!(reachable.contains(&Node(i)), "{generation} -> {i}")
         }
     }
 }
@@ -1216,7 +1216,7 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
         assert_eq!(graph.num_births, 0);
 
         std::mem::swap(&mut parents, &mut children);
-        validate_reachable(&graph, &parents)
+        validate_reachable(gen, &graph, &parents)
     }
 
     graph
