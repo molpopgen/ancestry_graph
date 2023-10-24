@@ -737,6 +737,11 @@ fn update_ancestry(
     };
     // TODO: API fn to replace.
     *ancestry.get_mut(current_ancestry_index) = out_seg;
+    if let Some(unary) = unary_mapping {
+        ancestry_mapped_node[current_ancestry_index.0] = unary;
+    } else {
+        ancestry_mapped_node[current_ancestry_index.0] = current_ancestry_index;
+    }
 
     if let Some(right_seg) = seg_right {
         let next = ancestry.next_raw(current_ancestry_index);
@@ -744,6 +749,19 @@ fn update_ancestry(
         ancestry.next[current_ancestry_index.0] = new_index.0;
         ancestry.next[new_index.0] = next.0;
         rv = new_index;
+        if let Some(unary) = unary_mapping {
+            if rv.0 < ancestry_mapped_node.len() {
+                ancestry_mapped_node[rv.0] = rv;
+            } else {
+                ancestry_mapped_node.push(rv);
+            }
+        } else {
+            if rv.0 < ancestry_mapped_node.len() {
+                ancestry_mapped_node[rv.0] = rv;
+            } else {
+                ancestry_mapped_node.push(rv);
+            }
+        }
     }
     rv
 }
