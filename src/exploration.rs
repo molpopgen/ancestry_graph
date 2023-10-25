@@ -2454,6 +2454,8 @@ mod multistep_tests {
             &[(72, 87, 4), (72, 87, 5), (87, 100, 4), (87, 100, 5)],
             &graph,
         );
+        // this is based on my naive view of the graph.
+        validate_ancestry(2, &[(0, 8, Some(0), 5), (8, 72, Some(1), 5)], &graph);
         let _ = validate_reachable(graph.current_time, &graph, &children);
     }
 }
