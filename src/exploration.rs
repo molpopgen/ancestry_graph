@@ -2448,6 +2448,7 @@ mod multistep_tests {
             .record_transmission(72, 100, parents[1], children[1])
             .unwrap();
         propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+        validate_edges(2, &[], &graph);
         let _ = validate_reachable(graph.current_time, &graph, &children);
     }
 }
