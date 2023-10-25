@@ -2449,6 +2449,11 @@ mod multistep_tests {
             .unwrap();
         propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
         validate_edges(2, &[], &graph);
+        validate_edges(
+            3,
+            &[(72, 87, 4), (72, 87, 5), (87, 100, 4), (87, 100, 5)],
+            &graph,
+        );
         let _ = validate_reachable(graph.current_time, &graph, &children);
     }
 }
