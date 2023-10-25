@@ -1136,15 +1136,23 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
 
 #[cfg(test)]
 fn validate_reachable(generation: i64, graph: &Graph, nodes: &[Node]) {
-    todo!("this is not right -- there is a stack that we need to build and process");
     let mut reachable = vec![];
+    let mut q = NodeHeap::default();
     for n in nodes.iter() {
         let mut a = graph.ancestry_head[n.as_index()];
         while !a.is_sentinel() {
             if let Some(parent) = graph.ancestry.get(a).parent {
-                if !reachable.contains(&parent) {
-                    reachable.push(parent)
-                }
+                q.insert(parent, graph.birth_time[parent.as_index()]);
+            }
+            a = graph.ancestry.next_raw(a);
+        }
+    }
+    while let Some(n) = q.pop() {
+        reachable.push(n);
+        let mut a = graph.ancestry_head[n.as_index()];
+        while !a.is_sentinel() {
+            if let Some(parent) = graph.ancestry.get(a).parent {
+                q.insert(parent, graph.birth_time[parent.as_index()]);
             }
             a = graph.ancestry.next_raw(a);
         }
