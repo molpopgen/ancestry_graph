@@ -2391,4 +2391,53 @@ mod multistep_tests {
         validate_ancestry(3, &[(2, 3, Some(2), 3), (0, 1, Some(1), 3)], &graph);
         validate_ancestry(4, &[(2, 3, Some(2), 4), (0, 1, Some(1), 4)], &graph);
     }
+
+    // Based on a specific set of transmissions happening in foo_foo_test_2_individuals
+    #[test]
+    fn test6() {
+        let (mut graph, mut parents) = Graph::with_initial_nodes(2, 100).unwrap();
+        graph.advance_time().unwrap();
+        parents.iter().for_each(|&node| graph.mark_node_death(node));
+        let mut children: Vec<Node> = vec![
+            graph.add_birth(graph.current_time).unwrap(),
+            graph.add_birth(graph.current_time).unwrap(),
+        ];
+        graph
+            .record_transmission(0, 8, parents[0], children[0])
+            .unwrap();
+        graph
+            .record_transmission(8, 100, parents[1], children[0])
+            .unwrap();
+        graph
+            .record_transmission(0, 48, parents[0], children[1])
+            .unwrap();
+        graph
+            .record_transmission(48, 100, parents[1], children[1])
+            .unwrap();
+        propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+        let _ = validate_reachable(graph.current_time, &graph, &children);
+
+        std::mem::swap(&mut parents, &mut children);
+        children.clear();
+
+        graph.advance_time().unwrap();
+        parents.iter().for_each(|&node| graph.mark_node_death(node));
+        children.push(graph.add_birth(graph.current_time).unwrap());
+        children.push(graph.add_birth(graph.current_time).unwrap());
+
+        graph
+            .record_transmission(0, 87, parents[1], children[0])
+            .unwrap();
+        graph
+            .record_transmission(87, 100, parents[1], children[0])
+            .unwrap();
+        graph
+            .record_transmission(0, 72, parents[0], children[1])
+            .unwrap();
+        graph
+            .record_transmission(72, 100, parents[1], children[1])
+            .unwrap();
+        propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+        let _ = validate_reachable(graph.current_time, &graph, &children);
+    }
 }
