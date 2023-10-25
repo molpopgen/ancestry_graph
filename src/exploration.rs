@@ -1924,6 +1924,14 @@ mod propagation_tests {
         let _ = propagate_ancestry_changes(PropagationOptions::default(), &mut graph);
         validate_ancestry(0, &[(0, 1, None, 0), (2, 3, None, 0)], &graph);
         validate_edges(0, &[(0, 1, 1), (2, 3, 1), (0, 1, 3), (2, 3, 3)], &graph);
+        for node in [1, 3] {
+            validate_ancestry(
+                node,
+                &[(0, 1, Some(0), node), (2, 3, Some(0), node)],
+                &graph,
+            )
+        }
+        validate_reachable(0, &graph, &[Node(0), Node(1)]);
     }
 
     #[test]
@@ -2039,6 +2047,7 @@ mod multistep_tests {
         // node 0
         validate_edges(0, &[(0, 2, 1), (0, 2, 4)], &graph);
         validate_ancestry(0, &[(0, 2, None, 0)], &graph);
+        validate_reachable(0, &graph, &[Node(2), Node(2), Node(4)]);
     }
 
     //     0
