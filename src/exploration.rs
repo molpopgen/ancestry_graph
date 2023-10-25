@@ -1083,6 +1083,15 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
     let mut rv = None;
     while let Some(queued_node) = graph.node_heap.pop() {
         println!("visiting {queued_node:?}");
+
+        // TODO: delete this block.  testing/dev only!
+        {
+            let mut a = graph.ancestry_head[queued_node.as_index()];
+            while !a.is_sentinel() {
+                println!("\t{:?}", graph.ancestry.get(a));
+                a = graph.ancestry.next_raw(a);
+            }
+        }
         rv = Some(queued_node);
         ancestry_intersection(queued_node, graph, &mut queue);
         if queue.is_empty() {
