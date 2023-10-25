@@ -2054,7 +2054,7 @@ mod multistep_tests {
         validate_edges(0, &[(0, 2, 1), (0, 2, 4)], &graph);
         validate_ancestry(0, &[(0, 2, None, 0)], &graph);
 
-        let reachable = validate_reachable(0, &graph, &[Node(2), Node(2), Node(4)]);
+        let reachable = validate_reachable(0, &graph, &[Node(2), Node(3), Node(4)]);
         assert_eq!(reachable.len(), 2);
         for i in [0, 1] {
             assert!(reachable.contains(&Node(i)));
@@ -2194,6 +2194,9 @@ mod multistep_tests {
         for node in [4, 5] {
             validate_ancestry(node, &[(0, 2, Some(0), node)], &graph)
         }
+        let reachable = validate_reachable(0, &graph, &[Node(2), Node(3), Node(4)]);
+        assert_eq!(reachable.len(), 1);
+        assert!(reachable.contains(&Node(0)));
     }
     // Tree 0, span [0,1)
     //    0
