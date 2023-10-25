@@ -2415,7 +2415,17 @@ mod multistep_tests {
             .record_transmission(48, 100, parents[1], children[1])
             .unwrap();
         propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
-        let _ = validate_reachable(graph.current_time, &graph, &children);
+        let reachable = validate_reachable(graph.current_time, &graph, &children);
+        assert_eq!(reachable.len(), 2);
+        for n in [0, 1] {
+            assert!(reachable.contains(&Node(n)));
+        }
+        validate_edges(0, &[(0, 8, 2), (0, 8, 3)], &graph);
+        validate_edges(1, &[(48, 100, 2), (48, 100, 3)], &graph);
+        validate_ancestry(0, &[(0, 8, None, 0), (8, 48, None, 3)], &graph);
+        validate_ancestry(1, &[(48, 100, None, 1), (8, 48, None, 2)], &graph);
+        validate_ancestry(2, &[(0, 8, Some(0), 2), (8, 100, Some(1), 2)], &graph);
+        validate_ancestry(3, &[(0, 48, Some(0), 3), (48, 100, Some(1), 3)], &graph);
 
         std::mem::swap(&mut parents, &mut children);
         children.clear();
