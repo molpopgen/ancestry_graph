@@ -1135,7 +1135,7 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
 }
 
 #[cfg(test)]
-fn validate_reachable(generation: i64, graph: &Graph, nodes: &[Node]) {
+fn validate_reachable(generation: i64, graph: &Graph, nodes: &[Node]) -> Vec<Node> {
     let mut reachable = vec![];
     let mut q = NodeHeap::default();
     for n in nodes.iter() {
@@ -1163,6 +1163,10 @@ fn validate_reachable(generation: i64, graph: &Graph, nodes: &[Node]) {
             assert!(reachable.contains(&Node(i)), "{generation} -> {i}")
         }
     }
+    for &n in reachable.iter() {
+        assert!(!graph.edge_head[n.as_index()].is_sentinel());
+    }
+    reachable
 }
 
 #[cfg(test)]
@@ -1225,7 +1229,7 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
         assert_eq!(graph.num_births, 0);
 
         std::mem::swap(&mut parents, &mut children);
-        validate_reachable(gen, &graph, &parents)
+        validate_reachable(gen, &graph, &parents);
     }
 
     graph
@@ -1931,7 +1935,9 @@ mod propagation_tests {
                 &graph,
             )
         }
-        validate_reachable(0, &graph, &[Node(0), Node(1)]);
+        let reachable = validate_reachable(0, &graph, &[Node(0), Node(1)]);
+        assert_eq!(reachable.len(), 1);
+        assert!(reachable.contains(&Node(0)));
     }
 
     #[test]
@@ -2047,7 +2053,12 @@ mod multistep_tests {
         // node 0
         validate_edges(0, &[(0, 2, 1), (0, 2, 4)], &graph);
         validate_ancestry(0, &[(0, 2, None, 0)], &graph);
-        validate_reachable(0, &graph, &[Node(2), Node(2), Node(4)]);
+
+        let reachable = validate_reachable(0, &graph, &[Node(2), Node(2), Node(4)]);
+        assert_eq!(reachable.len(), 2);
+        for i in [0, 1] {
+            assert!(reachable.contains(&Node(i)));
+        }
     }
 
     //     0
