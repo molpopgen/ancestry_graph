@@ -696,8 +696,10 @@ fn update_ancestry(
 ) -> Index {
     let mut seg_right = None;
     let current = *ancestry.get(current_ancestry_index);
+    println!("curent = {current:?}");
     let temp_left = std::cmp::max(current.left, left);
     let temp_right = std::cmp::min(current.right, right);
+    println!("temp l/r = {temp_left}, {temp_right}");
     let mut rv = ancestry.next_raw(current_ancestry_index);
     if current.left != temp_left {
         assert!(current.left < temp_left);
@@ -717,6 +719,7 @@ fn update_ancestry(
             left: temp_right,
             ..current
         });
+        println!("seg right = {seg_right:?}");
     }
 
     if mapped_node != current.mapped_node {
@@ -803,8 +806,9 @@ fn process_queued_node(
     let mut overlaps = overlapper.calculate_next_overlap_set();
 
     while !ahead.is_sentinel() {
-        println!("ahead = {ahead:?}");
+        println!("ahead = {ahead:?} -> {:?}", graph.ancestry.get(ahead));
         if let Some((left, right, ref mut current_overlaps)) = overlaps {
+            println!("{current_overlaps:?}");
             let (current_left, current_right) = {
                 let current = graph.ancestry.get(ahead);
                 (current.left, current.right)
