@@ -2480,6 +2480,12 @@ mod multistep_tests {
                 println!("{:?}", graph.ancestry.get(a));
                 a = graph.ancestry.next_raw(a)
             }
+            println!("edges of node {node}");
+            let mut a = graph.edge_head[node];
+            while !a.is_sentinel() {
+                println!("{:?}", graph.edges.get(a));
+                a = graph.edges.next_raw(a)
+            }
         }
         // this is based on my naive view of the graph.
         validate_ancestry(2, &[(0, 8, Some(0), 5), (8, 72, Some(1), 5)], &graph);
