@@ -1117,6 +1117,12 @@ fn propagate_ancestry_changes(options: PropagationOptions, graph: &mut Graph) ->
             #[cfg(debug_assertions)]
             {
                 println!("temp edges = {temp_edges:?}");
+                let mut a = graph.ancestry_head[queued_node.as_index()];
+                while !a.is_sentinel() {
+                    println!("\t{:?}", graph.ancestry.get(a));
+                    a = graph.ancestry.next_raw(a);
+                }
+
                 for i in temp_edges.iter() {
                     let mut found = false;
                     println!("child node {:?}", i.child);
