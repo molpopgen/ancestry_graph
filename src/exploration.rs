@@ -1840,6 +1840,23 @@ mod update_ancestry_tests {
         let mut queue = vec![];
         ancestry_intersection(Node(0), &graph, &mut queue);
         assert_eq!(queue.len(), 2);
+        let mut overlapper = AncestryOverlapper::new(Node(0), &queue);
+
+        let mut overlaps = overlapper.calculate_next_overlap_set();
+        let mut a = graph.ancestry_head[0];
+        let mut num_overlaps = 0;
+        while !a.is_sentinel() {
+            let current = graph.ancestry.get(a);
+            if let Some((left, right, ref mut current_overlaps)) = overlaps {
+                if current.right > left && right > current.left {
+                    println!("{current:?} => [{left},{right}), {current_overlaps:?}");
+                    num_overlaps += 1;
+                }
+            }
+            a = graph.ancestry.next_raw(a);
+            overlaps = overlapper.calculate_next_overlap_set();
+        }
+        assert_eq!(num_overlaps, 2)
     }
 }
 
