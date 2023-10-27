@@ -702,18 +702,20 @@ fn update_ancestry(
     println!("temp l/r = {temp_left}, {temp_right}");
     let mut rv = ancestry.next_raw(current_ancestry_index);
     if current.left != temp_left {
+        println!("left disagree");
         assert!(current.left < temp_left);
         if let Some(parent) = current.parent {
             node_heap.insert(parent, birth_time[parent.as_index()]);
         }
     }
     if current.right != temp_right {
+        println!("right disagree");
         if let Some(parent) = current.parent {
             node_heap.insert(parent, birth_time[parent.as_index()]);
         }
         {
             let current = ancestry.get_mut(current_ancestry_index);
-            current.left = temp_right;
+            current.right = temp_right;
         }
         seg_right = Some(AncestrySegment {
             left: temp_right,
@@ -731,13 +733,15 @@ fn update_ancestry(
     }
 
     let out_seg = AncestrySegment {
-        left,
-        right,
+        left: temp_left,
+        right: temp_right,
         mapped_node,
         parent: None,
     };
     // TODO: API fn to replace.
+    print!("replacing {current:?} with...");
     *ancestry.get_mut(current_ancestry_index) = out_seg;
+    println!("{out_seg:?}");
     if let Some(unary) = unary_mapping {
         ancestry_mapped_node[current_ancestry_index.0] = unary;
     } else {
@@ -745,6 +749,7 @@ fn update_ancestry(
     }
 
     if let Some(right_seg) = seg_right {
+        println!("seg right = {right_seg:?}");
         let next = ancestry.next_raw(current_ancestry_index);
         let new_index = ancestry.new_index(right_seg);
         ancestry.next[current_ancestry_index.0] = new_index.0;
@@ -807,12 +812,17 @@ fn process_queued_node(
 
     while !ahead.is_sentinel() {
         println!("ahead = {ahead:?} -> {:?}", graph.ancestry.get(ahead));
+        let (current_left, current_right) = {
+            let current = graph.ancestry.get(ahead);
+            (current.left, current.right)
+        };
+        if let Some((_, right, _)) = overlaps {
+            if current_left >= right {
+                overlaps = overlapper.calculate_next_overlap_set();
+            }
+        }
         if let Some((left, right, ref mut current_overlaps)) = overlaps {
             println!("{current_overlaps:?}");
-            let (current_left, current_right) = {
-                let current = graph.ancestry.get(ahead);
-                (current.left, current.right)
-            };
             if current_right > left && right > current_left {
                 let mapped_node;
                 let mut unary_segment: Option<Index> = None;
@@ -929,7 +939,7 @@ fn process_queued_node(
                 //        graph.ancestry.data[useg.0].parent = None;
                 //    }
                 //}
-                overlaps = overlapper.calculate_next_overlap_set();
+                //overlaps = overlapper.calculate_next_overlap_set();
             } else if last_ancestry_index == ahead {
                 let next = graph.ancestry.next_raw(ahead);
                 if !next.is_sentinel() {
