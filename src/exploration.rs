@@ -803,9 +803,20 @@ fn process_queued_node(
     queue: &[AncestryIntersection],
     temp_edges: &mut Vec<Edge>,
 ) {
-    todo!(
-        "node updating is not correctly ensuring that all parents are entered into the node heap"
-    );
+    // TODO: delete this b/c it is for dev
+    let mut input_parents = vec![];
+    {
+        let mut a = graph.ancestry_head[queued_parent.as_index()];
+        while !a.is_sentinel() {
+            if let Some(parent) = graph.ancestry.get(a).parent {
+                if !input_parents.contains(&parent) {
+                    input_parents.push(parent)
+                }
+            }
+            a = graph.ancestry.next_raw(a);
+        }
+    }
+
     let mut ahead = graph.ancestry_head[queued_parent.as_index()];
     let mut last_ancestry_index = ahead;
 
@@ -1011,6 +1022,12 @@ fn process_queued_node(
     }
 
     if temp_edges.is_empty() {
+        for i in input_parents {
+            assert!(
+                graph.node_heap.queued_nodes.contains(&i),
+                "{queued_parent:?}, {i:?}"
+            );
+        }
         // NOTE: node's input parents from ancestry must already be here!
         println!("no temp edges for {queued_parent:?}");
         println!("{:?}", graph.node_heap);
