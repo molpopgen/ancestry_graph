@@ -1847,6 +1847,11 @@ mod update_ancestry_tests {
         let mut num_overlaps = 0;
         while !a.is_sentinel() {
             let current = graph.ancestry.get(a);
+            if let Some((_, right, _)) = overlaps {
+                if current.left >= right {
+                    overlaps = overlapper.calculate_next_overlap_set();
+                }
+            }
             if let Some((left, right, ref mut current_overlaps)) = overlaps {
                 if current.right > left && right > current.left {
                     println!("{current:?} => [{left},{right}), {current_overlaps:?}");
@@ -1854,7 +1859,7 @@ mod update_ancestry_tests {
                 }
             }
             a = graph.ancestry.next_raw(a);
-            overlaps = overlapper.calculate_next_overlap_set();
+            //overlaps = overlapper.calculate_next_overlap_set();
         }
         assert_eq!(num_overlaps, 2)
     }
