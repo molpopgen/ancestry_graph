@@ -1189,7 +1189,11 @@ fn validate_reachable(generation: i64, graph: &Graph, nodes: &[Node]) -> Vec<Nod
     for i in 0..graph.birth_time.len() {
         if !graph.edge_head[i].is_sentinel() {
             assert!(!graph.free_nodes.contains(&i));
-            assert!(reachable.contains(&Node(i)), "{generation} -> {i}")
+            assert!(
+                reachable.contains(&Node(i)),
+                "{generation} -> {i}, {:?}",
+                graph.edges.data[graph.edge_head[i].0]
+            );
         }
     }
     for &n in reachable.iter() {
@@ -1226,6 +1230,7 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
         //        .filter(|(i, _)| { !graph.ancestry_head[*i].is_sentinel() })
         //        .count()
         //);
+        validate_reachable(gen, &graph, &children);
         children.clear();
         // Advance time
         graph.advance_time().unwrap();
@@ -1258,7 +1263,6 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
         assert_eq!(graph.num_births, 0);
 
         std::mem::swap(&mut parents, &mut children);
-        validate_reachable(gen, &graph, &parents);
     }
 
     graph
@@ -2576,6 +2580,56 @@ mod multistep_tests {
         }
         // this is based on my naive view of the graph.
         validate_ancestry(2, &[(0, 8, Some(0), 5), (8, 72, Some(1), 5)], &graph);
+        println!("parents = {parents:?}, {:?}", graph.free_nodes);
+        let _ = validate_reachable(graph.current_time, &graph, &children);
+
+        std::mem::swap(&mut parents, &mut children);
+        children.clear();
+
+        graph.advance_time().unwrap();
+        parents.iter().for_each(|&node| graph.mark_node_death(node));
+        children.push(graph.add_birth(graph.current_time).unwrap());
+        children.push(graph.add_birth(graph.current_time).unwrap());
+
+        graph
+            .record_transmission(0, 11, parents[0], children[0])
+            .unwrap();
+        graph
+            .record_transmission(11, 100, parents[0], children[0])
+            .unwrap();
+        graph
+            .record_transmission(0, 60, parents[1], children[1])
+            .unwrap();
+        graph
+            .record_transmission(60, 100, parents[0], children[1])
+            .unwrap();
+        propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+        println!("parents = {parents:?}");
+        for &p in &parents {
+            println!("parent {p:?}");
+            let mut a = graph.ancestry_head[p.0];
+            while !a.is_sentinel() {
+                println!("\t{:?}", graph.ancestry.get(a));
+                a = graph.ancestry.next_raw(a);
+            }
+            let mut a = graph.edge_head[p.0];
+            while !a.is_sentinel() {
+                println!("\t{:?}", graph.edges.get(a));
+                a = graph.edges.next_raw(a);
+            }
+        }
+        println!("children = {children:?}");
+        println!("node 0");
+        let mut a = graph.ancestry_head[0];
+        while !a.is_sentinel() {
+            println!("\t{:?}", graph.ancestry.get(a));
+            a = graph.ancestry.next_raw(a);
+        }
+        let mut a = graph.edge_head[0];
+        while !a.is_sentinel() {
+            println!("\t{:?}", graph.edges.get(a));
+            a = graph.edges.next_raw(a);
+        }
         let _ = validate_reachable(graph.current_time, &graph, &children);
     }
 }
