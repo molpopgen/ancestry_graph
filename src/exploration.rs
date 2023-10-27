@@ -955,6 +955,11 @@ fn process_queued_node(
                 //}
                 //overlaps = overlapper.calculate_next_overlap_set();
             } else if last_ancestry_index == ahead {
+                if let Some(parent) = graph.ancestry.get(ahead).parent {
+                    graph
+                        .node_heap
+                        .insert(parent, graph.birth_time[parent.as_index()])
+                }
                 let next = graph.ancestry.next_raw(ahead);
                 if !next.is_sentinel() {
                     if let Some(parent) = graph.ancestry.get(next).parent {
@@ -1253,7 +1258,6 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
         //        .filter(|(i, _)| { !graph.ancestry_head[*i].is_sentinel() })
         //        .count()
         //);
-        validate_reachable(gen, &graph, &children);
         children.clear();
         // Advance time
         graph.advance_time().unwrap();
@@ -1286,6 +1290,7 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
         assert_eq!(graph.num_births, 0);
 
         std::mem::swap(&mut parents, &mut children);
+        validate_reachable(gen, &graph, &parents);
     }
 
     graph
