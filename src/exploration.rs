@@ -1789,6 +1789,61 @@ mod graph_tests {
 }
 
 #[cfg(test)]
+mod update_ancestry_tests {
+
+    use super::test_utils::*;
+    use super::*;
+    #[test]
+    fn mock_test() {
+        let mut graph = Graph::new(100).unwrap();
+
+        graph.birth_time.push(0);
+        let a = graph.ancestry.new_index(AncestrySegment {
+            left: 0,
+            right: 8,
+            parent: None,
+            mapped_node: Node(0),
+        });
+        graph.ancestry_head.push(a);
+        let a = graph.ancestry.insert_after(
+            a,
+            AncestrySegment {
+                left: 8,
+                right: 100,
+                parent: None,
+                mapped_node: Node(0),
+            },
+        );
+        graph.ancestry_tail.push(a);
+        let a = graph.ancestry.new_index(AncestrySegment {
+            left: 0,
+            right: 100,
+            parent: None,
+            mapped_node: Node(1),
+        });
+        graph.ancestry_head.push(a);
+        graph.ancestry_tail.push(a);
+
+        let e = graph.edges.new_index(Edge {
+            left: 0,
+            right: 72,
+            child: Node(1),
+        });
+        graph.edge_head.push(e);
+        graph.edge_tail.push(e);
+
+        //check our setup
+        validate_ancestry(0, &[(0, 8, None, 0), (8, 100, None, 0)], &graph);
+        validate_ancestry(1, &[(0, 100, None, 1)], &graph);
+        validate_edges(0, &[(0, 72, 1)], &graph);
+
+        let mut queue = vec![];
+        ancestry_intersection(Node(0), &graph, &mut queue);
+        assert_eq!(queue.len(), 2);
+    }
+}
+
+#[cfg(test)]
 mod propagation_tests {
     use super::*;
     use test_utils::*;
