@@ -2734,6 +2734,9 @@ mod multistep_tests {
         );
         validate_edges(0, &[(45, 53, 4), (45, 53, 1)], &graph);
         validate_ancestry(0, &[(45, 53, None, 0), (53, 73, None, 2)], &graph);
+        // Here, we seem to be over-propagating the unary status back up to node 0.
+        // What is happening?
+        validate_ancestry(1, &[(0, 96, Some(2), 1), (96, 100, None, 1)], &graph);
         std::mem::swap(&mut parents, &mut children);
         children.clear();
         graph.advance_time().unwrap();
