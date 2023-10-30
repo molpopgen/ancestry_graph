@@ -2686,6 +2686,14 @@ mod multistep_tests {
 
         propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
         let reachable = validate_reachable(graph.current_time, &graph, &children);
+        assert_eq!(reachable.len(), 1);
+        assert!(reachable.contains(&Node(0)));
+        validate_edges(0, &[(45, 73, 2), (45, 73, 3)], &graph);
+        validate_ancestry(
+            0,
+            &[(0, 45, None, 3), (45, 73, None, 0), (73, 100, None, 2)],
+            &graph,
+        );
         std::mem::swap(&mut parents, &mut children);
         children.clear();
         graph.advance_time().unwrap();
@@ -2693,6 +2701,7 @@ mod multistep_tests {
         children.push(graph.add_birth(graph.current_time).unwrap());
         children.push(graph.add_birth(graph.current_time).unwrap());
 
+        println!("PP {parents:?} -> {children:?}");
         graph
             .record_transmission(0, 96, parents[0], children[0])
             .unwrap();
@@ -2708,6 +2717,23 @@ mod multistep_tests {
 
         propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
         let reachable = validate_reachable(graph.current_time, &graph, &children);
+        assert_eq!(reachable.len(), 2);
+        for node in [0, 2] {
+            assert!(reachable.contains(&Node(node)))
+        }
+        validate_edges(2, &[(53, 96, 4), (53, 96, 1)], &graph);
+        validate_ancestry(
+            2,
+            &[
+                (0, 45, None, 1),
+                (45, 53, Some(0), 1), // b/c this is the only interval where 0 has edges
+                (53, 96, None, 2),
+                (96, 100, None, 4),
+            ],
+            &graph,
+        );
+        validate_edges(0, &[(45, 53, 4), (45, 53, 1)], &graph);
+        validate_ancestry(0, &[(45, 53, None, 0), (53, 73, None, 2)], &graph);
         std::mem::swap(&mut parents, &mut children);
         children.clear();
         graph.advance_time().unwrap();
