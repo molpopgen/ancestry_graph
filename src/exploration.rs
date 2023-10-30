@@ -1290,7 +1290,7 @@ fn haploid_wf(seed: u64, popsize: usize, genome_length: i64, num_generations: i6
         assert_eq!(graph.num_births, 0);
 
         std::mem::swap(&mut parents, &mut children);
-        validate_reachable(gen, &graph, &parents);
+        validate_reachable(gen + 1, &graph, &parents);
     }
 
     graph
