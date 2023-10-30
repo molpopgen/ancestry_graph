@@ -2754,9 +2754,37 @@ mod multistep_tests {
             .record_transmission(60, 100, parents[0], children[1])
             .unwrap();
 
-        println!("{parents:?} {children:?}");
+        println!("PP {parents:?} {children:?}");
 
         propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+        let mut e = graph.edge_head[1];
+        while !e.is_sentinel() {
+            println!("\t{:?}", graph.edges.get(e));
+            e = graph.edges.next_raw(e)
+        }
+        validate_edges(4, &[], &graph);
+        validate_ancestry(4, &[(0, 53, Some(0), 5), (53, 60, Some(2), 5)], &graph);
+        // I think this is wrong, too
+        validate_ancestry(
+            1,
+            &[
+                (0, 11, None, 3),
+                // AFAICT, the next 2 segs should have 2 as their parent??
+                (11, 60, Some(0), 3),
+                (60, 96, None, 1),
+                (96, 100, None, 1),
+            ],
+            &graph,
+        );
+        for &node in &children {
+            println!("child node {node:?}");
+            let mut a = graph.ancestry_head[node.as_index()];
+            while !a.is_sentinel() {
+                println!("\t{:?}", graph.ancestry.get(a));
+                a = graph.ancestry.next_raw(a)
+            }
+        }
+        validate_edges(1, &[(60, 100, 3), (60, 100, 5)], &graph);
         let reachable = validate_reachable(graph.current_time, &graph, &children);
         std::mem::swap(&mut parents, &mut children);
         children.clear();
