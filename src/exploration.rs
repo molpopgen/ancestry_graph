@@ -2530,7 +2530,7 @@ mod multistep_tests {
         validate_ancestry(4, &[(2, 3, Some(2), 4), (0, 1, Some(1), 4)], &graph);
     }
 
-    // Based on a specific set of transmissions happening in foo_foo_test_2_individuals
+    // Based on a specific set of transmissions happening in foo_test_2_individuals
     #[test]
     fn test6() {
         let (mut graph, mut parents) = Graph::with_initial_nodes(2, 100).unwrap();
