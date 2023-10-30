@@ -2660,4 +2660,81 @@ mod multistep_tests {
         }
         let _ = validate_reachable(graph.current_time, &graph, &children);
     }
+
+    // Based on a specific set of transmissions happening in foo_foo_test_2_individuals
+    #[test]
+    fn test7() {
+        let (mut graph, mut parents) = Graph::with_initial_nodes(2, 100).unwrap();
+        graph.advance_time().unwrap();
+        parents.iter().for_each(|&node| graph.mark_node_death(node));
+        let mut children: Vec<Node> = vec![
+            graph.add_birth(graph.current_time).unwrap(),
+            graph.add_birth(graph.current_time).unwrap(),
+        ];
+        graph
+            .record_transmission(0, 45, parents[1], children[0])
+            .unwrap();
+        graph
+            .record_transmission(45, 100, parents[0], children[0])
+            .unwrap();
+        graph
+            .record_transmission(0, 73, parents[0], children[1])
+            .unwrap();
+        graph
+            .record_transmission(73, 100, parents[1], children[1])
+            .unwrap();
+
+        propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+        let reachable = validate_reachable(graph.current_time, &graph, &children);
+        std::mem::swap(&mut parents, &mut children);
+        children.clear();
+        graph.advance_time().unwrap();
+        parents.iter().for_each(|&node| graph.mark_node_death(node));
+        children.push(graph.add_birth(graph.current_time).unwrap());
+        children.push(graph.add_birth(graph.current_time).unwrap());
+
+        graph
+            .record_transmission(0, 96, parents[0], children[0])
+            .unwrap();
+        graph
+            .record_transmission(96, 100, parents[1], children[0])
+            .unwrap();
+        graph
+            .record_transmission(0, 53, parents[1], children[1])
+            .unwrap();
+        graph
+            .record_transmission(53, 100, parents[0], children[1])
+            .unwrap();
+
+        propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+        let reachable = validate_reachable(graph.current_time, &graph, &children);
+        std::mem::swap(&mut parents, &mut children);
+        children.clear();
+        graph.advance_time().unwrap();
+        parents.iter().for_each(|&node| graph.mark_node_death(node));
+        children.push(graph.add_birth(graph.current_time).unwrap());
+        children.push(graph.add_birth(graph.current_time).unwrap());
+
+        graph
+            .record_transmission(0, 11, parents[0], children[0])
+            .unwrap();
+        graph
+            .record_transmission(11, 100, parents[0], children[0])
+            .unwrap();
+        graph
+            .record_transmission(0, 60, parents[1], children[1])
+            .unwrap();
+        graph
+            .record_transmission(60, 100, parents[0], children[1])
+            .unwrap();
+
+        println!("{parents:?} {children:?}");
+
+        propagate_ancestry_changes(super::PropagationOptions::default(), &mut graph);
+        let reachable = validate_reachable(graph.current_time, &graph, &children);
+        std::mem::swap(&mut parents, &mut children);
+        children.clear();
+        graph.advance_time().unwrap();
+        parents.iter().for_each(|&node| graph.mark_node_death(node));
+    }
 }
