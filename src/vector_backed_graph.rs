@@ -84,10 +84,93 @@ struct Graph {
     free_nodes: Vec<usize>,
 }
 
+#[derive(Clone, Copy)]
 struct AncestryIntersection {
     left: i64,
     right: i64,
     node: Node,
+    unary_mapping: Option<Node>,
+}
+
+struct Overlapper<'q> {
+    queue: &'q [AncestryIntersection],
+    overlaps: Vec<AncestryIntersection>,
+    current_overlap: usize,
+    num_overlaps: usize,
+    left: i64,
+    right: i64,
+}
+
+impl<'q> Overlapper<'q> {
+    fn new(queue: &'q [AncestryIntersection]) -> Self {
+        let num_overlaps = if queue.is_empty() { 0 } else { queue.len() - 1 };
+        let right = if num_overlaps > 0 {
+            queue[0].right
+        } else {
+            i64::MAX
+        };
+        let left = i64::MAX;
+        Self {
+            queue,
+            left,
+            right,
+            num_overlaps,
+            current_overlap: 0,
+            overlaps: vec![],
+        }
+    }
+
+    fn calculate_next_overlap_set(&mut self) -> Option<(i64, i64, &mut [AncestryIntersection])> {
+        // NOTE: this if statement hides from the compiler
+        // that current_overlap is always < queue.len().
+        // We should be able to check current_overlap + 1 <
+        // queue.len() and have the later bounds check optimmized out.
+        if self.current_overlap < self.num_overlaps {
+            self.left = self.right;
+            self.overlaps.retain(|o| o.right > self.left);
+            if self.overlaps.is_empty() {
+                self.left = self.queue[self.current_overlap].left;
+            }
+            // NOTE: we should be able to get this
+            // from the "retain" step.
+            // As is, we are going over (part of) overlaps
+            // 2x.
+            self.right = match self.overlaps.iter().map(|&overlap| overlap.right).min() {
+                Some(r) => r,
+                None => i64::MAX,
+            };
+            for segment in &self.queue[self.current_overlap..] {
+                if segment.left == self.left {
+                    self.current_overlap += 1;
+                    self.right = std::cmp::min(self.right, segment.right);
+                    self.overlaps.push(*segment)
+                } else {
+                    break;
+                }
+            }
+            // NOTE: we can track the left value while
+            // traversing the overlaps, setting it to MAX
+            // initially, and dodge another bounds check
+            self.right = std::cmp::min(self.right, self.queue[self.current_overlap].left);
+            Some((self.left, self.right, &mut self.overlaps))
+        } else {
+            if !self.overlaps.is_empty() {
+                self.left = self.right;
+                // DUPLICATION
+                self.overlaps.retain(|o| o.right > self.left);
+            }
+            if !self.overlaps.is_empty() {
+                self.right = match self.overlaps.iter().map(|&overlap| overlap.right).min() {
+                    Some(right) => right,
+                    None => self.right,
+                };
+                self.overlaps.retain(|o| o.right > self.left);
+                Some((self.left, self.right, &mut self.overlaps))
+            } else {
+                None
+            }
+        }
+    }
 }
 
 fn ancestry_intersection(
@@ -101,15 +184,21 @@ fn ancestry_intersection(
         .zip(edges.right.iter())
         .zip(edges.child.iter())
     {
-        for (&aleft, &aright) in ancestry[node.as_index()]
+        for ((&aleft, &aright), &unary_mapping) in ancestry[node.as_index()]
             .left
             .iter()
             .zip(ancestry[node.as_index()].right.iter())
+            .zip(ancestry[node.as_index()].unary_mapping.iter())
         {
             if eright > aleft && aright > eleft {
                 let left = std::cmp::max(eleft, aleft);
                 let right = std::cmp::min(eright, aright);
-                queue.push(AncestryIntersection { left, right, node })
+                queue.push(AncestryIntersection {
+                    left,
+                    right,
+                    node,
+                    unary_mapping,
+                })
             }
         }
     }
@@ -119,8 +208,15 @@ fn ancestry_intersection(
             left: i64::MAX,
             right: i64::MAX,
             node: Node(usize::MAX),
+            unary_mapping: None,
         });
     }
+}
+
+fn process_queued_node(node: Node, queue: &[AncestryIntersection], graph: &mut Graph) {
+    // needs temp edge and temp ancestry as inputs?
+    let mut overlapper = Overlapper::new(queue);
+    todo!()
 }
 
 fn propagate_changes(graph: &mut Graph) {
@@ -132,6 +228,14 @@ fn propagate_changes(graph: &mut Graph) {
             &graph.tables.ancestry,
             &mut queue,
         );
+        if queue.is_empty() {
+            // Delete node from parents of all children.
+            // Clear out children
+            // Recycle the node id
+            todo!()
+        } else {
+            process_queued_node(node, &queue, graph);
+        }
         todo!()
     }
 }
