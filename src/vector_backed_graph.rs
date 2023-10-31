@@ -178,6 +178,8 @@ fn ancestry_intersection(
     ancestry: &[Ancestry],
     queue: &mut Vec<AncestryIntersection>,
 ) {
+    todo!("should remove this node from all the parents data of each child");
+    todo!("need to know which node we are talking about");
     for ((&eleft, &eright), &node) in edges
         .left
         .iter()
