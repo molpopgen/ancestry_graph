@@ -15,6 +15,14 @@ struct Ancestry {
     unary_mapping: Vec<Option<Node>>,
 }
 
+impl Ancestry {
+    fn clear(&mut self) {
+        self.left.clear();
+        self.right.clear();
+        self.unary_mapping.clear();
+    }
+}
+
 #[derive(Default)]
 struct Edges {
     left: Vec<i64>,
@@ -22,34 +30,43 @@ struct Edges {
     child: Vec<Node>,
 }
 
+impl Edges {
+    fn clear(&mut self) {
+        self.left.clear();
+        self.right.clear();
+        self.child.clear();
+    }
+}
+
 #[derive(Default)]
 struct Nodes {
     birth_time: Vec<i64>,
-    edge_start: Vec<Option<usize>>,
-    ancestry_start: Vec<Option<usize>>,
 }
 
 #[derive(Default)]
 struct Tables {
-    ancestry: Ancestry,
-    edges: Edges,
+    ancestry: Vec<Ancestry>,
+    edges: Vec<Edges>,
     nodes: Nodes,
 }
 
 #[derive(Default)]
 struct Graph {
     tables: Tables,
-    simplified_tables: Tables,
     node_heap: NodeHeap,
-    simplified_node_map: Vec<Option<Node>>,
     current_time: i64,
+    free_nodes: Vec<usize>,
 }
 
 impl Graph {
     pub fn add_birth(&mut self) -> Node {
-        self.tables.nodes.birth_time.push(self.current_time);
-        self.tables.nodes.edge_start.push(None);
-        self.tables.nodes.ancestry_start.push(None);
-        Node(self.tables.nodes.birth_time.len() - 1)
+        if let Some(index) = self.free_nodes.pop() {
+            self.tables.edges[index].clear();
+            self.tables.ancestry[index].clear();
+            Node(index)
+        } else {
+            self.tables.nodes.birth_time.push(self.current_time);
+            Node(self.tables.nodes.birth_time.len() - 1)
+        }
     }
 }
