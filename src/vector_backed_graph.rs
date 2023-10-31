@@ -24,9 +24,6 @@ struct Edges {
 
 #[derive(Default)]
 struct Nodes {
-    node: Vec<Node>,
-    // NOTE: it is possible that we will need to HASH
-    // a Node -> birth time mapping.
     birth_time: Vec<i64>,
     edge_start: Vec<Option<usize>>,
     ancestry_start: Vec<Option<usize>>,
@@ -44,4 +41,5 @@ struct Graph {
     tables: Tables,
     simplified_tables: Tables,
     node_heap: NodeHeap,
+    simplified_node_map: Vec<Option<Node>>,
 }
