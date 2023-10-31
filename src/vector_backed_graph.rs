@@ -78,8 +78,37 @@ struct AncestryIntersection {
     node: Node,
 }
 
-fn ancestry_intersection(edges: &Edges, ancestry: &[Ancestry]) -> Vec<AncestryIntersection> {
-    todo!()
+fn ancestry_intersection(
+    edges: &Edges,
+    ancestry: &[Ancestry],
+    queue: &mut Vec<AncestryIntersection>,
+) {
+    for ((&eleft, &eright), &node) in edges
+        .left
+        .iter()
+        .zip(edges.right.iter())
+        .zip(edges.child.iter())
+    {
+        for (&aleft, &aright) in ancestry[node.as_index()]
+            .left
+            .iter()
+            .zip(ancestry[node.as_index()].right.iter())
+        {
+            if eright > aleft && aright > eleft {
+                let left = std::cmp::max(eleft, aleft);
+                let right = std::cmp::min(eright, aright);
+                queue.push(AncestryIntersection { left, right, node })
+            }
+        }
+    }
+    queue.sort_unstable_by_key(|x| x.left);
+    if !queue.is_empty() {
+        queue.push(AncestryIntersection {
+            left: i64::MAX,
+            right: i64::MAX,
+            node: Node(usize::MAX),
+        });
+    }
 }
 
 impl Graph {
