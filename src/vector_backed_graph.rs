@@ -73,6 +73,8 @@ struct Nodes {
 struct Tables {
     ancestry: Vec<Ancestry>,
     edges: Vec<Edges>,
+    parents: Vec<Vec<Node>>,
+    children: Vec<Vec<Node>>,
     nodes: Nodes,
 }
 
@@ -245,8 +247,11 @@ fn propagate_changes(graph: &mut Graph) {
 
 impl Graph {
     pub fn add_birth(&mut self) -> Node {
+        todo!("make the tables api do this work");
         if let Some(index) = self.free_nodes.pop() {
             self.tables.edges[index].clear();
+            self.tables.parents[index].clear();
+            self.tables.children[index].clear();
             self.tables.ancestry[index].clear();
             self.tables.ancestry[index].add_ancestry(0, self.genome_length, None);
             Node(index)
@@ -256,6 +261,8 @@ impl Graph {
                 .ancestry
                 .push(Ancestry::new_sample(self.genome_length));
             self.tables.edges.push(Edges::default());
+            self.tables.parents.push(vec![]);
+            self.tables.children.push(vec![]);
             Node(self.tables.nodes.birth_time.len() - 1)
         }
     }
