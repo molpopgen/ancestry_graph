@@ -178,7 +178,7 @@ fn ancestry_intersection(
     ancestry: &[Ancestry],
     queue: &mut Vec<AncestryIntersection>,
 ) {
-    todo!("should remove this node from all the parents data of each child");
+    todo!("should swap_remove this node from all the parents data of each child");
     todo!("need to know which node we are talking about");
     for ((&eleft, &eright), &node) in edges
         .left
@@ -186,11 +186,12 @@ fn ancestry_intersection(
         .zip(edges.right.iter())
         .zip(edges.child.iter())
     {
-        for ((&aleft, &aright), &unary_mapping) in ancestry[node.as_index()]
+        let anode = &ancestry[node.as_index()];
+        for ((&aleft, &aright), &unary_mapping) in anode
             .left
             .iter()
-            .zip(ancestry[node.as_index()].right.iter())
-            .zip(ancestry[node.as_index()].unary_mapping.iter())
+            .zip(anode.right.iter())
+            .zip(anode.unary_mapping.iter())
         {
             if eright > aleft && aright > eleft {
                 let left = std::cmp::max(eleft, aleft);
