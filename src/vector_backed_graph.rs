@@ -8,6 +8,18 @@ struct NodeHeap {
     node_queue: std::collections::BinaryHeap<QueuedNode>,
 }
 
+impl NodeHeap {
+    fn pop(&mut self) -> Option<Node> {
+        match self.node_queue.pop() {
+            Some(qn) => {
+                self.queued_nodes.remove(&qn.node);
+                Some(qn.node)
+            }
+            None => None,
+        }
+    }
+}
+
 #[derive(Default)]
 struct Ancestry {
     left: Vec<i64>,
@@ -108,6 +120,19 @@ fn ancestry_intersection(
             right: i64::MAX,
             node: Node(usize::MAX),
         });
+    }
+}
+
+fn propagate_changes(graph: &mut Graph) {
+    let mut queue = vec![];
+    while let Some(node) = graph.node_heap.pop() {
+        graph.node_heap.queued_nodes.remove(&node);
+        ancestry_intersection(
+            &graph.tables.edges[node.as_index()],
+            &graph.tables.ancestry,
+            &mut queue,
+        );
+        todo!()
     }
 }
 
