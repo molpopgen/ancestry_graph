@@ -42,4 +42,14 @@ struct Graph {
     simplified_tables: Tables,
     node_heap: NodeHeap,
     simplified_node_map: Vec<Option<Node>>,
+    current_time: i64,
+}
+
+impl Graph {
+    pub fn add_birth(&mut self) -> Node {
+        self.tables.nodes.birth_time.push(self.current_time);
+        self.tables.nodes.edge_start.push(None);
+        self.tables.nodes.ancestry_start.push(None);
+        Node(self.tables.nodes.birth_time.len() - 1)
+    }
 }
