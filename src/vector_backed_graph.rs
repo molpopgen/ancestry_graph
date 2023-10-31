@@ -72,6 +72,16 @@ struct Graph {
     free_nodes: Vec<usize>,
 }
 
+struct AncestryIntersection {
+    left: i64,
+    right: i64,
+    node: Node,
+}
+
+fn ancestry_intersection(edges: &Edges, ancestry: &[Ancestry]) -> Vec<AncestryIntersection> {
+    todo!()
+}
+
 impl Graph {
     pub fn add_birth(&mut self) -> Node {
         if let Some(index) = self.free_nodes.pop() {
