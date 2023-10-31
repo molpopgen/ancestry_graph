@@ -7,6 +7,8 @@ mod overlapper_experiments;
 
 mod flags;
 
+mod vector_backed_graph;
+
 use flags::PropagationOptions;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
