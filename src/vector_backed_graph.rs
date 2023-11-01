@@ -188,6 +188,9 @@ fn ancestry_intersection(
         .zip(edges.right.iter())
         .zip(edges.child.iter())
     {
+        // NOTE: we are now doing a linear search PER INPUT EDGE,
+        // which is redundant. It will be more efficient to cache the child
+        // value and then iterate over them at the end.
         if let Some(index) = parents[node.as_index()].iter().position(|&x| x == parent) {
             let _ = parents[node.as_index()].swap_remove(index);
         }
