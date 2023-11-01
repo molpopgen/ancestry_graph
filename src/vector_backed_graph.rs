@@ -57,6 +57,12 @@ impl Ancestry {
         debug_assert_eq!(self.left.len(), self.unary_mapping.len());
         self.left.len()
     }
+
+    fn push(&mut self, left: i64, right: i64, unary_mapping: Option<Node>) {
+        self.left.push(left);
+        self.right.push(right);
+        self.unary_mapping.push(unary_mapping);
+    }
 }
 
 #[derive(Default, Debug)]
@@ -81,6 +87,12 @@ impl Edges {
         debug_assert_eq!(self.left.len(), self.right.len());
         debug_assert_eq!(self.left.len(), self.child.len());
         self.left.len()
+    }
+
+    fn push(&mut self, left: i64, right: i64, child: Node) {
+        self.left.push(left);
+        self.right.push(right);
+        self.child.push(child);
     }
 }
 
@@ -293,24 +305,15 @@ fn process_queued_node(node: Node, queue: &[AncestryIntersection], graph: &mut G
                 // The unary mapping becomes the overlapped child node
                 None => overlaps[0].node,
             };
-            // TODO: Ancestry should handle
-            temp_ancestry.left.push(left);
-            temp_ancestry.right.push(right);
-            temp_ancestry.unary_mapping.push(Some(unary_mapping));
+            temp_ancestry.push(left, right, Some(unary_mapping));
         } else {
             for o in overlaps.iter() {
                 let child = match o.unary_mapping {
                     Some(u) => u,
                     None => o.node,
                 };
-                // TODO: Edges should handle
-                temp_edges.left.push(left);
-                temp_edges.right.push(right);
-                temp_edges.child.push(child);
-                // TODO: Ancestry should handle
-                temp_ancestry.left.push(left);
-                temp_ancestry.right.push(right);
-                temp_ancestry.unary_mapping.push(None);
+                temp_edges.push(left, right, child);
+                temp_ancestry.push(left, right, None);
 
                 // Should be faster than a hash for scores of children.
                 if !temp_children.contains(&child) {
