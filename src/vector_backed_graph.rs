@@ -277,7 +277,7 @@ fn propagate_changes(graph: &mut Graph) {
             // Delete node from parents of all children.
             // Clear out children
             // Recycle the node id
-            todo!()
+            todo!("{node:?}");
         } else {
             process_queued_node(node, &queue, graph);
         }
@@ -411,7 +411,7 @@ mod single_tree_tests {
             graph.tables.parents[unary_child].push(Node(node))
         }
 
-        for node in [1, 4] {
+        for node in [1, 3] {
             graph.enqueue_parent(Node(node))
         }
 
