@@ -290,6 +290,31 @@ fn ancestry_intersection(
 }
 
 // TODO: needs temp edge and temp ancestry as inputs?
+//
+// # Some design notes
+//
+// ## Definition of an ancestry change
+//
+// 1. Change in left OR right coordinate.
+// 2. Change from coalescent to unary status of a segment.
+// 3. Change from unary to coao status of a segment.
+//    Is this even possible?
+// 4. Total loss of a segment.
+//
+// Squashing will be important:
+//
+// It is conceivable that overlaps squash down into an unchanged
+// input segment. We do NOT want to label this as a change.
+//
+// ## Avoiding queuing ALL parents when a change occurs.
+//
+// It is tempting to simply pass all of node's parents into the
+// queue. 
+// An alternative is:
+//
+// 1. cache intervals that have changed.
+// 2. When done, look for parent edge / changed interval overlap
+//    and add overlapping parents into the queue.
 fn process_queued_node(node: Node, queue: &[AncestryIntersection], graph: &mut Graph) {
     let mut overlapper = Overlapper::new(queue);
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
