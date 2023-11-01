@@ -20,7 +20,7 @@ impl NodeHeap {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Ancestry {
     left: Vec<i64>,
     right: Vec<i64>,
@@ -47,9 +47,19 @@ impl Ancestry {
         self.right.clear();
         self.unary_mapping.clear();
     }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn len(&self) -> usize {
+        debug_assert_eq!(self.left.len(), self.right.len());
+        debug_assert_eq!(self.left.len(), self.unary_mapping.len());
+        self.left.len()
+    }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Edges {
     left: Vec<i64>,
     right: Vec<i64>,
@@ -61,6 +71,16 @@ impl Edges {
         self.left.clear();
         self.right.clear();
         self.child.clear();
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn len(&self) -> usize {
+        debug_assert_eq!(self.left.len(), self.right.len());
+        debug_assert_eq!(self.left.len(), self.child.len());
+        self.left.len()
     }
 }
 
@@ -154,7 +174,7 @@ impl<'q> Overlapper<'q> {
         }
     }
 
-    fn calculate_next_overlap_set(&mut self) -> Option<(i64, i64, &mut [AncestryIntersection])> {
+    fn calculate_next_overlap_set(&mut self) -> Option<(i64, i64, &[AncestryIntersection])> {
         // NOTE: this if statement hides from the compiler
         // that current_overlap is always < queue.len().
         // We should be able to check current_overlap + 1 <
@@ -186,7 +206,7 @@ impl<'q> Overlapper<'q> {
             // traversing the overlaps, setting it to MAX
             // initially, and dodge another bounds check
             self.right = std::cmp::min(self.right, self.queue[self.current_overlap].left);
-            Some((self.left, self.right, &mut self.overlaps))
+            Some((self.left, self.right, &self.overlaps))
         } else {
             if !self.overlaps.is_empty() {
                 self.left = self.right;
@@ -199,7 +219,7 @@ impl<'q> Overlapper<'q> {
                     None => self.right,
                 };
                 self.overlaps.retain(|o| o.right > self.left);
-                Some((self.left, self.right, &mut self.overlaps))
+                Some((self.left, self.right, &self.overlaps))
             } else {
                 None
             }
@@ -214,6 +234,7 @@ fn ancestry_intersection(
     parents: &mut [Vec<Node>],
     queue: &mut Vec<AncestryIntersection>,
 ) {
+    queue.clear();
     for ((&eleft, &eright), &node) in edges
         .left
         .iter()
@@ -260,9 +281,64 @@ fn process_queued_node(node: Node, queue: &[AncestryIntersection], graph: &mut G
     // needs temp edge and temp ancestry as inputs?
     let mut overlapper = Overlapper::new(queue);
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
-    while let Some((left, right, overlaps)) = current_overlaps {
+    let mut temp_edges = Edges::default();
+    let mut temp_ancestry = Ancestry::default();
+    let mut temp_children: Vec<Node> = vec![];
+    while let Some((left, right, ref overlaps)) = current_overlaps {
         println!("{left},{right},{overlaps:?}");
-        todo!()
+        if overlaps.len() == 1 {
+            let unary_mapping = overlaps[0]
+                .unary_mapping
+                .map_or_else(|| overlaps[0].node, |u| u);
+            // TODO: Ancestry should handle
+            temp_ancestry.left.push(left);
+            temp_ancestry.right.push(right);
+            temp_ancestry.unary_mapping.push(Some(unary_mapping));
+        } else {
+            for o in overlaps.iter() {
+                let child = match o.unary_mapping {
+                    Some(u) => u,
+                    None => o.node,
+                };
+                // TODO: Edges should handle
+                temp_edges.left.push(left);
+                temp_edges.right.push(right);
+                temp_edges.child.push(child);
+                // TODO: Ancestry should handle
+                temp_ancestry.left.push(left);
+                temp_ancestry.right.push(right);
+                temp_ancestry.unary_mapping.push(None);
+
+                // Should be faster than a hash for scores of children.
+                if !temp_children.contains(&child) {
+                    temp_children.push(child);
+                }
+            }
+        }
+        current_overlaps = overlapper.calculate_next_overlap_set();
+    }
+    std::mem::swap(&mut graph.tables.edges[node.as_index()], &mut temp_edges);
+    std::mem::swap(
+        &mut graph.tables.ancestry[node.as_index()],
+        &mut temp_ancestry,
+    );
+    for &c in temp_children.iter() {
+        debug_assert!(!graph.tables.parents[c.as_index()].contains(&node));
+        graph.tables.parents[c.as_index()].push(node);
+    }
+    std::mem::swap(
+        &mut graph.tables.children[node.as_index()],
+        &mut temp_children,
+    );
+    // FIXME: next step is wrong.
+    // We should only do this IF ANCESTRY CHANGES
+    for &parent in graph.tables.parents[node.as_index()].iter() {
+        if !graph.node_heap.queued_nodes.contains(&parent) {
+            graph.node_heap.node_queue.push(QueuedNode {
+                node: parent,
+                birth_time: graph.tables.nodes.birth_time[parent.as_index()],
+            })
+        }
     }
 }
 
@@ -285,7 +361,6 @@ fn propagate_changes(graph: &mut Graph) {
         } else {
             process_queued_node(node, &queue, graph);
         }
-        todo!()
     }
 }
 
@@ -419,6 +494,26 @@ mod single_tree_tests {
             graph.enqueue_parent(Node(node))
         }
 
-        propagate_changes(&mut graph)
+        propagate_changes(&mut graph);
+
+        assert_eq!(graph.tables.children[0].len(), 2);
+        for node in [4, 5] {
+            assert!(graph.tables.children[0].contains(&Node(node)));
+            assert_eq!(graph.tables.parents[node].len(), 1);
+            assert_eq!(graph.tables.parents[node][0], Node(0));
+        }
+
+        for (node, unary) in [(1, 4), (2, 5), (2, 5)] {
+            assert!(graph.tables.children[node].is_empty());
+            assert!(graph.tables.parents[node].is_empty());
+            assert!(graph.tables.edges[node].is_empty());
+            assert!(!graph.tables.ancestry[node].is_empty());
+            assert_eq!(graph.tables.ancestry[node].len(), 1);
+            assert!(graph.tables.ancestry[node].left.contains(&0));
+            assert!(graph.tables.ancestry[node].right.contains(&100));
+            assert!(graph.tables.ancestry[node]
+                .unary_mapping
+                .contains(&Some(Node(unary))));
+        }
     }
 }
