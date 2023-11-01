@@ -332,6 +332,7 @@ fn process_queued_node(node: Node, queue: &[AncestryIntersection], graph: &mut G
     );
     // FIXME: next step is wrong.
     // We should only do this IF ANCESTRY CHANGES
+    todo!("need to handle detecting ancestry changes");
     for &parent in graph.tables.parents[node.as_index()].iter() {
         if !graph.node_heap.queued_nodes.contains(&parent) {
             graph.node_heap.node_queue.push(QueuedNode {
