@@ -118,7 +118,7 @@ impl Graph {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct AncestryIntersection {
     left: i64,
     right: i64,
@@ -259,7 +259,11 @@ fn ancestry_intersection(
 fn process_queued_node(node: Node, queue: &[AncestryIntersection], graph: &mut Graph) {
     // needs temp edge and temp ancestry as inputs?
     let mut overlapper = Overlapper::new(queue);
-    todo!()
+    let mut current_overlaps = overlapper.calculate_next_overlap_set();
+    while let Some((left, right, overlaps)) = current_overlaps {
+        println!("{left},{right},{overlaps:?}");
+        todo!()
+    }
 }
 
 fn propagate_changes(graph: &mut Graph) {
