@@ -106,6 +106,18 @@ struct Graph {
     free_nodes: Vec<usize>,
 }
 
+impl Graph {
+    pub fn new(genome_length: i64) -> Self {
+        Self {
+            genome_length,
+            current_time: 0,
+            tables: Tables::default(),
+            node_heap: NodeHeap::default(),
+            free_nodes: vec![],
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct AncestryIntersection {
     left: i64,
@@ -306,5 +318,103 @@ impl Graph {
         e.left.push(left);
         e.right.push(right);
         e.child.push(child);
+    }
+}
+
+#[cfg(test)]
+mod single_tree_tests {
+    use super::*;
+
+    //   0
+    //  ---
+    //  1 2
+    //  | |
+    //  | 3
+    //  | |
+    //  4 5
+    #[test]
+    fn test0() {
+        let mut graph = Graph::new(100);
+        graph.tables.nodes.birth_time = vec![0, 1, 1, 2, 3, 3];
+        graph.tables.edges.push(Edges {
+            left: vec![0, 0],
+            right: vec![100, 100],
+            child: vec![Node(1), Node(2)],
+        });
+        graph.tables.edges.push(Edges {
+            left: vec![0],
+            right: vec![100],
+            child: vec![Node(4)],
+        });
+        graph.tables.edges.push(Edges {
+            left: vec![0],
+            right: vec![100],
+            child: vec![Node(3)],
+        });
+        graph.tables.edges.push(Edges {
+            left: vec![0],
+            right: vec![100],
+            child: vec![Node(5)],
+        });
+        graph.tables.edges.push(Edges {
+            left: vec![],
+            right: vec![],
+            child: vec![],
+        });
+        graph.tables.edges.push(Edges {
+            left: vec![],
+            right: vec![],
+            child: vec![],
+        });
+
+        graph.tables.ancestry.push(Ancestry {
+            left: vec![0],
+            right: vec![100],
+            unary_mapping: vec![None],
+        });
+        graph.tables.ancestry.push(Ancestry {
+            left: vec![0],
+            right: vec![100],
+            unary_mapping: vec![Some(Node(4))],
+        });
+        graph.tables.ancestry.push(Ancestry {
+            left: vec![0],
+            right: vec![100],
+            unary_mapping: vec![Some(Node(3))],
+        });
+        graph.tables.ancestry.push(Ancestry {
+            left: vec![0],
+            right: vec![100],
+            unary_mapping: vec![Some(Node(5))],
+        });
+        graph.tables.ancestry.push(Ancestry {
+            left: vec![0],
+            right: vec![100],
+            unary_mapping: vec![None],
+        });
+        graph.tables.ancestry.push(Ancestry {
+            left: vec![0],
+            right: vec![100],
+            unary_mapping: vec![None],
+        });
+
+        for _ in 0..graph.tables.nodes.birth_time.len() {
+            graph.tables.parents.push(vec![]);
+            graph.tables.children.push(vec![]);
+        }
+        for node in [1, 2] {
+            graph.tables.children[0].push(Node(node));
+            graph.tables.parents[node].push(Node(0));
+        }
+        for (node, unary_child) in [(1_usize, 4), (2, 3), (3, 5)] {
+            graph.tables.children[node].push(Node(unary_child));
+            graph.tables.parents[unary_child].push(Node(node))
+        }
+
+        for node in [1, 4] {
+            graph.enqueue_parent(Node(node))
+        }
+
+        propagate_changes(&mut graph)
     }
 }
