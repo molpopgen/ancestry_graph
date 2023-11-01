@@ -176,18 +176,21 @@ impl<'q> Overlapper<'q> {
 }
 
 fn ancestry_intersection(
+    parent: Node,
     edges: &Edges,
     ancestry: &[Ancestry],
+    parents: &mut [Vec<Node>],
     queue: &mut Vec<AncestryIntersection>,
 ) {
-    todo!("should swap_remove this node from all the parents data of each child");
-    todo!("need to know which node we are talking about");
     for ((&eleft, &eright), &node) in edges
         .left
         .iter()
         .zip(edges.right.iter())
         .zip(edges.child.iter())
     {
+        if let Some(index) = parents[node.as_index()].iter().position(|&x| x == parent) {
+            let _ = parents[node.as_index()].swap_remove(index);
+        }
         let anode = &ancestry[node.as_index()];
         for ((&aleft, &aright), &unary_mapping) in anode
             .left
@@ -229,8 +232,10 @@ fn propagate_changes(graph: &mut Graph) {
     while let Some(node) = graph.node_heap.pop() {
         graph.node_heap.queued_nodes.remove(&node);
         ancestry_intersection(
+            node,
             &graph.tables.edges[node.as_index()],
             &graph.tables.ancestry,
+            &mut graph.tables.parents,
             &mut queue,
         );
         if queue.is_empty() {
