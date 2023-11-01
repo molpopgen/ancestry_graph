@@ -287,9 +287,12 @@ fn process_queued_node(node: Node, queue: &[AncestryIntersection], graph: &mut G
     while let Some((left, right, ref overlaps)) = current_overlaps {
         println!("{left},{right},{overlaps:?}");
         if overlaps.len() == 1 {
-            let unary_mapping = overlaps[0]
-                .unary_mapping
-                .map_or_else(|| overlaps[0].node, |u| u);
+            let unary_mapping = match overlaps[0].unary_mapping {
+                // Propagate the unary mapping up the graph
+                Some(u) => u,
+                // The unary mapping becomes the overlapped child node
+                None => overlaps[0].node,
+            };
             // TODO: Ancestry should handle
             temp_ancestry.left.push(left);
             temp_ancestry.right.push(right);
