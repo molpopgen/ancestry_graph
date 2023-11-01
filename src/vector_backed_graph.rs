@@ -78,6 +78,26 @@ struct Tables {
     nodes: Nodes,
 }
 
+impl Tables {
+    fn recycle_index_as_birth_node(&mut self, index: usize, current_time: i64, genome_length: i64) {
+        self.nodes.birth_time[index] = current_time;
+        self.edges[index].clear();
+        self.parents[index].clear();
+        self.children[index].clear();
+        self.ancestry[index].clear();
+        self.ancestry[index].add_ancestry(0, genome_length, None);
+    }
+
+    fn add_new_birth_node(&mut self, current_time: i64, genome_length: i64) -> usize {
+        self.nodes.birth_time.push(current_time);
+        self.ancestry.push(Ancestry::new_sample(genome_length));
+        self.edges.push(Edges::default());
+        self.parents.push(vec![]);
+        self.children.push(vec![]);
+        self.nodes.birth_time.len() - 1
+    }
+}
+
 struct Graph {
     tables: Tables,
     node_heap: NodeHeap,
@@ -255,23 +275,15 @@ fn propagate_changes(graph: &mut Graph) {
 
 impl Graph {
     pub fn add_birth(&mut self) -> Node {
-        todo!("make the tables api do this work");
         if let Some(index) = self.free_nodes.pop() {
-            self.tables.edges[index].clear();
-            self.tables.parents[index].clear();
-            self.tables.children[index].clear();
-            self.tables.ancestry[index].clear();
-            self.tables.ancestry[index].add_ancestry(0, self.genome_length, None);
+            self.tables
+                .recycle_index_as_birth_node(index, self.current_time, self.genome_length);
             Node(index)
         } else {
-            self.tables.nodes.birth_time.push(self.current_time);
-            self.tables
-                .ancestry
-                .push(Ancestry::new_sample(self.genome_length));
-            self.tables.edges.push(Edges::default());
-            self.tables.parents.push(vec![]);
-            self.tables.children.push(vec![]);
-            Node(self.tables.nodes.birth_time.len() - 1)
+            Node(
+                self.tables
+                    .add_new_birth_node(self.current_time, self.genome_length),
+            )
         }
     }
 
