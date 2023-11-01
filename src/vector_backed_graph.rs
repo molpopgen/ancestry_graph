@@ -334,12 +334,7 @@ fn process_queued_node(node: Node, queue: &[AncestryIntersection], graph: &mut G
     // We should only do this IF ANCESTRY CHANGES
     todo!("need to handle detecting ancestry changes");
     for &parent in graph.tables.parents[node.as_index()].iter() {
-        if !graph.node_heap.queued_nodes.contains(&parent) {
-            graph.node_heap.node_queue.push(QueuedNode {
-                node: parent,
-                birth_time: graph.tables.nodes.birth_time[parent.as_index()],
-            })
-        }
+        enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
     }
 }
 
@@ -365,6 +360,15 @@ fn propagate_changes(graph: &mut Graph) {
     }
 }
 
+fn enqueue_parent(parent: Node, birth_time: &[i64], node_heap: &mut NodeHeap) {
+    if !node_heap.queued_nodes.contains(&parent) {
+        node_heap.node_queue.push(QueuedNode {
+            node: parent,
+            birth_time: birth_time[parent.as_index()],
+        })
+    }
+}
+
 impl Graph {
     pub fn add_birth(&mut self) -> Node {
         if let Some(index) = self.free_nodes.pop() {
@@ -384,12 +388,7 @@ impl Graph {
     // once per segment per time chosen as a parent.
     pub fn enqueue_parent(&mut self, parent: Node) {
         let h = &mut self.node_heap;
-        if !h.queued_nodes.contains(&parent) {
-            h.node_queue.push(QueuedNode {
-                node: parent,
-                birth_time: self.tables.nodes.birth_time[parent.as_index()],
-            })
-        }
+        enqueue_parent(parent, &self.tables.nodes.birth_time, &mut self.node_heap)
     }
 
     // TODO: validate parent/child birth times?
