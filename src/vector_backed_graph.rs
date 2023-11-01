@@ -277,8 +277,8 @@ fn ancestry_intersection(
     }
 }
 
+// TODO: needs temp edge and temp ancestry as inputs?
 fn process_queued_node(node: Node, queue: &[AncestryIntersection], graph: &mut Graph) {
-    // needs temp edge and temp ancestry as inputs?
     let mut overlapper = Overlapper::new(queue);
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
     let mut temp_edges = Edges::default();
