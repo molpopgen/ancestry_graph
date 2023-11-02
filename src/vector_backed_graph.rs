@@ -365,7 +365,7 @@ fn process_queued_node(
                 // The unary mapping becomes the overlapped child node
                 None => Some(overlaps[0].node),
             };
-            println!("{unary_mapping:?} <-> {input_unary:?}");
+            println!("unary {unary_mapping:?} <-> {input_unary:?}");
             if unary_mapping != input_unary {
                 changed = true;
             }
@@ -377,13 +377,13 @@ fn process_queued_node(
                     None => o.node,
                 };
                 buffers.edges.push(left, right, child);
-                buffers.ancestry.push(left, right, None);
 
                 // Should be faster than a hash for scores of children.
                 if !buffers.children.contains(&child) {
                     buffers.children.push(child);
                 }
             }
+            buffers.ancestry.push(left, right, None);
         }
         current_overlaps = overlapper.calculate_next_overlap_set();
     }
