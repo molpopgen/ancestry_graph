@@ -365,25 +365,6 @@ fn process_queued_node(
         }
         current_overlaps = overlapper.calculate_next_overlap_set();
     }
-    std::mem::swap(&mut graph.tables.edges[node.as_index()], &mut buffers.edges);
-    std::mem::swap(
-        &mut graph.tables.ancestry[node.as_index()],
-        &mut buffers.ancestry,
-    );
-    for &c in buffers.children.iter() {
-        debug_assert!(!graph.tables.parents[c.as_index()].contains(&node));
-        graph.tables.parents[c.as_index()].push(node);
-    }
-    std::mem::swap(
-        &mut graph.tables.children[node.as_index()],
-        &mut buffers.children,
-    );
-    // FIXME: next step is wrong.
-    // We should only do this IF ANCESTRY CHANGES
-    //todo!("need to handle detecting ancestry changes");
-    for &parent in graph.tables.parents[node.as_index()].iter() {
-        enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
-    }
 }
 
 fn propagate_changes(graph: &mut Graph) {
@@ -405,6 +386,27 @@ fn propagate_changes(graph: &mut Graph) {
             todo!("{node:?} has empty queue");
         } else {
             process_queued_node(node, &queue, &mut buffers, graph);
+
+            // TODO: the next steps should be a new fn
+            std::mem::swap(&mut graph.tables.edges[node.as_index()], &mut buffers.edges);
+            std::mem::swap(
+                &mut graph.tables.ancestry[node.as_index()],
+                &mut buffers.ancestry,
+            );
+            for &c in buffers.children.iter() {
+                debug_assert!(!graph.tables.parents[c.as_index()].contains(&node));
+                graph.tables.parents[c.as_index()].push(node);
+            }
+            std::mem::swap(
+                &mut graph.tables.children[node.as_index()],
+                &mut buffers.children,
+            );
+            // FIXME: next step is wrong.
+            // We should only do this IF ANCESTRY CHANGES
+            //todo!("need to handle detecting ancestry changes");
+            for &parent in graph.tables.parents[node.as_index()].iter() {
+                enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
+            }
             buffers.clear();
         }
     }
