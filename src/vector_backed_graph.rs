@@ -421,6 +421,7 @@ fn propagate_changes(graph: &mut Graph) {
             graph.free_nodes.push(node.as_index());
         } else {
             let changed = process_queued_node(node, &queue, &mut buffers, graph);
+            assert!(!graph.tables.ancestry[node.as_index()].is_empty());
             println!("{node:?} -> {changed}");
 
             // TODO: the next steps should be a new fn
