@@ -411,6 +411,10 @@ fn propagate_changes(graph: &mut Graph) {
             println!("{node:?} -> {changed}");
 
             // TODO: the next steps should be a new fn
+            if buffers.edges.is_empty() {
+                // Node has gone extinct
+                graph.free_nodes.push(node.as_index());
+            }
             std::mem::swap(&mut graph.tables.edges[node.as_index()], &mut buffers.edges);
             std::mem::swap(
                 &mut graph.tables.ancestry[node.as_index()],
@@ -634,6 +638,10 @@ mod single_tree_tests {
                 .unary_mapping
                 .contains(&Some(Node(unary))));
         }
+
+        for node in [1, 2, 3] {
+            assert!(graph.free_nodes.contains(&node))
+        }
     }
 
     //     0
@@ -713,5 +721,7 @@ mod single_tree_tests {
             Some(Node(2))
         ));
         assert!(graph.tables.children[1].is_empty());
+
+        assert!(graph.free_nodes.contains(&1));
     }
 }
