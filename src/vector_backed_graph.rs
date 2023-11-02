@@ -670,11 +670,7 @@ mod single_tree_tests {
             child: vec![Node(3), Node(2)],
         });
         for _ in 0..3 {
-            graph.tables.edges.push(Edges {
-                left: vec![],
-                right: vec![],
-                child: vec![],
-            });
+            graph.tables.edges.push(Edges::default());
         }
 
         for _ in 0..graph.tables.nodes.birth_time.len() {
@@ -725,5 +721,101 @@ mod single_tree_tests {
         assert!(graph.tables.children[1].is_empty());
 
         assert!(graph.free_nodes.contains(&1));
+    }
+}
+
+#[cfg(test)]
+mod multi_tree_tests {
+    use super::*;
+
+    // Tree 0, span [0,50)
+    //    0
+    //  -----
+    //  1   |
+    //  |   2
+    // ---  |
+    // 3 4  5
+    //
+    // Tree 1, span [50,100)
+    //    0
+    //  -----
+    //  1   |
+    //  |   2
+    //  |  ---
+    //  5  3 4
+    //
+    // Node 5 loses all ancestry
+    //
+    // Node 0 will be unary on both trees, having no edges
+    #[test]
+    fn test0() {
+        let mut graph = Graph::new(100);
+
+        graph.tables.nodes.birth_time = vec![0, 1, 2, 3, 3, 3];
+
+        graph.tables.edges.push(Edges {
+            left: vec![0, 0, 50, 50],
+            right: vec![50, 50, 100, 100],
+            child: vec![Node(1), Node(2), Node(1), Node(2)],
+        });
+
+        graph.tables.edges.push(Edges {
+            left: vec![0, 0, 50],
+            right: vec![50, 50, 100],
+            child: vec![Node(3), Node(4), Node(5)],
+        });
+
+        graph.tables.edges.push(Edges {
+            left: vec![0, 50, 50],
+            right: vec![50, 100, 100],
+            child: vec![Node(5), Node(3), Node(4)],
+        });
+
+        for _ in 0..3 {
+            graph.tables.edges.push(Edges::default());
+        }
+
+        graph.tables.ancestry.push(Ancestry {
+            left: vec![0, 50],
+            right: vec![50, 100],
+            unary_mapping: vec![None, None],
+        });
+        graph.tables.ancestry.push(Ancestry {
+            left: vec![0, 50],
+            right: vec![50, 100],
+            unary_mapping: vec![None, Some(Node(5))],
+        });
+        graph.tables.ancestry.push(Ancestry {
+            left: vec![0, 50],
+            right: vec![50, 100],
+            unary_mapping: vec![Some(Node(5)), None],
+        });
+        for _ in 0..3 {
+            graph.tables.ancestry.push(Ancestry::new_sample(100));
+        }
+
+        // This will force chages up the gree once we enqueue
+        // the parents
+        graph.tables.ancestry[5].clear();
+
+        graph.tables.parents.push(vec![]);
+        graph.tables.parents.push(vec![Node(0)]);
+        graph.tables.parents.push(vec![Node(0)]);
+        graph.tables.parents.push(vec![Node(1), Node(2)]);
+        graph.tables.parents.push(vec![Node(1), Node(2)]);
+        graph.tables.parents.push(vec![Node(2), Node(2)]);
+
+        graph.tables.children.push(vec![Node(1), Node(2)]);
+        graph.tables.children.push(vec![Node(3), Node(4), Node(5)]);
+        graph.tables.children.push(vec![Node(3), Node(4), Node(5)]);
+        for _ in 0..3 {
+            graph.tables.children.push(vec![]);
+        }
+
+        for &i in graph.tables.parents[5].iter() {
+            enqueue_parent(i, &graph.tables.nodes.birth_time, &mut graph.node_heap);
+        }
+        propagate_changes(&mut graph);
+        todo!()
     }
 }
