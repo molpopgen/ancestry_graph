@@ -63,6 +63,10 @@ impl Ancestry {
         self.right.push(right);
         self.unary_mapping.push(unary_mapping);
     }
+
+    fn ancestry(&self, i: usize) -> (i64, i64, Option<Node>) {
+        (self.left[i], self.right[i], self.unary_mapping[i])
+    }
 }
 
 #[derive(Default, Debug)]
@@ -335,20 +339,36 @@ fn process_queued_node(
     queue: &[AncestryIntersection],
     buffers: &mut TempBuffers,
     graph: &mut Graph,
-) -> bool{
+) -> bool {
     let mut overlapper = Overlapper::new(queue);
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
     let mut changed = false;
+    let mut input_ancestry = 0_usize;
+    let input_ancestry_len = graph.tables.ancestry[node.as_index()].len();
     while let Some((left, right, ref overlaps)) = current_overlaps {
+        while input_ancestry < input_ancestry_len
+            && graph.tables.ancestry[node.as_index()].left[input_ancestry] > right
+        {
+            input_ancestry += 1;
+        }
+        let (input_left, input_right, input_unary) =
+            graph.tables.ancestry[node.as_index()].ancestry(input_ancestry);
+        if left != input_left || right != input_right {
+            changed = true;
+        }
         println!("{left},{right},{overlaps:?}");
         if overlaps.len() == 1 {
             let unary_mapping = match overlaps[0].unary_mapping {
                 // Propagate the unary mapping up the graph
-                Some(u) => u,
+                Some(u) => Some(u),
                 // The unary mapping becomes the overlapped child node
-                None => overlaps[0].node,
+                None => Some(overlaps[0].node),
             };
-            buffers.ancestry.push(left, right, Some(unary_mapping));
+            println!("{unary_mapping:?} <-> {input_unary:?}");
+            if unary_mapping != input_unary {
+                changed = true;
+            }
+            buffers.ancestry.push(left, right, unary_mapping);
         } else {
             for o in overlaps.iter() {
                 let child = match o.unary_mapping {
@@ -388,6 +408,7 @@ fn propagate_changes(graph: &mut Graph) {
             todo!("{node:?} has empty queue");
         } else {
             let changed = process_queued_node(node, &queue, &mut buffers, graph);
+            println!("{node:?} -> {changed}");
 
             // TODO: the next steps should be a new fn
             std::mem::swap(&mut graph.tables.edges[node.as_index()], &mut buffers.edges);
@@ -502,6 +523,7 @@ mod single_tree_tests {
             child: vec![],
         });
 
+        todo!("comment on why the unary mappings internally must be None for the internal nodes");
         graph.tables.ancestry.push(Ancestry {
             left: vec![0],
             right: vec![100],
@@ -510,17 +532,17 @@ mod single_tree_tests {
         graph.tables.ancestry.push(Ancestry {
             left: vec![0],
             right: vec![100],
-            unary_mapping: vec![Some(Node(4))],
+            unary_mapping: vec![None],
         });
         graph.tables.ancestry.push(Ancestry {
             left: vec![0],
             right: vec![100],
-            unary_mapping: vec![Some(Node(3))],
+            unary_mapping: vec![None],
         });
         graph.tables.ancestry.push(Ancestry {
             left: vec![0],
             right: vec![100],
-            unary_mapping: vec![Some(Node(5))],
+            unary_mapping: vec![None],
         });
         graph.tables.ancestry.push(Ancestry {
             left: vec![0],
