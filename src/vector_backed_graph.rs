@@ -478,6 +478,10 @@ impl Graph {
 mod single_tree_tests {
     use super::*;
 
+    // This test starts with some slightly hokey data
+    // in order to test our unary propagation logic in a
+    // straightforward way.
+    //
     //   0
     //  ---
     //  1 2
