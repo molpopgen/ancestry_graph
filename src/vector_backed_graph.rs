@@ -455,6 +455,7 @@ fn propagate_changes(graph: &mut Graph) {
 
 fn enqueue_parent(parent: Node, birth_time: &[i64], node_heap: &mut NodeHeap) {
     if !node_heap.queued_nodes.contains(&parent) {
+        node_heap.queued_nodes.insert(parent);
         node_heap.node_queue.push(QueuedNode {
             node: parent,
             birth_time: birth_time[parent.as_index()],
