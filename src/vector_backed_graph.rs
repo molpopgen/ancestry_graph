@@ -475,6 +475,47 @@ impl Graph {
 }
 
 #[cfg(test)]
+fn edges_contains(edges: &Edges, left: i64, right: i64, child: Node) -> bool {
+    let lslice = edges.left.as_slice();
+    let mut offset = 0_usize;
+    let mut position = lslice.iter().position(|&x| x == left);
+
+    while let Some(p) = position {
+        if edges.right[offset + p] == right && edges.child[offset + p] == child {
+            return true;
+        }
+        offset += p + 1;
+        position = lslice[offset..].iter().position(|&x| x == left)
+    }
+
+    false
+}
+
+#[cfg(test)]
+fn ancestry_contains(
+    ancestry: &Ancestry,
+    left: i64,
+    right: i64,
+    unary_mapping: Option<Node>,
+) -> bool {
+    let lslice = ancestry.left.as_slice();
+    let mut offset = 0_usize;
+    let mut position = lslice.iter().position(|&x| x == left);
+
+    while let Some(p) = position {
+        if ancestry.right[offset + p] == right
+            && ancestry.unary_mapping[offset + p] == unary_mapping
+        {
+            return true;
+        }
+        offset += p + 1;
+        position = lslice[offset..].iter().position(|&x| x == left)
+    }
+
+    false
+}
+
+#[cfg(test)]
 mod single_tree_tests {
     use super::*;
 
@@ -593,5 +634,84 @@ mod single_tree_tests {
                 .unary_mapping
                 .contains(&Some(Node(unary))));
         }
+    }
+
+    //     0
+    //   -----
+    //   |   |
+    //   |   1
+    //   |  ---
+    //   4  2 3
+    //
+    // 3 will "die", resulting in (0,(2,4)) being the remaining topo.
+    #[test]
+    fn test1() {
+        let mut graph = Graph::new(100);
+        graph.tables.nodes.birth_time = vec![0, 1, 2, 2, 2];
+
+        graph.tables.edges.push(Edges {
+            left: vec![0, 0],
+            right: vec![100, 100],
+            child: vec![Node(4), Node(1)],
+        });
+        graph.tables.edges.push(Edges {
+            left: vec![0, 0],
+            right: vec![100, 100],
+            child: vec![Node(3), Node(2)],
+        });
+        for _ in 0..3 {
+            graph.tables.edges.push(Edges {
+                left: vec![],
+                right: vec![],
+                child: vec![],
+            });
+        }
+
+        for _ in 0..graph.tables.nodes.birth_time.len() {
+            graph.tables.ancestry.push(Ancestry {
+                left: vec![0],
+                right: vec![100],
+                unary_mapping: vec![None],
+            });
+        }
+
+        // This node has lost all ancestry,
+        // which is the state that we have to propagate.
+        graph.tables.ancestry[3].clear();
+
+        graph.tables.children.push(vec![Node(1), Node(4)]);
+        graph.tables.children.push(vec![Node(2), Node(3)]);
+        for _ in 0..3 {
+            graph.tables.children.push(vec![]);
+        }
+
+        graph.tables.parents.push(vec![]);
+        graph.tables.parents.push(vec![Node(0)]);
+        graph.tables.parents.push(vec![Node(1)]);
+        graph.tables.parents.push(vec![Node(2)]);
+        graph.tables.parents.push(vec![Node(0)]);
+
+        graph.enqueue_parent(Node(1));
+        propagate_changes(&mut graph);
+
+        assert_eq!(graph.tables.children[0].len(), 2);
+        for i in [2, 4] {
+            assert!(graph.tables.children[0].contains(&Node(i)));
+            assert!(graph.tables.parents[i].contains(&Node(0)))
+        }
+
+        assert_eq!(graph.tables.edges[0].len(), 2);
+        assert!(edges_contains(&graph.tables.edges[0], 0, 100, Node(4)));
+        assert!(edges_contains(&graph.tables.edges[0], 0, 100, Node(2)));
+
+        assert!(graph.tables.edges[1].is_empty());
+
+        assert!(ancestry_contains(
+            &graph.tables.ancestry[1],
+            0,
+            100,
+            Some(Node(2))
+        ));
+        assert!(graph.tables.children[1].is_empty());
     }
 }
