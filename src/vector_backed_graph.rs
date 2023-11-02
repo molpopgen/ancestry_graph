@@ -816,6 +816,7 @@ mod multi_tree_tests {
         for &i in graph.tables.parents[5].iter() {
             enqueue_parent(i, &graph.tables.nodes.birth_time, &mut graph.node_heap);
         }
+        assert!(!graph.tables.parents[5].is_empty());
         propagate_changes(&mut graph);
 
         for node in [1, 2] {
@@ -854,6 +855,20 @@ mod multi_tree_tests {
         for node in [0, 2, 1] {
             assert!(graph.tables.parents[node].is_empty());
         }
-        todo!()
+        for node in [1, 2] {
+            assert_eq!(graph.tables.children[node].len(), 2);
+            for c in [3, 4] {
+                assert!(graph.tables.children[node].contains(&Node(c)))
+            }
+        }
+
+        assert!(graph.tables.parents[5].is_empty());
+
+        // NOTE: 5 is not in the list because we have
+        // manually forced it to be "extinct".
+        for node in [0] {
+            assert!(graph.free_nodes.contains(&node), "{node}")
+        }
+        assert_eq!(graph.free_nodes.len(), 1)
     }
 }
