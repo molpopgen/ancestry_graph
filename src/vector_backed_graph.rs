@@ -424,9 +424,6 @@ fn propagate_changes(graph: &mut Graph) {
                 &mut graph.tables.children[node.as_index()],
                 &mut buffers.children,
             );
-            // FIXME: next step is wrong.
-            // We should only do this IF ANCESTRY CHANGES
-            //todo!("need to handle detecting ancestry changes");
             if changed {
                 for &parent in graph.tables.parents[node.as_index()].iter() {
                     enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
@@ -523,7 +520,6 @@ mod single_tree_tests {
             child: vec![],
         });
 
-        todo!("get minimal number of internal nodes that have to be initially unary");
         graph.tables.ancestry.push(Ancestry {
             left: vec![0],
             right: vec![100],
@@ -537,7 +533,7 @@ mod single_tree_tests {
         graph.tables.ancestry.push(Ancestry {
             left: vec![0],
             right: vec![100],
-            unary_mapping: vec![None],
+            unary_mapping: vec![Some(Node(3))],
         });
         graph.tables.ancestry.push(Ancestry {
             left: vec![0],
