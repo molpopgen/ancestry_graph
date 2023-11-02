@@ -404,6 +404,8 @@ fn propagate_changes(graph: &mut Graph) {
             &mut queue,
         );
         if queue.is_empty() {
+            // FIXME: this behavior must change if node
+            // is a "sample" or "alive".
             println!("node {node:?} has no overlaps");
             // TODO: this logic can be a separate fn
 
