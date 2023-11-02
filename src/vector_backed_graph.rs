@@ -523,7 +523,7 @@ mod single_tree_tests {
             child: vec![],
         });
 
-        todo!("comment on why the unary mappings internally must be None for the internal nodes");
+        todo!("get minimal number of internal nodes that have to be initially unary");
         graph.tables.ancestry.push(Ancestry {
             left: vec![0],
             right: vec![100],
