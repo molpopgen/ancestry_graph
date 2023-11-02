@@ -294,6 +294,10 @@ fn ancestry_intersection(
                     node,
                     unary_mapping,
                 })
+            } else if aleft >= eright {
+                // Ancestry must be sorted by left coordinat,
+                // meaning no more segments can possibly overlap
+                break;
             }
         }
     }
