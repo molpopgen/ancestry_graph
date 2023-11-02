@@ -818,7 +818,26 @@ mod multi_tree_tests {
         }
         propagate_changes(&mut graph);
 
-        assert!(graph.tables.edges[0].is_empty());
+        for node in [1, 2] {
+            assert_eq!(
+                graph.tables.ancestry[node].len(),
+                1,
+                "{node:?} -> {:?}",
+                graph.tables.ancestry[node]
+            )
+        }
+
+        assert!(
+            graph.tables.edges[0].is_empty(),
+            "{:?}",
+            graph.tables.edges[0]
+        );
+        assert_eq!(
+            graph.tables.ancestry[0].len(),
+            2,
+            "{:?}",
+            graph.tables.ancestry[0]
+        );
         todo!()
     }
 }
