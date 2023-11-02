@@ -403,10 +403,17 @@ fn propagate_changes(graph: &mut Graph) {
             &mut queue,
         );
         if queue.is_empty() {
-            // Delete node from parents of all children.
-            // Clear out children
-            // Recycle the node id
-            todo!("{node:?} has empty queue");
+            // TODO: this logic can be a separate fn
+
+            // clearing edges is the "mark" of a node
+            // that is not part of the graph
+            graph.tables.edges[node.as_index()].clear();
+            // queue all parents for processing
+            for &parent in graph.tables.parents[node.as_index()].iter() {
+                enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
+            }
+            // this node can be recycled
+            graph.free_nodes.push(node.as_index());
         } else {
             let changed = process_queued_node(node, &queue, &mut buffers, graph);
             println!("{node:?} -> {changed}");
@@ -926,6 +933,7 @@ mod multi_tree_tests {
         });
         graph.tables.edges.push(Edges::default());
 
+        graph.tables.ancestry.push(Ancestry::new_sample(100));
         graph.tables.ancestry.push(Ancestry::new_sample(100));
         graph.tables.ancestry.push(Ancestry::new_sample(100));
         graph.tables.ancestry.push(Ancestry::new_sample(100));
