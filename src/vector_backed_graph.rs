@@ -871,4 +871,33 @@ mod multi_tree_tests {
         }
         assert_eq!(graph.free_nodes.len(), 1)
     }
+
+    // Tree 0:
+    //    0
+    //  -----
+    //  1   2
+    // ---  |
+    // | |  |
+    // 3 4  5
+    //  
+    //  
+    //
+    // Tree 1:
+    //
+    //    0
+    //  -----
+    //  1   2
+    // ---  |
+    // | |  |
+    // 3 4  5 
+    //      |
+    //      6
+    //
+    // 3, 4, 5 "die", with 3/4 failing to reproduce
+    // 8 is a birth, but only on part of the tree.
+    // (Hokey, but gets the job done for testing.)
+    #[test]
+    fn test3() {
+        todo!("test an empty queue")
+    }
 }
