@@ -838,6 +838,22 @@ mod multi_tree_tests {
             "{:?}",
             graph.tables.ancestry[0]
         );
+        assert!(ancestry_contains(
+            &graph.tables.ancestry[0],
+            0,
+            50,
+            Some(Node(1))
+        ));
+        assert!(ancestry_contains(
+            &graph.tables.ancestry[0],
+            50,
+            100,
+            Some(Node(2))
+        ));
+        assert!(graph.tables.children[0].is_empty());
+        for node in [0, 2, 1] {
+            assert!(graph.tables.parents[node].is_empty());
+        }
         todo!()
     }
 }
