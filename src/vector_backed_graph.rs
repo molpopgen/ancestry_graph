@@ -1002,28 +1002,5 @@ mod multi_tree_tests {
                 Some(Node(6))
             ))
         }
-
-        //assert_eq!(graph.tables.edges[0].len(), 2);
-        //assert!(edges_contains(&graph.tables.edges[0], 50, 100, Node(1)),);
-        //assert!(edges_contains(&graph.tables.edges[0], 50, 100, Node(6)));
-        //assert_eq!(graph.tables.edges[1].len(), 2);
-        //assert!(edges_contains(&graph.tables.edges[1], 0, 100, Node(3)),);
-        //assert!(edges_contains(&graph.tables.edges[1], 0, 100, Node(4)));
-        //for node in [2, 5, 6] {
-        //    assert!(graph.tables.edges[node].is_empty())
-        //}
-
-        //for node in [2, 5] {
-        //    assert_eq!(graph.tables.ancestry[node].len(), 1);
-        //    assert!(ancestry_contains(
-        //        &graph.tables.ancestry[node],
-        //        50,
-        //        100,
-        //        Some(Node(6))
-        //    ));
-        //    assert!(graph.tables.children[node].is_empty());
-        //    assert!(graph.tables.parents[node].is_empty());
-        //}
-        //todo!("test an empty queue")
     }
 }
