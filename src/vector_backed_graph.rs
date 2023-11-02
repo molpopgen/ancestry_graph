@@ -576,6 +576,10 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
             graph.record_transmission(breakpoint, genome_length, right_parent, child);
         }
         propagate_changes(&mut graph);
+        for &i in &children {
+            // mark them as "dead".
+            graph.enqueue_parent(i);
+        }
 
         std::mem::swap(&mut parents, &mut children);
         children.clear();
