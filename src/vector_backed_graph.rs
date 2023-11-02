@@ -912,7 +912,7 @@ mod multi_tree_tests {
     //
     // The death of nodes 3 and 4 must trigger an "ancestry loss",
     // eliminating that subtree.
-    // In the end, nodes 1,3,4 should be extinct and set up for recycling.
+    // In the end, nodes 0 thru 5 should be extinct and set up for recycling.
     // All nodes ancestral to 6 should have a unary mapping to 6 on [0,50)
     // and no edges
     #[test]
@@ -979,12 +979,16 @@ mod multi_tree_tests {
         assert_eq!(graph.tables.ancestry[6].len(), 1);
         assert!(ancestry_contains(&graph.tables.ancestry[6], 0, 100, None));
 
+        for node in [0, 1, 3, 4, 2, 5] {
+            assert!(graph.free_nodes.contains(&node));
+        }
+        assert_eq!(graph.free_nodes.len(), 6);
+
         for node in [1, 3, 4] {
             assert!(graph.tables.children[node].is_empty());
             assert!(graph.tables.parents[node].is_empty());
             assert!(graph.tables.edges[node].is_empty());
             assert!(graph.tables.ancestry[node].is_empty());
-            assert!(graph.free_nodes.contains(&node));
         }
         for node in [2, 5, 0] {
             assert!(graph.tables.children[node].is_empty());
