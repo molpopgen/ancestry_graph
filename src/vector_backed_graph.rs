@@ -335,9 +335,10 @@ fn process_queued_node(
     queue: &[AncestryIntersection],
     buffers: &mut TempBuffers,
     graph: &mut Graph,
-) {
+) -> bool{
     let mut overlapper = Overlapper::new(queue);
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
+    let mut changed = false;
     while let Some((left, right, ref overlaps)) = current_overlaps {
         println!("{left},{right},{overlaps:?}");
         if overlaps.len() == 1 {
@@ -365,6 +366,7 @@ fn process_queued_node(
         }
         current_overlaps = overlapper.calculate_next_overlap_set();
     }
+    changed
 }
 
 fn propagate_changes(graph: &mut Graph) {
@@ -385,7 +387,7 @@ fn propagate_changes(graph: &mut Graph) {
             // Recycle the node id
             todo!("{node:?} has empty queue");
         } else {
-            process_queued_node(node, &queue, &mut buffers, graph);
+            let changed = process_queued_node(node, &queue, &mut buffers, graph);
 
             // TODO: the next steps should be a new fn
             std::mem::swap(&mut graph.tables.edges[node.as_index()], &mut buffers.edges);
@@ -404,8 +406,10 @@ fn propagate_changes(graph: &mut Graph) {
             // FIXME: next step is wrong.
             // We should only do this IF ANCESTRY CHANGES
             //todo!("need to handle detecting ancestry changes");
-            for &parent in graph.tables.parents[node.as_index()].iter() {
-                enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
+            if changed {
+                for &parent in graph.tables.parents[node.as_index()].iter() {
+                    enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
+                }
             }
             buffers.clear();
         }
