@@ -239,6 +239,21 @@ impl<'q> Overlapper<'q> {
     }
 }
 
+#[derive(Default)]
+struct TempBuffers {
+    edges: Edges,
+    ancestry: Ancestry,
+    children: Vec<Node>,
+}
+
+impl TempBuffers {
+    fn clear(&mut self) {
+        self.edges.clear();
+        self.ancestry.clear();
+        self.children.clear();
+    }
+}
+
 fn ancestry_intersection(
     parent: Node,
     edges: &Edges,
@@ -309,18 +324,20 @@ fn ancestry_intersection(
 // ## Avoiding queuing ALL parents when a change occurs.
 //
 // It is tempting to simply pass all of node's parents into the
-// queue. 
+// queue.
 // An alternative is:
 //
 // 1. cache intervals that have changed.
 // 2. When done, look for parent edge / changed interval overlap
 //    and add overlapping parents into the queue.
-fn process_queued_node(node: Node, queue: &[AncestryIntersection], graph: &mut Graph) {
+fn process_queued_node(
+    node: Node,
+    queue: &[AncestryIntersection],
+    buffers: &mut TempBuffers,
+    graph: &mut Graph,
+) {
     let mut overlapper = Overlapper::new(queue);
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
-    let mut temp_edges = Edges::default();
-    let mut temp_ancestry = Ancestry::default();
-    let mut temp_children: Vec<Node> = vec![];
     while let Some((left, right, ref overlaps)) = current_overlaps {
         println!("{left},{right},{overlaps:?}");
         if overlaps.len() == 1 {
@@ -330,40 +347,40 @@ fn process_queued_node(node: Node, queue: &[AncestryIntersection], graph: &mut G
                 // The unary mapping becomes the overlapped child node
                 None => overlaps[0].node,
             };
-            temp_ancestry.push(left, right, Some(unary_mapping));
+            buffers.ancestry.push(left, right, Some(unary_mapping));
         } else {
             for o in overlaps.iter() {
                 let child = match o.unary_mapping {
                     Some(u) => u,
                     None => o.node,
                 };
-                temp_edges.push(left, right, child);
-                temp_ancestry.push(left, right, None);
+                buffers.edges.push(left, right, child);
+                buffers.ancestry.push(left, right, None);
 
                 // Should be faster than a hash for scores of children.
-                if !temp_children.contains(&child) {
-                    temp_children.push(child);
+                if !buffers.children.contains(&child) {
+                    buffers.children.push(child);
                 }
             }
         }
         current_overlaps = overlapper.calculate_next_overlap_set();
     }
-    std::mem::swap(&mut graph.tables.edges[node.as_index()], &mut temp_edges);
+    std::mem::swap(&mut graph.tables.edges[node.as_index()], &mut buffers.edges);
     std::mem::swap(
         &mut graph.tables.ancestry[node.as_index()],
-        &mut temp_ancestry,
+        &mut buffers.ancestry,
     );
-    for &c in temp_children.iter() {
+    for &c in buffers.children.iter() {
         debug_assert!(!graph.tables.parents[c.as_index()].contains(&node));
         graph.tables.parents[c.as_index()].push(node);
     }
     std::mem::swap(
         &mut graph.tables.children[node.as_index()],
-        &mut temp_children,
+        &mut buffers.children,
     );
     // FIXME: next step is wrong.
     // We should only do this IF ANCESTRY CHANGES
-    todo!("need to handle detecting ancestry changes");
+    //todo!("need to handle detecting ancestry changes");
     for &parent in graph.tables.parents[node.as_index()].iter() {
         enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
     }
@@ -371,6 +388,7 @@ fn process_queued_node(node: Node, queue: &[AncestryIntersection], graph: &mut G
 
 fn propagate_changes(graph: &mut Graph) {
     let mut queue = vec![];
+    let mut buffers = TempBuffers::default();
     while let Some(node) = graph.node_heap.pop() {
         graph.node_heap.queued_nodes.remove(&node);
         ancestry_intersection(
@@ -384,9 +402,10 @@ fn propagate_changes(graph: &mut Graph) {
             // Delete node from parents of all children.
             // Clear out children
             // Recycle the node id
-            todo!("{node:?}");
+            todo!("{node:?} has empty queue");
         } else {
-            process_queued_node(node, &queue, graph);
+            process_queued_node(node, &queue, &mut buffers, graph);
+            buffers.clear();
         }
     }
 }
