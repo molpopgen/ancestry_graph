@@ -394,6 +394,7 @@ fn propagate_changes(graph: &mut Graph) {
     let mut queue = vec![];
     let mut buffers = TempBuffers::default();
     while let Some(node) = graph.node_heap.pop() {
+        println!("processing {node:?}");
         graph.node_heap.queued_nodes.remove(&node);
         ancestry_intersection(
             node,
@@ -403,15 +404,19 @@ fn propagate_changes(graph: &mut Graph) {
             &mut queue,
         );
         if queue.is_empty() {
+            println!("node {node:?} has no overlaps");
             // TODO: this logic can be a separate fn
 
             // clearing edges is the "mark" of a node
             // that is not part of the graph
             graph.tables.edges[node.as_index()].clear();
+            graph.tables.ancestry[node.as_index()].clear();
+            graph.tables.children[node.as_index()].clear();
             // queue all parents for processing
             for &parent in graph.tables.parents[node.as_index()].iter() {
                 enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
             }
+            graph.tables.parents[node.as_index()].clear();
             // this node can be recycled
             graph.free_nodes.push(node.as_index());
         } else {
@@ -901,8 +906,14 @@ mod multi_tree_tests {
     //      6
     //
     // 3, 4, 5 "die", with 3/4 failing to reproduce
-    // 8 is a birth, but only on part of the tree.
+    // 6 is a birth, but only on part of the tree.
     // (Hokey, but gets the job done for testing.)
+    //
+    // The death of nodes 3 and 4 must trigger an "ancestry loss",
+    // eliminating that subtree.
+    // In the end, nodes 1,3,4 should be extinct and set up for recycling.
+    // All nodes ancestral to 6 should have a unary mapping to 6 on [0,50)
+    // and no edges
     #[test]
     fn test3() {
         let mut graph = Graph::new(100);
@@ -962,6 +973,52 @@ mod multi_tree_tests {
         }
 
         propagate_changes(&mut graph);
-        todo!("test an empty queue")
+
+        assert!(graph.tables.parents[6].is_empty());
+        assert_eq!(graph.tables.ancestry[6].len(), 1);
+        assert!(ancestry_contains(&graph.tables.ancestry[6], 0, 100, None));
+
+        for node in [1, 3, 4] {
+            assert!(graph.tables.children[node].is_empty());
+            assert!(graph.tables.parents[node].is_empty());
+            assert!(graph.tables.edges[node].is_empty());
+            assert!(graph.tables.ancestry[node].is_empty());
+            assert!(graph.free_nodes.contains(&node));
+        }
+        for node in [2, 5, 0] {
+            assert!(graph.tables.children[node].is_empty());
+            assert!(graph.tables.parents[node].is_empty());
+            assert!(graph.tables.edges[node].is_empty());
+            assert_eq!(graph.tables.ancestry[node].len(), 1, "{node:?}");
+            assert!(ancestry_contains(
+                &graph.tables.ancestry[node],
+                50,
+                100,
+                Some(Node(6))
+            ))
+        }
+
+        //assert_eq!(graph.tables.edges[0].len(), 2);
+        //assert!(edges_contains(&graph.tables.edges[0], 50, 100, Node(1)),);
+        //assert!(edges_contains(&graph.tables.edges[0], 50, 100, Node(6)));
+        //assert_eq!(graph.tables.edges[1].len(), 2);
+        //assert!(edges_contains(&graph.tables.edges[1], 0, 100, Node(3)),);
+        //assert!(edges_contains(&graph.tables.edges[1], 0, 100, Node(4)));
+        //for node in [2, 5, 6] {
+        //    assert!(graph.tables.edges[node].is_empty())
+        //}
+
+        //for node in [2, 5] {
+        //    assert_eq!(graph.tables.ancestry[node].len(), 1);
+        //    assert!(ancestry_contains(
+        //        &graph.tables.ancestry[node],
+        //        50,
+        //        100,
+        //        Some(Node(6))
+        //    ));
+        //    assert!(graph.tables.children[node].is_empty());
+        //    assert!(graph.tables.parents[node].is_empty());
+        //}
+        //todo!("test an empty queue")
     }
 }
