@@ -297,6 +297,7 @@ fn ancestry_intersection(
             } else if aleft >= eright {
                 // Ancestry must be sorted by left coordinat,
                 // meaning no more segments can possibly overlap
+                // NOTE: could also do this via take_while in the zip steps.
                 break;
             }
         }
