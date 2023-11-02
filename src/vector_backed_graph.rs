@@ -428,6 +428,8 @@ fn propagate_changes(graph: &mut Graph) {
                 &mut graph.tables.children[node.as_index()],
                 &mut buffers.children,
             );
+
+            // TODO: parent queuing should be a separate fn
             if changed {
                 for &parent in graph.tables.parents[node.as_index()].iter() {
                     enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
