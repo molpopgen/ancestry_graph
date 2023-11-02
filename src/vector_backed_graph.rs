@@ -345,7 +345,7 @@ fn process_queued_node(
     buffers: &mut TempBuffers,
     graph: &mut Graph,
 ) -> bool {
-    println!("visiting node {node:?}");
+    // println!("visiting node {node:?}");
     let mut overlapper = Overlapper::new(queue);
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
     let mut changed = false;
@@ -362,7 +362,7 @@ fn process_queued_node(
         if left != input_left || right != input_right {
             changed = true;
         }
-        println!("{left},{right},{overlaps:?}");
+        // println!("{left},{right},{overlaps:?}");
         if overlaps.len() == 1 {
             let unary_mapping = match overlaps[0].unary_mapping {
                 // Propagate the unary mapping up the graph
@@ -370,7 +370,7 @@ fn process_queued_node(
                 // The unary mapping becomes the overlapped child node
                 None => Some(overlaps[0].node),
             };
-            println!("unary {unary_mapping:?} <-> {input_unary:?}");
+            // println!("unary {unary_mapping:?} <-> {input_unary:?}");
             if unary_mapping != input_unary {
                 changed = true;
             }
@@ -398,8 +398,10 @@ fn process_queued_node(
 fn propagate_changes(graph: &mut Graph) {
     let mut queue = vec![];
     let mut buffers = TempBuffers::default();
+    let mut visited = 0;
     while let Some(node) = graph.node_heap.pop() {
-        println!("processing {node:?}");
+        visited+=1;
+        // println!("processing {node:?}");
         graph.node_heap.queued_nodes.remove(&node);
         ancestry_intersection(
             node,
@@ -411,7 +413,7 @@ fn propagate_changes(graph: &mut Graph) {
         if queue.is_empty() {
             // FIXME: this behavior must change if node
             // is a "sample" or "alive".
-            println!("node {node:?} has no overlaps");
+            // println!("node {node:?} has no overlaps");
             // TODO: this logic can be a separate fn
 
             // clearing edges is the "mark" of a node
@@ -429,7 +431,7 @@ fn propagate_changes(graph: &mut Graph) {
         } else {
             let changed = process_queued_node(node, &queue, &mut buffers, graph);
             assert!(!graph.tables.ancestry[node.as_index()].is_empty());
-            println!("{node:?} -> {changed}");
+            // println!("{node:?} -> {changed}");
 
             // TODO: the next steps should be a new fn
             if buffers.edges.is_empty() {
@@ -459,6 +461,7 @@ fn propagate_changes(graph: &mut Graph) {
             buffers.clear();
         }
     }
+    println!("visited {visited}");
 }
 
 fn enqueue_parent(parent: Node, birth_time: &[i64], node_heap: &mut NodeHeap) {
@@ -541,6 +544,44 @@ fn ancestry_contains(
     }
 
     false
+}
+
+#[cfg(test)]
+fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) -> Graph {
+    todo!("way too many nodes in play");
+    use rand::Rng;
+    use rand::SeedableRng;
+
+    let mut graph = Graph::new(genome_length);
+    let mut parents = vec![];
+    for _ in 0..popsize {
+        parents.push(graph.add_birth())
+    }
+    let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+    let sample_parent = rand::distributions::Uniform::new(0, popsize);
+    let sample_breakpoint = rand::distributions::Uniform::new(1, genome_length);
+    let mut children = vec![];
+
+    for gen in 0..ngenerations {
+        println!("{gen}");
+        for _ in 0..popsize {
+            let child = graph.add_birth();
+            children.push(child);
+            let left_parent = parents[rng.sample(sample_parent)];
+            let right_parent = parents[rng.sample(sample_parent)];
+            let breakpoint = rng.sample(sample_breakpoint);
+            graph.enqueue_parent(left_parent);
+            graph.enqueue_parent(right_parent);
+            graph.record_transmission(0, breakpoint, left_parent, child);
+            graph.record_transmission(breakpoint, genome_length, right_parent, child);
+        }
+        propagate_changes(&mut graph);
+
+        std::mem::swap(&mut parents, &mut children);
+        children.clear();
+    }
+
+    graph
 }
 
 #[cfg(test)]
@@ -1010,5 +1051,16 @@ mod multi_tree_tests {
                 Some(Node(6))
             ))
         }
+    }
+}
+
+#[cfg(test)]
+mod haploid_wf_tests {
+    use super::*;
+
+    #[test]
+    fn test0() {
+        let g = haploid_wf(10, 100, 1000000, 0);
+        todo!();
     }
 }
