@@ -564,6 +564,7 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
 
     for gen in 0..ngenerations {
         println!("{gen}");
+        graph.current_time += 1;
         for _ in 0..popsize {
             let child = graph.add_birth();
             children.push(child);
