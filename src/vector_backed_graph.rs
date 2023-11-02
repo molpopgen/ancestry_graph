@@ -879,8 +879,8 @@ mod multi_tree_tests {
     // ---  |
     // | |  |
     // 3 4  5
-    //  
-    //  
+    //
+    //
     //
     // Tree 1:
     //
@@ -889,7 +889,7 @@ mod multi_tree_tests {
     //  1   2
     // ---  |
     // | |  |
-    // 3 4  5 
+    // 3 4  5
     //      |
     //      6
     //
@@ -898,6 +898,62 @@ mod multi_tree_tests {
     // (Hokey, but gets the job done for testing.)
     #[test]
     fn test3() {
+        let mut graph = Graph::new(100);
+
+        graph.tables.nodes.birth_time = vec![0, 1, 1, 2, 2, 2, 3];
+
+        graph.tables.edges.push(Edges {
+            left: vec![0, 0, 50, 50],
+            right: vec![50, 50, 100, 100],
+            child: vec![Node(1), Node(2), Node(1), Node(2)],
+        });
+        graph.tables.edges.push(Edges {
+            left: vec![0, 0],
+            right: vec![100, 100],
+            child: vec![Node(3), Node(4)],
+        });
+        graph.tables.edges.push(Edges {
+            left: vec![0],
+            right: vec![100],
+            child: vec![Node(5)],
+        });
+        graph.tables.edges.push(Edges::default());
+        graph.tables.edges.push(Edges::default());
+        graph.tables.edges.push(Edges {
+            left: vec![50],
+            right: vec![100],
+            child: vec![Node(6)],
+        });
+        graph.tables.edges.push(Edges::default());
+
+        graph.tables.ancestry.push(Ancestry::new_sample(100));
+        graph.tables.ancestry.push(Ancestry::new_sample(100));
+        graph.tables.ancestry.push(Ancestry::new_sample(100));
+        graph.tables.ancestry.push(Ancestry::new_sample(100));
+        graph.tables.ancestry.push(Ancestry::new_sample(100));
+        graph.tables.ancestry.push(Ancestry::new_sample(100));
+
+        graph.tables.parents.push(vec![]);
+        graph.tables.parents.push(vec![Node(0)]);
+        graph.tables.parents.push(vec![Node(0)]);
+        graph.tables.parents.push(vec![Node(1)]);
+        graph.tables.parents.push(vec![Node(1)]);
+        graph.tables.parents.push(vec![Node(2)]);
+        graph.tables.parents.push(vec![Node(5)]);
+
+        graph.tables.children.push(vec![Node(1), Node(2)]);
+        graph.tables.children.push(vec![Node(3), Node(4)]);
+        graph.tables.children.push(vec![Node(5)]);
+        graph.tables.children.push(vec![]);
+        graph.tables.children.push(vec![]);
+        graph.tables.children.push(vec![Node(6)]);
+        graph.tables.children.push(vec![]);
+
+        for node in [3, 4, 5] {
+            graph.enqueue_parent(Node(node));
+        }
+
+        propagate_changes(&mut graph);
         todo!("test an empty queue")
     }
 }
