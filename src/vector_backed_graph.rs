@@ -340,6 +340,7 @@ fn process_queued_node(
     buffers: &mut TempBuffers,
     graph: &mut Graph,
 ) -> bool {
+    println!("visiting node {node:?}");
     let mut overlapper = Overlapper::new(queue);
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
     let mut changed = false;
@@ -803,7 +804,7 @@ mod multi_tree_tests {
         graph.tables.parents.push(vec![Node(0)]);
         graph.tables.parents.push(vec![Node(1), Node(2)]);
         graph.tables.parents.push(vec![Node(1), Node(2)]);
-        graph.tables.parents.push(vec![Node(2), Node(2)]);
+        graph.tables.parents.push(vec![Node(1), Node(2)]);
 
         graph.tables.children.push(vec![Node(1), Node(2)]);
         graph.tables.children.push(vec![Node(3), Node(4), Node(5)]);
@@ -816,6 +817,8 @@ mod multi_tree_tests {
             enqueue_parent(i, &graph.tables.nodes.birth_time, &mut graph.node_heap);
         }
         propagate_changes(&mut graph);
+
+        assert!(graph.tables.edges[0].is_empty());
         todo!()
     }
 }
