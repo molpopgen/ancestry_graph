@@ -547,8 +547,44 @@ fn ancestry_contains(
 }
 
 #[cfg(test)]
+fn validate_reachable_nodes(graph: &Graph, alive: &[Node]) {
+    let mut node_heap = NodeHeap::default();
+    for &node in alive {
+        for &parent in graph.tables.parents[node.as_index()].iter() {
+            enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut node_heap);
+        }
+    }
+    let mut reachable = vec![];
+    while let Some(node) = node_heap.pop() {
+        assert!(!reachable.contains(&node));
+        reachable.push(node);
+        for &parent in graph.tables.parents[node.as_index()].iter() {
+            enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut node_heap);
+        }
+    }
+    for (i, edges) in graph.tables.edges.iter().enumerate() {
+        if !edges.is_empty() {
+            assert!(reachable.contains(&Node(i)));
+            assert!(!graph.tables.children[i].is_empty());
+            for &c in edges.child.iter() {
+                assert!(graph.tables.parents[c.as_index()].contains(&Node(i)));
+            }
+            let mut parents_copy = graph.tables.parents.clone();
+            let mut queue = vec![];
+            ancestry_intersection(
+                Node(i),
+                &graph.tables.edges[i],
+                &graph.tables.ancestry,
+                &mut parents_copy,
+                &mut queue,
+            );
+            assert!(!queue.is_empty());
+        }
+    }
+}
+
+#[cfg(test)]
 fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) -> Graph {
-    todo!("way too many nodes in play");
     use rand::Rng;
     use rand::SeedableRng;
 
@@ -577,6 +613,9 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
             graph.record_transmission(breakpoint, genome_length, right_parent, child);
         }
         propagate_changes(&mut graph);
+
+        validate_reachable_nodes(&graph, &children);
+
         for &i in &children {
             // mark them as "dead".
             graph.enqueue_parent(i);
