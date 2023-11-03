@@ -351,7 +351,7 @@ fn process_queued_node(
     let mut changed = false;
     let mut input_ancestry = 0_usize;
     let input_ancestry_len = graph.tables.ancestry[node.as_index()].len();
-    while let Some((left, right, ref overlaps)) = current_overlaps {
+    while let Some((left, right, overlaps)) = current_overlaps {
         while input_ancestry < input_ancestry_len
             && graph.tables.ancestry[node.as_index()].left[input_ancestry] > right
         {
