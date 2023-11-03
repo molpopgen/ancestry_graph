@@ -579,6 +579,9 @@ fn validate_reachable_nodes(graph: &Graph, alive: &[Node]) {
                 &mut queue,
             );
             assert!(!queue.is_empty());
+            for o in queue.iter().take(queue.len()-1) {
+                assert!(edges.child.contains(&o.node));
+            }
         }
     }
 }
