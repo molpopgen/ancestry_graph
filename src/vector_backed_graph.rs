@@ -415,11 +415,21 @@ fn propagate_changes(graph: &mut Graph) {
             // is a "sample" or "alive".
             // println!("node {node:?} has no overlaps");
             // TODO: this logic can be a separate fn
+            
+            // FIXME: remove b/c this is only for testing
+            for &c in graph.tables.edges[node.as_index()].child.iter() {
+                assert!(!graph.tables.parents[c.as_index()].contains(&node))
+            }
+            // FIXME: remove b/c this is only for testing
+            for &c in graph.tables.children[node.as_index()].iter() {
+                assert!(!graph.tables.parents[c.as_index()].contains(&node))
+            }
 
             // clearing edges is the "mark" of a node
             // that is not part of the graph
             graph.tables.edges[node.as_index()].clear();
             graph.tables.ancestry[node.as_index()].clear();
+
             graph.tables.children[node.as_index()].clear();
             // queue all parents for processing
             for &parent in graph.tables.parents[node.as_index()].iter() {
@@ -579,7 +589,7 @@ fn validate_reachable_nodes(graph: &Graph, alive: &[Node]) {
                 &mut queue,
             );
             assert!(!queue.is_empty());
-            for o in queue.iter().take(queue.len()-1) {
+            for o in queue.iter().take(queue.len() - 1) {
                 assert!(edges.child.contains(&o.node));
             }
         }
