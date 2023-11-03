@@ -1104,10 +1104,12 @@ mod multi_tree_tests {
 #[cfg(test)]
 mod haploid_wf_tests {
     use super::*;
+    use proptest::prelude::*;
 
-    #[test]
-    fn test0() {
-        let g = haploid_wf(10, 100, 1000000, 0);
-        todo!();
+    proptest! {
+        #[test]
+        fn test_10_individuals(seed in 0..u64::MAX) {
+            let g = haploid_wf(10, 50, 10000000, seed);
+        }
     }
 }
