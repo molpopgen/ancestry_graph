@@ -400,7 +400,7 @@ fn propagate_changes(graph: &mut Graph) {
     let mut buffers = TempBuffers::default();
     let mut visited = 0;
     while let Some(node) = graph.node_heap.pop() {
-        visited+=1;
+        visited += 1;
         // println!("processing {node:?}");
         graph.node_heap.queued_nodes.remove(&node);
         ancestry_intersection(
