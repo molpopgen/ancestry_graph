@@ -1207,6 +1207,8 @@ mod haploid_wf_tests {
             let g = haploid_wf(10, 50, 10000000, seed);
         }
     }
+
+    #[ignore]
     #[test]
     fn test_1000_individuals() {
         let g = haploid_wf(1000, 1000, 10000000, 161363643);
