@@ -1225,6 +1225,8 @@ mod haploid_wf_tests {
     #[test]
     fn test_1000_individuals() {
         let g = haploid_wf(1000, 1000, 10000000, 161363643);
+        let with_edges = g.tables.edges.iter().filter(|e|!e.is_empty()).count();
+        println!("{with_edges}")
     }
 }
 
