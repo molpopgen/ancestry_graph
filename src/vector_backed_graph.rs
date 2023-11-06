@@ -83,6 +83,12 @@ impl Ancestry {
     }
 }
 
+struct Edge {
+    left: i64,
+    right: i64,
+    child: Node,
+}
+
 #[derive(Default, Debug)]
 struct Edges {
     left: Vec<i64>,
@@ -259,7 +265,7 @@ impl<'q> Overlapper<'q> {
 
 #[derive(Default)]
 struct TempBuffers {
-    edges: Edges,
+    edges: Vec<Edge>,
     ancestry: Ancestry,
     children: Vec<Node>,
 }
@@ -269,6 +275,14 @@ impl TempBuffers {
         self.edges.clear();
         self.ancestry.clear();
         self.children.clear();
+    }
+
+    fn push_edge(&mut self, left: i64, right: i64, child: Node) {
+        self.edges.push(Edge { left, right, child })
+    }
+
+    fn sort_edges(&mut self) {
+        self.edges.sort_unstable_by_key(|e| (e.child, e.left));
     }
 }
 
@@ -395,7 +409,7 @@ fn process_queued_node(
                     Some(u) => u,
                     None => o.node,
                 };
-                buffers.edges.push(left, right, child);
+                buffers.push_edge(left, right, child);
 
                 // Should be faster than a hash for scores of children.
                 if !buffers.children.contains(&child) {
@@ -462,7 +476,33 @@ fn propagate_changes(graph: &mut Graph) {
                 // Node has gone extinct
                 graph.free_nodes.push(node.as_index());
             }
-            std::mem::swap(&mut graph.tables.edges[node.as_index()], &mut buffers.edges);
+            buffers.sort_edges();
+            let node_edges = &mut graph.tables.edges[node.as_index()];
+            node_edges.clear();
+            let mut last_right: Option<i64> = None;
+            let mut last_child: Option<Node> = None;
+            for edge in buffers.edges.iter() {
+                let to_squash = if let Some(lright) = last_right {
+                    if lright == edge.left && last_child.unwrap() == edge.child {
+                        Some(lright)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+                if let Some(right) = to_squash {
+                    let len = node_edges.right.len() - 1;
+                    node_edges.right[len] = edge.right;
+                } else {
+                    node_edges.left.push(edge.left);
+                    node_edges.right.push(edge.right);
+                    node_edges.child.push(edge.child);
+                }
+                last_right = Some(edge.right);
+                last_child = Some(edge.child);
+            }
+            //std::mem::swap(&mut graph.tables.edges[node.as_index()], &mut buffers.edges);
             std::mem::swap(
                 &mut graph.tables.ancestry[node.as_index()],
                 &mut buffers.ancestry,
@@ -485,7 +525,7 @@ fn propagate_changes(graph: &mut Graph) {
             buffers.clear();
         }
     }
-    println!("visited {visited}");
+    //println!("visited {visited}");
 }
 
 fn enqueue_parent(parent: Node, birth_time: &[i64], node_heap: &mut NodeHeap) {
@@ -656,7 +696,7 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
     let mut children = vec![];
 
     for gen in 0..ngenerations {
-        println!("{gen}");
+        //println!("{gen}");
         graph.current_time += 1;
         for _ in 0..popsize {
             let child = graph.add_birth();
