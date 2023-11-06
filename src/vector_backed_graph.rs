@@ -383,6 +383,7 @@ fn process_queued_node(
         while input_ancestry < input_ancestry_len
             && graph.tables.ancestry[node.as_index()].left[input_ancestry] > right
         {
+            changed = true;
             input_ancestry += 1;
         }
         let (input_left, input_right, input_unary) =
