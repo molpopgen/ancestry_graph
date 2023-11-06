@@ -1214,3 +1214,81 @@ mod haploid_wf_tests {
         let g = haploid_wf(1000, 1000, 10000000, 161363643);
     }
 }
+
+#[cfg(test)]
+mod design_list_difference_calculations {
+    #[derive(PartialEq, Eq, Copy, Clone, Debug)]
+    struct Interval {
+        left: i64,
+        right: i64,
+    }
+
+    impl Interval {
+        fn new(left: i64, right: i64) -> Self {
+            Self { left, right }
+        }
+    }
+
+    fn interval_delta(a: &[Interval], b: &[Interval]) -> Vec<Interval> {
+        let mut rv = vec![];
+
+        let mut ai = 0_usize;
+        let mut bi = 0_usize;
+        while ai < a.len() && bi < b.len() {
+            while ai < a.len() && a[ai].right < b[bi].left {
+                // segments entirely lost from a b4 anything in b exists
+                rv.push(a[ai]);
+                ai += 1;
+            }
+            if ai >= a.len() {
+                break;
+            }
+
+            let aleft = a[ai].left;
+            let aright = a[ai].right;
+            let bleft = b[bi].left;
+            let bright = b[bi].right;
+
+            if aright > bleft && bright > aleft {
+                if aleft != bleft {
+                    rv.push(Interval::new(
+                        std::cmp::min(aleft, bleft),
+                        std::cmp::max(aleft, bleft),
+                    ))
+                }
+                if aright != bright {
+                    rv.push(Interval::new(
+                        std::cmp::min(aright, bright),
+                        std::cmp::max(aright, bright),
+                    ))
+                }
+            }
+            ai += 1;
+            bi += 1;
+        }
+
+        // segments at the end of a not found in b
+        for i in &a[ai..] {
+            rv.push(*i)
+        }
+
+        rv
+    }
+
+    fn validate_delta_contents(delta: &[Interval], expected: &[(i64, i64)]) {
+        assert_eq!(delta.len(), expected.len(), "{delta:?}");
+        for e in expected {
+            assert!(delta.contains(&Interval::new(e.0, e.1)));
+        }
+    }
+
+    #[test]
+    fn test0() {
+        let a = vec![Interval::new(0, 10), Interval::new(10, 100)];
+        let b = vec![Interval::new(6, 10), Interval::new(50, 73)];
+
+        // c should contain (0,6), (10,50), (73,100)
+        let c = interval_delta(&a, &b);
+        validate_delta_contents(&c, &[(0, 6), (10, 50), (73, 100)]);
+    }
+}
