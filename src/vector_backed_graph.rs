@@ -20,7 +20,7 @@ impl NodeHeap {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq, Eq)]
 struct Ancestry {
     left: Vec<i64>,
     right: Vec<i64>,
@@ -519,6 +519,7 @@ fn propagate_changes(graph: &mut Graph) {
 
             // TODO: parent queuing should be a separate fn
             if changed {
+                debug_assert_ne!(graph.tables.ancestry[node.as_index()], buffers.ancestry);
                 for &parent in graph.tables.parents[node.as_index()].iter() {
                     enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
                 }
