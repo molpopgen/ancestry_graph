@@ -523,6 +523,11 @@ fn propagate_changes(graph: &mut Graph) {
                 for &parent in graph.tables.parents[node.as_index()].iter() {
                     enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
                 }
+            } 
+
+            #[cfg(debug_assertions)]
+            if !changed {
+                debug_assert_eq!(graph.tables.ancestry[node.as_index()], buffers.ancestry);
             }
             buffers.clear();
         }
