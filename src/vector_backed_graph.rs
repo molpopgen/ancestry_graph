@@ -1225,7 +1225,7 @@ mod haploid_wf_tests {
     #[test]
     fn test_1000_individuals() {
         let g = haploid_wf(1000, 1000, 10000000, 161363643);
-        let with_edges = g.tables.edges.iter().filter(|e|!e.is_empty()).count();
+        let with_edges = g.tables.edges.iter().filter(|e| !e.is_empty()).count();
         println!("{with_edges}")
     }
 }
@@ -1326,5 +1326,14 @@ mod design_list_difference_calculations {
 
         let c = interval_delta(&a, &b);
         validate_delta_contents(&c, &[(0, 10), (40, 50), (73, 80), (90, 100)]);
+    }
+
+    #[test]
+    fn test3() {
+        let a = vec![Interval::new(0, 10)];
+        let b = vec![Interval::new(0, 10)];
+
+        let c = interval_delta(&a, &b);
+        validate_delta_contents(&c, &[]);
     }
 }
