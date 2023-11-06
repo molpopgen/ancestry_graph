@@ -444,7 +444,7 @@ fn propagate_changes(graph: &mut Graph) {
             // println!("node {node:?} has no overlaps");
             // TODO: this logic can be a separate fn
 
-            // FIXME: remove b/c this is only for testing
+            #[cfg(debug_assertions)]
             for &c in graph.tables.edges[node.as_index()].child.iter() {
                 assert!(!graph.tables.parents[c.as_index()].contains(&node))
             }
