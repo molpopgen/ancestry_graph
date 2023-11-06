@@ -59,9 +59,23 @@ impl Ancestry {
     }
 
     fn push(&mut self, left: i64, right: i64, unary_mapping: Option<Node>) {
-        self.left.push(left);
-        self.right.push(right);
-        self.unary_mapping.push(unary_mapping);
+        let to_squash = if let Some(lright) = self.right.last_mut() {
+            if lright == &left && self.unary_mapping[self.unary_mapping.len() - 1] == unary_mapping
+            {
+                Some(lright)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        if let Some(lright) = to_squash {
+            *lright = left
+        } else {
+            self.left.push(left);
+            self.right.push(right);
+            self.unary_mapping.push(unary_mapping);
+        }
     }
 
     fn ancestry(&self, i: usize) -> (i64, i64, Option<Node>) {
@@ -1142,4 +1156,8 @@ mod haploid_wf_tests {
             let g = haploid_wf(10, 50, 10000000, seed);
         }
     }
+        #[test]
+        fn test_1000_individuals() {
+            let g = haploid_wf(1000, 1000, 10000000, 161363643);
+        }
 }
