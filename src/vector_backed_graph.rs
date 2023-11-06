@@ -380,10 +380,15 @@ fn process_queued_node(
     let mut input_ancestry = 0_usize;
     let input_ancestry_len = graph.tables.ancestry[node.as_index()].len();
     while let Some((left, right, overlaps)) = current_overlaps {
+        println!("{left} {right} {overlaps:?} | {input_ancestry} {input_ancestry_len}");
+        if input_ancestry < input_ancestry_len {
+            println!("{:?}", graph.tables.ancestry[node.as_index()].ancestry(input_ancestry))
+        }
         while input_ancestry < input_ancestry_len
             && graph.tables.ancestry[node.as_index()].left[input_ancestry] > right
         {
             changed = true;
+            println!("increment early");
             input_ancestry += 1;
         }
         let (input_left, input_right, input_unary) =
@@ -420,6 +425,7 @@ fn process_queued_node(
             buffers.ancestry.push(left, right, None);
         }
         current_overlaps = overlapper.calculate_next_overlap_set();
+        println!("increment late");
         input_ancestry += 1;
     }
 
