@@ -70,7 +70,7 @@ impl Ancestry {
             None
         };
         if let Some(lright) = to_squash {
-            *lright = left
+            *lright = right
         } else {
             self.left.push(left);
             self.right.push(right);
@@ -579,9 +579,13 @@ fn validate_reachable_nodes(graph: &Graph, alive: &[Node]) {
         }
     }
     let mut reachable = vec![];
+    let mut edges = 0;
+    let mut ancestry = 0;
     while let Some(node) = node_heap.pop() {
         assert!(!reachable.contains(&node));
         reachable.push(node);
+        edges += graph.tables.edges[node.as_index()].left.len();
+        ancestry += graph.tables.ancestry[node.as_index()].left.len();
         for &child in graph.tables.children[node.as_index()].iter() {
             assert_eq!(
                 graph.tables.children[node.as_index()]
@@ -628,6 +632,12 @@ fn validate_reachable_nodes(graph: &Graph, alive: &[Node]) {
             }
         }
     }
+    println!(
+        "{} {} {}",
+        (edges as f64) / reachable.len() as f64,
+        (ancestry as f64) / reachable.len() as f64,
+        reachable.len()
+    )
 }
 
 #[cfg(test)]
@@ -1156,8 +1166,8 @@ mod haploid_wf_tests {
             let g = haploid_wf(10, 50, 10000000, seed);
         }
     }
-        #[test]
-        fn test_1000_individuals() {
-            let g = haploid_wf(1000, 1000, 10000000, 161363643);
-        }
+    #[test]
+    fn test_1000_individuals() {
+        let g = haploid_wf(1000, 1000, 10000000, 161363643);
+    }
 }
