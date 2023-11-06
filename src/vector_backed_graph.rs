@@ -1287,8 +1287,29 @@ mod design_list_difference_calculations {
         let a = vec![Interval::new(0, 10), Interval::new(10, 100)];
         let b = vec![Interval::new(6, 10), Interval::new(50, 73)];
 
-        // c should contain (0,6), (10,50), (73,100)
         let c = interval_delta(&a, &b);
         validate_delta_contents(&c, &[(0, 6), (10, 50), (73, 100)]);
+    }
+
+    #[test]
+    fn test1() {
+        let a = vec![Interval::new(0, 10), Interval::new(10, 100)];
+        let b = vec![Interval::new(50, 73)];
+
+        let c = interval_delta(&a, &b);
+        validate_delta_contents(&c, &[(0, 10), (10, 50), (73, 100)]);
+    }
+
+    #[test]
+    fn test2() {
+        let a = vec![
+            Interval::new(0, 10),
+            Interval::new(40, 80),
+            Interval::new(90, 100),
+        ];
+        let b = vec![Interval::new(50, 73)];
+
+        let c = interval_delta(&a, &b);
+        validate_delta_contents(&c, &[(0, 10), (40, 50), (73, 80), (90, 100)]);
     }
 }
