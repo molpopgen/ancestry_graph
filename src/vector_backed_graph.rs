@@ -420,6 +420,11 @@ fn process_queued_node(
         }
         current_overlaps = overlapper.calculate_next_overlap_set();
     }
+
+    // There are input segments w/no outputs
+    if input_ancestry < input_ancestry_len {
+        changed = true;
+    }
     changed
 }
 
@@ -523,7 +528,7 @@ fn propagate_changes(graph: &mut Graph) {
                 for &parent in graph.tables.parents[node.as_index()].iter() {
                     enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
                 }
-            } 
+            }
 
             #[cfg(debug_assertions)]
             if !changed {
