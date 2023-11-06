@@ -477,32 +477,33 @@ fn propagate_changes(graph: &mut Graph) {
                 graph.free_nodes.push(node.as_index());
             }
             buffers.sort_edges();
-            let node_edges = &mut graph.tables.edges[node.as_index()];
-            node_edges.clear();
-            let mut last_right: Option<i64> = None;
-            let mut last_child: Option<Node> = None;
-            for edge in buffers.edges.iter() {
-                let to_squash = if let Some(lright) = last_right {
-                    if lright == edge.left && last_child.unwrap() == edge.child {
-                        Some(lright)
+            {
+                let node_edges = &mut graph.tables.edges[node.as_index()];
+                node_edges.clear();
+                let mut last_right: Option<i64> = None;
+                let mut last_child: Option<Node> = None;
+                for edge in buffers.edges.iter() {
+                    let to_squash = if let Some(lright) = last_right {
+                        if lright == edge.left && last_child.unwrap() == edge.child {
+                            Some(lright)
+                        } else {
+                            None
+                        }
                     } else {
                         None
+                    };
+                    if let Some(right) = to_squash {
+                        let len = node_edges.right.len() - 1;
+                        node_edges.right[len] = edge.right;
+                    } else {
+                        node_edges.left.push(edge.left);
+                        node_edges.right.push(edge.right);
+                        node_edges.child.push(edge.child);
                     }
-                } else {
-                    None
-                };
-                if let Some(right) = to_squash {
-                    let len = node_edges.right.len() - 1;
-                    node_edges.right[len] = edge.right;
-                } else {
-                    node_edges.left.push(edge.left);
-                    node_edges.right.push(edge.right);
-                    node_edges.child.push(edge.child);
+                    last_right = Some(edge.right);
+                    last_child = Some(edge.child);
                 }
-                last_right = Some(edge.right);
-                last_child = Some(edge.child);
             }
-            //std::mem::swap(&mut graph.tables.edges[node.as_index()], &mut buffers.edges);
             std::mem::swap(
                 &mut graph.tables.ancestry[node.as_index()],
                 &mut buffers.ancestry,
