@@ -420,6 +420,7 @@ fn process_queued_node(
             buffers.ancestry.push(left, right, None);
         }
         current_overlaps = overlapper.calculate_next_overlap_set();
+        input_ancestry += 1;
     }
 
     // There are input segments w/no outputs
