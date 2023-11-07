@@ -1308,7 +1308,10 @@ mod design_list_difference_calculations {
     fn validate_delta_contents(delta: &[Interval], expected: &[(i64, i64)]) {
         assert_eq!(delta.len(), expected.len(), "{delta:?}");
         for e in expected {
-            assert!(delta.contains(&Interval::new(e.0, e.1)));
+            assert!(
+                delta.contains(&Interval::new(e.0, e.1)),
+                "{e:?} not in {delta:?}"
+            );
         }
     }
 
@@ -1356,6 +1359,15 @@ mod design_list_difference_calculations {
     fn test4() {
         let a = vec![Interval::new(0, 10)];
         let b = vec![Interval::new(3, 5), Interval::new(6, 8)];
+
+        let c = interval_delta(&a, &b);
+        validate_delta_contents(&c, &[(0, 3), (5, 6), (8, 10)]);
+    }
+
+    #[test]
+    fn test5() {
+        let a = vec![Interval::new(3, 5), Interval::new(6, 8)];
+        let b = vec![Interval::new(0, 10)];
 
         let c = interval_delta(&a, &b);
         validate_delta_contents(&c, &[(0, 3), (5, 6), (8, 10)]);
