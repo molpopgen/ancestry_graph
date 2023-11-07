@@ -382,7 +382,10 @@ fn process_queued_node(
     while let Some((left, right, overlaps)) = current_overlaps {
         println!("{left} {right} {overlaps:?} | {input_ancestry} {input_ancestry_len}");
         if input_ancestry < input_ancestry_len {
-            println!("{:?}", graph.tables.ancestry[node.as_index()].ancestry(input_ancestry))
+            println!(
+                "{:?}",
+                graph.tables.ancestry[node.as_index()].ancestry(input_ancestry)
+            )
         }
         while input_ancestry < input_ancestry_len
             && graph.tables.ancestry[node.as_index()].left[input_ancestry] > right
@@ -1347,5 +1350,14 @@ mod design_list_difference_calculations {
 
         let c = interval_delta(&a, &b);
         validate_delta_contents(&c, &[]);
+    }
+
+    #[test]
+    fn test4() {
+        let a = vec![Interval::new(0, 10)];
+        let b = vec![Interval::new(3, 5), Interval::new(6, 8)];
+
+        let c = interval_delta(&a, &b);
+        validate_delta_contents(&c, &[(0, 3), (5, 6), (8, 10)]);
     }
 }
