@@ -1260,6 +1260,10 @@ mod design_list_difference_calculations {
     }
 
     fn interval_delta(a: &[Interval], b: &[Interval]) -> Vec<Interval> {
+        // We can, on paper, think of this as an iterator 
+        // problem: given a and the last interval that did overlap,
+        // we can output the next sub-interval, etc..
+        todo!("consider this as an iterator problem");
         let mut rv = vec![];
 
         let mut ai = 0_usize;
