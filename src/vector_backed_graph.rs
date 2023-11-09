@@ -1267,7 +1267,7 @@ mod design_list_overlap_calculations {
         let mut bi = b.iter();
         let mut rv = vec![];
 
-        let inner = bi.next();
+        let mut inner = bi.next();
 
         while let Some(mut ainterval) = ai.next() {
             if let Some(binterval) = inner {
@@ -1277,8 +1277,11 @@ mod design_list_overlap_calculations {
                         None => break,
                     };
                 }
+                println!("{ainterval:?} {binterval:?}");
                 if ainterval.right > binterval.left && binterval.right > ainterval.left {
                     rv.push(*ainterval)
+                } else {
+                    inner = bi.next();
                 }
             } else {
                 break;
@@ -1301,6 +1304,28 @@ mod design_list_overlap_calculations {
     fn test0() {
         let a = vec![Interval::new(3, 5), Interval::new(6, 8)];
         let b = vec![Interval::new(0, 10)];
+
+        let c = interval_overlap(&a, &b);
+        validate_overlap_contents(&c, &[(3, 5), (6, 8)]);
+    }
+
+    #[test]
+    fn test1() {
+        let a = vec![Interval::new(3, 5), Interval::new(6, 8)];
+        let b = vec![Interval::new(0, 6), Interval::new(6, 10)];
+
+        let c = interval_overlap(&a, &b);
+        validate_overlap_contents(&c, &[(3, 5), (6, 8)]);
+    }
+
+    #[test]
+    fn test2() {
+        let a = vec![
+            Interval::new(0, 2),
+            Interval::new(3, 5),
+            Interval::new(6, 8),
+        ];
+        let b = vec![Interval::new(3, 6), Interval::new(6, 10)];
 
         let c = interval_overlap(&a, &b);
         validate_overlap_contents(&c, &[(3, 5), (6, 8)]);
