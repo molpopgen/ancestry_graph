@@ -1245,6 +1245,64 @@ mod haploid_wf_tests {
     }
 }
 
+// Hoping this helps us in process_queued_node to get
+// the increment steps right b/w the overlaps
+// and the input ancestry
+#[cfg(test)]
+mod design_list_overlap_calculations {
+    #[derive(PartialEq, Eq, Copy, Clone, Debug)]
+    struct Interval {
+        left: i64,
+        right: i64,
+    }
+
+    impl Interval {
+        fn new(left: i64, right: i64) -> Self {
+            Self { left, right }
+        }
+    }
+
+    fn interval_overlap(a: &[Interval], b: &[Interval]) -> Vec<Interval> {
+        let mut ai = a.iter();
+        let mut bi = b.iter();
+        let mut rv = vec![];
+
+        while let Some(mut ainterval) = ai.next() {
+            if let Some(binterval) = bi.next() {
+                while ainterval.right < binterval.left {
+                    ainterval = match ai.next() {
+                        Some(a) => a,
+                        None => break,
+                    };
+                }
+                if ainterval.right > binterval.left && binterval.right > ainterval.left {
+                    rv.push(*ainterval)
+                }
+            }
+        }
+        rv
+    }
+
+    fn validate_overlap_contents(overlap: &[Interval], expected: &[(i64, i64)]) {
+        assert_eq!(overlap.len(), expected.len(), "{overlap:?}");
+        for e in expected {
+            assert!(
+                overlap.contains(&Interval::new(e.0, e.1)),
+                "{e:?} not in {overlap:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test0() {
+        let a = vec![Interval::new(3, 5), Interval::new(6, 8)];
+        let b = vec![Interval::new(0, 10)];
+
+        let c = interval_overlap(&a, &b);
+        validate_overlap_contents(&c, &[(0, 3), (5, 6)]);
+    }
+}
+
 #[cfg(test)]
 mod design_list_difference_calculations {
     #[derive(PartialEq, Eq, Copy, Clone, Debug)]
@@ -1260,7 +1318,7 @@ mod design_list_difference_calculations {
     }
 
     fn interval_delta(a: &[Interval], b: &[Interval]) -> Vec<Interval> {
-        // We can, on paper, think of this as an iterator 
+        // We can, on paper, think of this as an iterator
         // problem: given a and the last interval that did overlap,
         // we can output the next sub-interval, etc..
         todo!("consider this as an iterator problem");
