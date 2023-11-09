@@ -1267,8 +1267,10 @@ mod design_list_overlap_calculations {
         let mut bi = b.iter();
         let mut rv = vec![];
 
+        let inner = bi.next();
+
         while let Some(mut ainterval) = ai.next() {
-            if let Some(binterval) = bi.next() {
+            if let Some(binterval) = inner {
                 while ainterval.right < binterval.left {
                     ainterval = match ai.next() {
                         Some(a) => a,
@@ -1278,6 +1280,8 @@ mod design_list_overlap_calculations {
                 if ainterval.right > binterval.left && binterval.right > ainterval.left {
                     rv.push(*ainterval)
                 }
+            } else {
+                break;
             }
         }
         rv
@@ -1299,7 +1303,7 @@ mod design_list_overlap_calculations {
         let b = vec![Interval::new(0, 10)];
 
         let c = interval_overlap(&a, &b);
-        validate_overlap_contents(&c, &[(0, 3), (5, 6)]);
+        validate_overlap_contents(&c, &[(3, 5), (6, 8)]);
     }
 }
 
