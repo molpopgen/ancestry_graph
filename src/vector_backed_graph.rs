@@ -182,6 +182,7 @@ struct AncestryIntersection {
     unary_mapping: Option<Node>,
 }
 
+#[derive(Debug)]
 struct Overlapper<'q> {
     queue: &'q [AncestryIntersection],
     overlaps: Vec<AncestryIntersection>,
@@ -373,22 +374,25 @@ fn process_queued_node(
     buffers: &mut TempBuffers,
     graph: &mut Graph,
 ) -> bool {
-    //println!("visiting node {node:?}");
+    println!("visiting node {node:?}");
     let mut overlapper = Overlapper::new(queue);
+    println!("{overlapper:?}");
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
     let mut changed = false;
     let mut input_ancestry = 0_usize;
     let input_ancestry_len = graph.tables.ancestry[node.as_index()].len();
 
     while input_ancestry < input_ancestry_len {
-        //println!(
-        //    "{input_ancestry},{input_ancestry_len} -> {:?} {:?}",
-        //    graph.tables.ancestry[node.as_index()].ancestry(input_ancestry),
-        //    current_overlaps
-        //);
+        println!(
+            "{input_ancestry},{input_ancestry_len} -> {:?} {:?}",
+            graph.tables.ancestry[node.as_index()].ancestry(input_ancestry),
+            current_overlaps
+        );
         while let Some((left, right, _)) = current_overlaps {
-            //println!("{left} > {}?",
-            //         graph.tables.ancestry[node.as_index()].right[input_ancestry] );
+            println!(
+                "{left} > {}?",
+                graph.tables.ancestry[node.as_index()].right[input_ancestry]
+            );
             if left >= graph.tables.ancestry[node.as_index()].right[input_ancestry] {
                 break;
             }
@@ -414,6 +418,7 @@ fn process_queued_node(
                 changed = true;
             }
             if overlaps.len() == 1 {
+                println!("unary");
                 let unary_mapping = match overlaps[0].unary_mapping {
                     // Propagate the unary mapping up the graph
                     Some(u) => Some(u),
@@ -425,6 +430,7 @@ fn process_queued_node(
                 }
                 buffers.ancestry.push(left, right, unary_mapping);
             } else {
+                println!("overlap");
                 for o in overlaps.iter() {
                     let child = match o.unary_mapping {
                         Some(u) => u,
@@ -814,6 +820,7 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
             let right_parent = parents[pindex];
             let right_tsk_parent = tsk_parents[pindex];
             let breakpoint = rng.sample(sample_breakpoint);
+            println!("{left_parent:?} {right_parent:?} {left_tsk_parent:?} {right_tsk_parent:?} {breakpoint} {child:?} {tsk_child}");
             tables
                 .add_edge(0., breakpoint as f64, left_tsk_parent, tsk_child)
                 .unwrap();
@@ -1525,6 +1532,14 @@ mod design_list_overlap_calculations {
 
         let c = interval_overlap(&a, &b);
         validate_overlap_contents(&c, &[(0, 2), (6, 8)]);
+    }
+
+    #[test]
+    fn test4() {
+        let a = vec![Interval::new(0, 10000000)];
+        let b = vec![Interval::new(0, 258447), Interval::new(258447, 10000000)];
+        let c = interval_overlap(&a, &b);
+        validate_overlap_contents(&c, &[(0, 258447), (258447, 10000000)]);
     }
 }
 
