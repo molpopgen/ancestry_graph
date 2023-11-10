@@ -793,9 +793,7 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
     let mut tsk_parents = vec![];
     let mut tsk_children = vec![];
     for _ in 0..popsize {
-        let p = tables
-            .add_node(0, (ngenerations - 1) as f64, -1, -1)
-            .unwrap();
+        let p = tables.add_node(0, (ngenerations) as f64, -1, -1).unwrap();
         tsk_parents.push(p);
     }
 
@@ -806,7 +804,7 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
             let child = graph.add_birth();
             children.push(child);
             let tsk_child = tables
-                .add_node(0, (ngenerations - 1 - (gen + 1)) as f64, -1, -1)
+                .add_node(0, (ngenerations - 1 - gen) as f64, -1, -1)
                 .unwrap();
             tsk_children.push(tsk_child);
             let pindex = rng.sample(sample_parent);
@@ -846,6 +844,9 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
         std::mem::swap(&mut tsk_parents, &mut tsk_children);
         tsk_children.clear();
     }
+    for p in tsk_parents.iter().cloned() {
+        assert_eq!(tables.nodes().time(p).unwrap(), 0.0);
+    }
     tables
         .full_sort(tskit::TableSortOptions::default())
         .unwrap();
@@ -856,10 +857,17 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
     let treeseq = tables
         .tree_sequence(tskit::TreeSequenceFlags::default())
         .unwrap();
+    let mut oldest_tsk_node_time = 0.0;
+    for t in treeseq.nodes().time_slice().iter().cloned() {
+        if t > oldest_tsk_node_time {
+            oldest_tsk_node_time = t.into()
+        }
+    }
     println!(
-        "{} {}",
+        "{} {} {}",
         treeseq.nodes().num_rows(),
-        treeseq.edges().num_rows()
+        treeseq.edges().num_rows(),
+        oldest_tsk_node_time
     );
     let num_nodes = graph
         .tables
@@ -1355,7 +1363,7 @@ mod haploid_wf_tests {
     proptest! {
         #[test]
         fn test_10_individuals(seed in 0..u64::MAX) {
-            let g = haploid_wf(10, 50, 10000000, seed);
+            let g = haploid_wf(10, 1, 10000000, seed);
         }
     }
 
