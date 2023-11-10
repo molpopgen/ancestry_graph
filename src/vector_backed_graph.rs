@@ -409,7 +409,7 @@ fn process_queued_node(
             }
             let (input_left, input_right, input_unary) =
                 graph.tables.ancestry[node.as_index()].ancestry(input_ancestry);
-            assert!(input_right>left && right>input_left);
+            assert!(input_right > left && right > input_left);
             if left != input_left || right != input_right {
                 changed = true;
             }
@@ -551,6 +551,7 @@ fn propagate_changes(graph: &mut Graph) {
             graph.tables.parents[node.as_index()].clear();
             // this node can be recycled
             graph.free_nodes.push(node.as_index());
+            graph.tables.nodes.birth_time[node.as_index()] = -1;
         } else {
             let changed = process_queued_node(node, &queue, &mut buffers, graph);
             assert!(!graph.tables.ancestry[node.as_index()].is_empty());
@@ -560,6 +561,7 @@ fn propagate_changes(graph: &mut Graph) {
             if buffers.edges.is_empty() {
                 // Node has gone extinct
                 graph.free_nodes.push(node.as_index());
+                graph.tables.nodes.birth_time[node.as_index()] = -1;
             }
             buffers.sort_edges();
             {
@@ -787,6 +789,15 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
     let sample_parent = rand::distributions::Uniform::new(0, popsize);
     let sample_breakpoint = rand::distributions::Uniform::new(1, genome_length);
     let mut children = vec![];
+    let mut tables = tskit::TableCollection::new(genome_length as f64).unwrap();
+    let mut tsk_parents = vec![];
+    let mut tsk_children = vec![];
+    for _ in 0..popsize {
+        let p = tables
+            .add_node(0, (ngenerations - 1) as f64, -1, -1)
+            .unwrap();
+        tsk_parents.push(p);
+    }
 
     for gen in 0..ngenerations {
         //println!("{gen}");
@@ -794,9 +805,28 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
         for _ in 0..popsize {
             let child = graph.add_birth();
             children.push(child);
-            let left_parent = parents[rng.sample(sample_parent)];
-            let right_parent = parents[rng.sample(sample_parent)];
+            let tsk_child = tables
+                .add_node(0, (ngenerations - 1 - (gen + 1)) as f64, -1, -1)
+                .unwrap();
+            tsk_children.push(tsk_child);
+            let pindex = rng.sample(sample_parent);
+            let left_parent = parents[pindex];
+            let left_tsk_parent = tsk_parents[pindex];
+            let pindex = rng.sample(sample_parent);
+            let right_parent = parents[pindex];
+            let right_tsk_parent = tsk_parents[pindex];
             let breakpoint = rng.sample(sample_breakpoint);
+            tables
+                .add_edge(0., breakpoint as f64, left_tsk_parent, tsk_child)
+                .unwrap();
+            tables
+                .add_edge(
+                    breakpoint as f64,
+                    genome_length as f64,
+                    right_tsk_parent,
+                    tsk_child,
+                )
+                .unwrap();
             graph.enqueue_parent(left_parent);
             graph.enqueue_parent(right_parent);
             graph.record_transmission(0, breakpoint, left_parent, child);
@@ -813,7 +843,36 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
 
         std::mem::swap(&mut parents, &mut children);
         children.clear();
+        std::mem::swap(&mut tsk_parents, &mut tsk_children);
+        tsk_children.clear();
     }
+    tables
+        .full_sort(tskit::TableSortOptions::default())
+        .unwrap();
+    tables
+        .simplify(&tsk_parents, tskit::SimplificationOptions::default(), false)
+        .unwrap();
+    tables.build_index().unwrap();
+    let treeseq = tables
+        .tree_sequence(tskit::TreeSequenceFlags::default())
+        .unwrap();
+    println!(
+        "{} {}",
+        treeseq.nodes().num_rows(),
+        treeseq.edges().num_rows()
+    );
+    let num_nodes = graph
+        .tables
+        .nodes
+        .birth_time
+        .iter()
+        .filter(|&&t| t != -1)
+        .count();
+    assert_eq!(num_nodes, u64::from(treeseq.nodes().num_rows()) as usize);
+    assert_eq!(
+        num_nodes,
+        graph.tables.edges.iter().filter(|e| !e.is_empty()).count() + popsize
+    );
 
     graph
 }
@@ -1312,11 +1371,10 @@ mod haploid_wf_tests {
         let g = haploid_wf(1000, 5000, 10000000, 161363643);
         let with_edges = g.tables.edges.iter().filter(|e| !e.is_empty()).count();
         let mut oldest = i64::MAX;
-        for (i,t) in g.tables.nodes.birth_time.iter().cloned().enumerate() {
-            if !g.tables.edges[i].is_empty(){
-                oldest = std::cmp::min(oldest,t);
+        for (i, t) in g.tables.nodes.birth_time.iter().cloned().enumerate() {
+            if !g.tables.edges[i].is_empty() {
+                oldest = std::cmp::min(oldest, t);
             }
-
         }
         println!("{with_edges} {oldest}")
     }
