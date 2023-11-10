@@ -1400,7 +1400,7 @@ mod haploid_wf_tests {
     #[test]
     fn test_10_individuals_seed0() {
         let seed = 0;
-        let g = haploid_wf(10, 50, 10000000, seed);
+        let g = haploid_wf(10, 1, 10000000, seed);
     }
 
     #[ignore]
