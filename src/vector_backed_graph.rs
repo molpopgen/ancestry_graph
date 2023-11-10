@@ -887,6 +887,17 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
             .filter(|(i, t)| *t != -1)
         {
             println!("Birth time: {t}");
+            for j in 0..graph.tables.edges[i].left.len() {
+                println!(
+                    "edge {} {} {:?}",
+                    graph.tables.edges[i].left[j],
+                    graph.tables.edges[i].right[j],
+                    graph.tables.edges[i].child[j],
+                );
+            }
+        }
+        for edge in treeseq.edges_iter() {
+            println!("{edge:?}");
         }
     }
     assert_eq!(num_nodes, u64::from(treeseq.nodes().num_rows()) as usize);
