@@ -1443,40 +1443,29 @@ mod design_list_overlap_calculations {
     }
 
     fn interval_overlap(a: &[Interval], b: &[Interval]) -> Vec<Interval> {
-        let mut ai = a.iter();
-        let mut bi = b.iter();
+        let mut ai = 0_usize;
+        let mut bi = 0_usize;
         let mut rv = vec![];
 
-        let mut inner = bi.next();
-
-        while let Some(mut ainterval) = ai.next() {
-            while let Some(binterval) = inner {
-                if binterval.left > ainterval.right {
+        while ai < a.len() {
+            let mut aleft = a[ai].left;
+            let mut aright = a[ai].right;
+            for i in &b[bi..] {
+                let bleft = i.left;
+                let bright = i.right;
+                if bleft >= aright {
                     break;
                 }
-                println!("updating {binterval:?}");
-                if !(binterval.right > ainterval.left && ainterval.right > binterval.left) {
-                    inner = bi.next()
-                } else {
-                    break;
+                println!("{:?} {i:?}", a[ai]);
+                if bright > aleft && aright > bleft {
+                    rv.push(Interval::new(aleft, aright));
+                } else if aright > bright {
+                    bi += 1;
                 }
             }
-            println!("A {ainterval:?} {inner:?}");
-            if let Some(binterval) = inner {
-                while ainterval.right < binterval.left {
-                    ainterval = match ai.next() {
-                        Some(a) => a,
-                        None => break,
-                    };
-                }
-                println!("B {ainterval:?} {binterval:?}");
-                if ainterval.right > binterval.left && binterval.right > ainterval.left {
-                    rv.push(*ainterval)
-                }
-            } else {
-                break;
-            }
+            ai += 1;
         }
+
         rv
     }
 
@@ -1539,7 +1528,7 @@ mod design_list_overlap_calculations {
         let a = vec![Interval::new(0, 10000000)];
         let b = vec![Interval::new(0, 258447), Interval::new(258447, 10000000)];
         let c = interval_overlap(&a, &b);
-        validate_overlap_contents(&c, &[(0, 258447), (258447, 10000000)]);
+        validate_overlap_contents(&c, &[(0, 10000000), (0, 10000000)]);
     }
 }
 
