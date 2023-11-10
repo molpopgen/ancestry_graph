@@ -896,6 +896,12 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
                 );
             }
         }
+        println!("all non-empty edges:");
+        for (i, e) in graph.tables.edges.iter().enumerate() {
+            for j in 0..e.left.len() {
+                println!("node {i}: {} {} {:?}", e.left[j], e.right[j], e.child[j],);
+            }
+        }
         for edge in treeseq.edges_iter() {
             println!("{edge:?}");
         }
