@@ -876,6 +876,19 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
         .iter()
         .filter(|&&t| t != -1)
         .count();
+    if num_nodes != u64::from(treeseq.nodes().num_rows()) as usize {
+        for (i, t) in graph
+            .tables
+            .nodes
+            .birth_time
+            .iter()
+            .cloned()
+            .enumerate()
+            .filter(|(i, t)| *t != -1)
+        {
+            println!("Birth time: {t}");
+        }
+    }
     assert_eq!(num_nodes, u64::from(treeseq.nodes().num_rows()) as usize);
     assert_eq!(
         num_nodes,
