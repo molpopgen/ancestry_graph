@@ -804,7 +804,7 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
         }
         propagate_changes(&mut graph);
 
-        //validate_reachable_nodes(&graph, &children);
+        validate_reachable_nodes(&graph, &children);
 
         for &i in &children {
             // mark them as "dead".
