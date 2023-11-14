@@ -1530,6 +1530,14 @@ mod design_list_overlap_calculations {
         let c = interval_overlap(&a, &b);
         validate_overlap_contents(&c, &[(0, 10000000), (0, 10000000)]);
     }
+
+    #[test]
+    fn test5() {
+        let a = vec![Interval::new(0, 10000000)];
+        let b = vec![Interval::new(0, 10000000)];
+        let c = interval_overlap(&a, &b);
+        validate_overlap_contents(&c, &[(0, 10000000)]);
+    }
 }
 
 #[cfg(test)]
