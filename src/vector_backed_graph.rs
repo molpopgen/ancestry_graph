@@ -386,11 +386,13 @@ fn process_queued_node(
         let aleft = graph.tables.ancestry[node.as_index()].left[input_ancestry];
         let aright = graph.tables.ancestry[node.as_index()].right[input_ancestry];
         let input_unary = graph.tables.ancestry[node.as_index()].unary_mapping[input_ancestry];
+        let mut matched = false;
         while let Some((left, right, overlaps)) = current_overlaps {
             if left > aright {
                 break;
             }
             if right > aleft && aright > left {
+                matched = true;
                 if left != aleft || right != aright {
                     changed = true;
                 }
@@ -442,6 +444,10 @@ fn process_queued_node(
         //    break;
         //}
 
+        if !matched {
+            println!("not matched on {aleft} {aright} {input_unary:?}");
+            changed = true;
+        }
         input_ancestry += 1;
     }
     //while let Some((left, right, overlaps)) = current_overlaps {
@@ -1400,6 +1406,12 @@ mod haploid_wf_tests {
     #[test]
     fn test_10_individuals_seed0() {
         let seed = 0;
+        let g = haploid_wf(10, 1, 10000000, seed);
+    }
+
+    #[test]
+    fn test_10_individuals_seed_1498053795046341779() {
+        let seed = 1498053795046341779;
         let g = haploid_wf(10, 1, 10000000, seed);
     }
 
