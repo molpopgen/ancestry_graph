@@ -503,10 +503,7 @@ fn process_queued_node(
     //    input_ancestry += 1;
     //}
 
-    // There are input segments w/no outputs
-    if input_ancestry < input_ancestry_len {
-        changed = true;
-    }
+    assert_eq!(input_ancestry, input_ancestry_len);
     changed
 }
 
