@@ -1448,20 +1448,22 @@ mod design_list_overlap_calculations {
         let mut rv = vec![];
 
         while ai < a.len() {
-            let mut aleft = a[ai].left;
-            let mut aright = a[ai].right;
-            for i in &b[bi..] {
-                let bleft = i.left;
-                let bright = i.right;
+            let aleft = a[ai].left;
+            let aright = a[ai].right;
+            while bi < b.len() {
+                let bleft = b[bi].left;
+                let bright = b[bi].right;
                 if bleft >= aright {
                     break;
                 }
-                println!("{:?} {i:?}", a[ai]);
+                println!("{:?} {:?}", a[ai], b[bi]);
                 if bright > aleft && aright > bleft {
                     rv.push(Interval::new(aleft, aright));
-                } else if aright > bright {
-                    bi += 1;
                 }
+                if aright < bright {
+                    break;
+                }
+                bi += 1;
             }
             ai += 1;
         }
