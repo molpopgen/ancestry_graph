@@ -70,6 +70,7 @@ impl Ancestry {
             None
         };
         if let Some(lright) = to_squash {
+            println!("squashing");
             *lright = right
         } else {
             self.left.push(left);
@@ -394,6 +395,7 @@ fn process_queued_node(
             if right > aleft && aright > left {
                 matched = true;
                 if left != aleft || right != aright {
+                    println!("coords");
                     changed = true;
                 }
                 if overlaps.len() == 1 {
@@ -405,6 +407,7 @@ fn process_queued_node(
                         None => Some(overlaps[0].node),
                     };
                     if unary_mapping != input_unary {
+                        println!("mapping");
                         changed = true;
                     }
                     buffers.ancestry.push(left, right, unary_mapping);
@@ -504,6 +507,9 @@ fn process_queued_node(
     //}
 
     assert_eq!(input_ancestry, input_ancestry_len);
+    if changed {
+        assert_ne!(graph.tables.ancestry[node.as_index()], buffers.ancestry)
+    }
     changed
 }
 
