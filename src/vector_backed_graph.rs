@@ -4,7 +4,7 @@ use crate::QueuedNode;
 
 #[derive(Default, Debug)]
 struct NodeHeap {
-    queued_nodes: NodeHash,
+    queued_nodes: Vec<usize>,
     node_queue: std::collections::BinaryHeap<QueuedNode>,
 }
 
@@ -12,7 +12,7 @@ impl NodeHeap {
     fn pop(&mut self) -> Option<Node> {
         match self.node_queue.pop() {
             Some(qn) => {
-                self.queued_nodes.remove(&qn.node);
+                //self.queued_nodes.remove(&qn.node);
                 Some(qn.node)
             }
             None => None,
@@ -93,7 +93,7 @@ struct Edge {
 }
 
 #[derive(Default, Debug)]
-struct Edges {
+pub struct Edges {
     left: Vec<i64>,
     right: Vec<i64>,
     child: Vec<Node>,
@@ -106,11 +106,11 @@ impl Edges {
         self.child.clear();
     }
 
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         debug_assert_eq!(self.left.len(), self.right.len());
         debug_assert_eq!(self.left.len(), self.child.len());
         self.left.len()
@@ -124,17 +124,17 @@ impl Edges {
 }
 
 #[derive(Default)]
-struct Nodes {
-    birth_time: Vec<i64>,
+pub struct Nodes {
+    pub birth_time: Vec<i64>,
 }
 
 #[derive(Default)]
-struct Tables {
+pub struct Tables {
     ancestry: Vec<Ancestry>,
-    edges: Vec<Edges>,
+    pub edges: Vec<Edges>,
     parents: Vec<Vec<Node>>,
     children: Vec<Vec<Node>>,
-    nodes: Nodes,
+    pub nodes: Nodes,
 }
 
 impl Tables {
@@ -158,7 +158,7 @@ impl Tables {
 }
 
 pub struct Graph {
-    tables: Tables,
+    pub tables: Tables,
     node_heap: NodeHeap,
     pub current_time: i64,
     genome_length: i64,
@@ -529,7 +529,15 @@ fn process_queued_node(
     changed
 }
 
-pub fn propagate_changes(graph: &mut Graph) {
+pub fn propagate_changes(parents: &[Node], graph: &mut Graph) {
+    graph.node_heap.queued_nodes.fill(0);
+    graph
+        .node_heap
+        .queued_nodes
+        .resize(graph.tables.nodes.birth_time.len(), 0);
+    for p in parents.iter().cloned() {
+        graph.enqueue_parent(p)
+    }
     let mut queue = vec![];
     let mut buffers = TempBuffers::default();
     let mut visited = 0;
@@ -537,7 +545,7 @@ pub fn propagate_changes(graph: &mut Graph) {
     while let Some(node) = graph.node_heap.pop() {
         visited += 1;
         // println!("processing {node:?}");
-        graph.node_heap.queued_nodes.remove(&node);
+        //graph.node_heap.queued_nodes.remove(&node);
         ancestry_intersection(
             node,
             &graph.tables.edges[node.as_index()],
@@ -646,8 +654,8 @@ pub fn propagate_changes(graph: &mut Graph) {
 }
 
 fn enqueue_parent(parent: Node, birth_time: &[i64], node_heap: &mut NodeHeap) {
-    if !node_heap.queued_nodes.contains(&parent) {
-        node_heap.queued_nodes.insert(parent);
+    if node_heap.queued_nodes[parent.as_index()] == 0 {
+        node_heap.queued_nodes[parent.as_index()] += 1;
         node_heap.node_queue.push(QueuedNode {
             node: parent,
             birth_time: birth_time[parent.as_index()],
