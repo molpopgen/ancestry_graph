@@ -459,7 +459,7 @@ fn process_queued_node(
             let a = &graph.tables.ancestry[node.as_index()];
             if left != a.left[input_ancestry]
                 || right != a.right[input_ancestry]
-                || last_input_unary != a.unary_mapping[input_ancestry]
+                || last_input_unary != input_unary
             {
                 changed = true;
             }
@@ -829,10 +829,10 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
         //println!("{gen}");
         graph.current_time += 1;
         for _ in 0..popsize {
-        for &i in &parents {
-            // mark them as "dead".
-            graph.enqueue_parent(i);
-        }
+            for &i in &parents {
+                // mark them as "dead".
+                graph.enqueue_parent(i);
+            }
             let child = graph.add_birth();
             children.push(child);
             let tsk_child = tables
