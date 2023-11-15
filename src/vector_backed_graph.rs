@@ -285,11 +285,13 @@ impl TempBuffers {
         self.edges.push(Edge { left, right, child })
     }
 
+    #[inline(never)]
     fn sort_edges(&mut self) {
         self.edges.sort_unstable_by_key(|e| (e.child, e.left));
     }
 }
 
+#[inline(never)]
 fn ancestry_intersection(
     parent: Node,
     edges: &Edges,
@@ -371,6 +373,7 @@ fn ancestry_intersection(
 // 1. cache intervals that have changed.
 // 2. When done, look for parent edge / changed interval overlap
 //    and add overlapping parents into the queue.
+#[inline(never)]
 fn process_queued_node(
     node: Node,
     queue: &[AncestryIntersection],
