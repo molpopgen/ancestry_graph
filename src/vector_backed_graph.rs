@@ -602,15 +602,11 @@ pub fn propagate_changes(parents: &[Node], graph: &mut Graph) {
                 let mut last_child: Option<Node> = None;
                 for edge in buffers.edges.iter() {
                     let to_squash = if let Some(lright) = last_right {
-                        if lright == edge.left && last_child.unwrap() == edge.child {
-                            Some(lright)
-                        } else {
-                            None
-                        }
+                        lright == edge.left && last_child == Some(edge.child)
                     } else {
-                        None
+                        false
                     };
-                    if let Some(right) = to_squash {
+                    if to_squash {
                         let len = node_edges.right.len() - 1;
                         node_edges.right[len] = edge.right;
                     } else {
