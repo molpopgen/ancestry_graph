@@ -58,7 +58,8 @@ impl Ancestry {
         self.left.len()
     }
 
-    fn push(&mut self, left: i64, right: i64, unary_mapping: Option<Node>) {
+    #[must_use]
+    fn push(&mut self, left: i64, right: i64, unary_mapping: Option<Node>) -> bool {
         let to_squash = if let Some(lright) = self.right.last_mut() {
             if lright == &left && self.unary_mapping[self.unary_mapping.len() - 1] == unary_mapping
             {
@@ -71,11 +72,13 @@ impl Ancestry {
         };
         if let Some(lright) = to_squash {
             println!("squashing");
-            *lright = right
+            *lright = right;
+            true
         } else {
             self.left.push(left);
             self.right.push(right);
             self.unary_mapping.push(unary_mapping);
+            false
         }
     }
 
@@ -387,30 +390,29 @@ fn process_queued_node(
         let aleft = graph.tables.ancestry[node.as_index()].left[input_ancestry];
         let aright = graph.tables.ancestry[node.as_index()].right[input_ancestry];
         let input_unary = graph.tables.ancestry[node.as_index()].unary_mapping[input_ancestry];
-        let mut matched = false;
+        let mut last_left: Option<i64> = None;
+        let mut last_right: Option<i64> = None;
+        let mut last_input_unary: Option<Node> = None;
         while let Some((left, right, overlaps)) = current_overlaps {
             if left > aright {
                 break;
             }
             if right > aleft && aright > left {
-                matched = true;
-                if left != aleft || right != aright {
-                    println!("coords");
-                    changed = true;
-                }
                 if overlaps.len() == 1 {
-                    println!("unary");
                     let unary_mapping = match overlaps[0].unary_mapping {
                         // Propagate the unary mapping up the graph
                         Some(u) => Some(u),
                         // The unary mapping becomes the overlapped child node
                         None => Some(overlaps[0].node),
                     };
-                    if unary_mapping != input_unary {
-                        println!("mapping");
-                        changed = true;
+                    last_input_unary = unary_mapping;
+                    let squashed = buffers.ancestry.push(left, right, unary_mapping);
+                    if squashed {
+                        last_right = Some(right);
+                    } else {
+                        last_left = Some(left);
+                        last_right = Some(right);
                     }
-                    buffers.ancestry.push(left, right, unary_mapping);
                 } else {
                     println!("overlap");
                     for o in overlaps.iter() {
@@ -425,7 +427,13 @@ fn process_queued_node(
                             buffers.children.push(child);
                         }
                     }
-                    buffers.ancestry.push(left, right, None);
+                    let squashed = buffers.ancestry.push(left, right, None);
+                    if squashed {
+                        last_right = Some(right);
+                    } else {
+                        last_left = Some(left);
+                        last_right = Some(right);
+                    }
                 }
             }
             if aright < right {
@@ -446,11 +454,21 @@ fn process_queued_node(
         //} else {
         //    break;
         //}
+        if let Some(left) = last_left {
+            let right = last_right.unwrap();
+            let a = &graph.tables.ancestry[node.as_index()];
+            if left != a.left[input_ancestry]
+                || right != a.right[input_ancestry]
+                || last_input_unary != a.unary_mapping[input_ancestry]
+            {
+                changed = true;
+            }
+        } else { changed = true; }
 
-        if !matched {
-            println!("not matched on {aleft} {aright} {input_unary:?}");
-            changed = true;
-        }
+        //if !matched {
+        //    println!("not matched on {aleft} {aright} {input_unary:?}");
+        //    changed = true;
+        //}
         input_ancestry += 1;
     }
     //while let Some((left, right, overlaps)) = current_overlaps {
