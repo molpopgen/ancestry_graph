@@ -518,7 +518,8 @@ fn process_queued_node(
     //    input_ancestry += 1;
     //}
 
-    assert_eq!(input_ancestry, input_ancestry_len);
+    debug_assert_eq!(input_ancestry, input_ancestry_len);
+    #[cfg(debug_assertions)]
     if changed {
         assert_ne!(graph.tables.ancestry[node.as_index()], buffers.ancestry)
     }
