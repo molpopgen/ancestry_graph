@@ -911,9 +911,9 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
             .iter()
             .cloned()
             .enumerate()
-            .filter(|(i, t)| *t != -1)
+            .filter(|(_, t)| *t != -1)
         {
-            println!("Birth time: {t}");
+            println!("Node {i}, birth time: {t}");
             for j in 0..graph.tables.edges[i].left.len() {
                 println!(
                     "edge {} {} {:?}",
