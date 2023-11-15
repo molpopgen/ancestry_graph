@@ -71,7 +71,6 @@ impl Ancestry {
             None
         };
         if let Some(lright) = to_squash {
-            println!("squashing");
             *lright = right;
             true
         } else {
@@ -158,10 +157,10 @@ impl Tables {
     }
 }
 
-struct Graph {
+pub struct Graph {
     tables: Tables,
     node_heap: NodeHeap,
-    current_time: i64,
+    pub current_time: i64,
     genome_length: i64,
     free_nodes: Vec<usize>,
 }
@@ -378,9 +377,7 @@ fn process_queued_node(
     buffers: &mut TempBuffers,
     graph: &mut Graph,
 ) -> bool {
-    println!("visiting node {node:?}");
     let mut overlapper = Overlapper::new(queue);
-    println!("{overlapper:?}");
     let mut current_overlaps = overlapper.calculate_next_overlap_set();
     let mut changed = false;
     let mut input_ancestry = 0_usize;
@@ -414,7 +411,6 @@ fn process_queued_node(
                         last_right = Some(right);
                     }
                 } else {
-                    println!("overlap");
                     for o in overlaps.iter() {
                         let child = match o.unary_mapping {
                             Some(u) => u,
@@ -467,10 +463,6 @@ fn process_queued_node(
             changed = true;
         }
 
-        //if !matched {
-        //    println!("not matched on {aleft} {aright} {input_unary:?}");
-        //    changed = true;
-        //}
         input_ancestry += 1;
     }
     //while let Some((left, right, overlaps)) = current_overlaps {
@@ -533,12 +525,11 @@ fn process_queued_node(
     changed
 }
 
-fn propagate_changes(graph: &mut Graph) {
+pub fn propagate_changes(graph: &mut Graph) {
     let mut queue = vec![];
     let mut buffers = TempBuffers::default();
     let mut visited = 0;
     let mut ttl_changed = 0;
-    let with_edges = graph.tables.edges.iter().filter(|e| !e.is_empty()).count();
     while let Some(node) = graph.node_heap.pop() {
         visited += 1;
         // println!("processing {node:?}");
@@ -648,7 +639,6 @@ fn propagate_changes(graph: &mut Graph) {
             buffers.clear();
         }
     }
-    println!("visited {visited} {ttl_changed} {with_edges}");
 }
 
 fn enqueue_parent(parent: Node, birth_time: &[i64], node_heap: &mut NodeHeap) {
@@ -795,12 +785,6 @@ fn validate_reachable_nodes(graph: &Graph, alive: &[Node]) {
             }
         }
     }
-    println!(
-        "{} {} {}",
-        (edges as f64) / reachable.len() as f64,
-        (ancestry as f64) / reachable.len() as f64,
-        reachable.len()
-    )
 }
 
 #[cfg(test)]
@@ -846,7 +830,6 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
             let right_parent = parents[pindex];
             let right_tsk_parent = tsk_parents[pindex];
             let breakpoint = rng.sample(sample_breakpoint);
-            println!("{left_parent:?} {right_parent:?} {left_tsk_parent:?} {right_tsk_parent:?} {breakpoint} {child:?} {tsk_child}");
             tables
                 .add_edge(0., breakpoint as f64, left_tsk_parent, tsk_child)
                 .unwrap();

@@ -7,7 +7,7 @@ mod overlapper_experiments;
 
 mod flags;
 
-mod vector_backed_graph;
+pub mod vector_backed_graph;
 
 use flags::PropagationOptions;
 
