@@ -463,7 +463,9 @@ fn process_queued_node(
             {
                 changed = true;
             }
-        } else { changed = true; }
+        } else {
+            changed = true;
+        }
 
         //if !matched {
         //    println!("not matched on {aleft} {aright} {input_unary:?}");
@@ -904,6 +906,14 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
         .filter(|&&t| t != -1)
         .count();
     if num_nodes != u64::from(treeseq.nodes().num_rows()) as usize {
+        println!("raw node details:");
+        for (i, n) in graph.tables.nodes.birth_time.iter().enumerate() {
+            println!(
+                "{i} {n} {} {}",
+                graph.tables.edges[i].len(),
+                graph.tables.ancestry[i].len()
+            );
+        }
         for (i, t) in graph
             .tables
             .nodes
