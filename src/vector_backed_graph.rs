@@ -829,6 +829,10 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
         //println!("{gen}");
         graph.current_time += 1;
         for _ in 0..popsize {
+        for &i in &parents {
+            // mark them as "dead".
+            graph.enqueue_parent(i);
+        }
             let child = graph.add_birth();
             children.push(child);
             let tsk_child = tables
@@ -863,10 +867,10 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
 
         validate_reachable_nodes(&graph, &children);
 
-        for &i in &children {
-            // mark them as "dead".
-            graph.enqueue_parent(i);
-        }
+        //for &i in &children {
+        //    // mark them as "dead".
+        //    graph.enqueue_parent(i);
+        //}
 
         std::mem::swap(&mut parents, &mut children);
         children.clear();
@@ -1433,7 +1437,7 @@ mod haploid_wf_tests {
     proptest! {
         #[test]
         fn test_10_individuals(seed in 0..u64::MAX) {
-            let g = haploid_wf(10, 1, 10000000, seed);
+            let g = haploid_wf(10, 100, 10000000, seed);
         }
     }
 
