@@ -939,6 +939,9 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
                 println!("node {i}: {} {} {:?}", e.left[j], e.right[j], e.child[j],);
             }
         }
+        for node in treeseq.nodes_iter() {
+            println!("{node:?}");
+        }
         for edge in treeseq.edges_iter() {
             println!("{edge:?}");
         }
