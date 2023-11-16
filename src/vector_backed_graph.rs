@@ -316,6 +316,12 @@ fn ancestry_intersection(
             .zip(anode.right.iter())
             .zip(anode.unary_mapping.iter())
         {
+            // Ancestry must be sorted by left coordinat,
+            // meaning no more segments can possibly overlap
+            // NOTE: could also do this via take_while in the zip steps.
+            if aleft >= eright {
+                break;
+            }
             if eright > aleft && aright > eleft {
                 let left = std::cmp::max(eleft, aleft);
                 let right = std::cmp::min(eright, aright);
@@ -325,11 +331,6 @@ fn ancestry_intersection(
                     node,
                     unary_mapping,
                 })
-            } else if aleft >= eright {
-                // Ancestry must be sorted by left coordinat,
-                // meaning no more segments can possibly overlap
-                // NOTE: could also do this via take_while in the zip steps.
-                break;
             }
         }
     }
@@ -647,7 +648,7 @@ pub fn propagate_changes(parents: &[Node], graph: &mut Graph) {
 }
 
 fn enqueue_parent(parent: Node, birth_time: &[i64], node_heap: &mut NodeHeap) {
-    if !node_heap.queued_nodes[parent.as_index()]  {
+    if !node_heap.queued_nodes[parent.as_index()] {
         node_heap.queued_nodes[parent.as_index()] = true;
         node_heap.node_queue.push(QueuedNode {
             node: parent,
