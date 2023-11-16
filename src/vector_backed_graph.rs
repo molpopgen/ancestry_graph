@@ -285,7 +285,6 @@ impl TempBuffers {
         self.edges.push(Edge { left, right, child })
     }
 
-    #[inline(never)]
     fn sort_edges(&mut self) {
         self.edges.sort_unstable_by_key(|e| (e.child, e.left));
     }
@@ -460,6 +459,71 @@ fn process_queued_node(
     changed
 }
 
+#[inline(never)]
+fn squash_output_edges(node: Node, graph: &mut Graph, buffers: &mut TempBuffers) {
+    buffers.sort_edges();
+    {
+        let node_edges = &mut graph.tables.edges[node.as_index()];
+        node_edges.clear();
+        let mut last_right: Option<i64> = None;
+        let mut last_child: Option<Node> = None;
+        for edge in buffers.edges.iter() {
+            let to_squash = if let Some(lright) = last_right {
+                lright == edge.left && last_child == Some(edge.child)
+            } else {
+                false
+            };
+            if to_squash {
+                let len = node_edges.right.len() - 1;
+                node_edges.right[len] = edge.right;
+            } else {
+                node_edges.left.push(edge.left);
+                node_edges.right.push(edge.right);
+                node_edges.child.push(edge.child);
+            }
+            last_right = Some(edge.right);
+            last_child = Some(edge.child);
+        }
+    }
+}
+
+#[inline(never)]
+fn post_processing(node: Node, changed: bool, graph: &mut Graph, buffers: &mut TempBuffers) {
+    // TODO: the next steps should be a new fn
+    if buffers.edges.is_empty() {
+        // Node has gone extinct
+        graph.free_nodes.push(node.as_index());
+        graph.tables.nodes.birth_time[node.as_index()] = -1;
+    }
+    squash_output_edges(node, graph, buffers);
+    std::mem::swap(
+        &mut graph.tables.ancestry[node.as_index()],
+        &mut buffers.ancestry,
+    );
+    for &c in buffers.children.iter() {
+        debug_assert!(!graph.tables.parents[c.as_index()].contains(&node));
+        graph.tables.parents[c.as_index()].push(node);
+    }
+    std::mem::swap(
+        &mut graph.tables.children[node.as_index()],
+        &mut buffers.children,
+    );
+
+    // TODO: parent queuing should be a separate fn
+    if changed {
+        debug_assert_ne!(graph.tables.ancestry[node.as_index()], buffers.ancestry);
+        for &parent in graph.tables.parents[node.as_index()].iter() {
+            enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    if !changed {
+        debug_assert_eq!(graph.tables.ancestry[node.as_index()], buffers.ancestry);
+    }
+    buffers.clear();
+}
+
 pub fn propagate_changes(parents: &[Node], graph: &mut Graph) {
     graph.node_heap.queued_nodes.fill(false);
     graph
@@ -514,64 +578,7 @@ pub fn propagate_changes(parents: &[Node], graph: &mut Graph) {
         } else {
             let changed = process_queued_node(node, &queue, &mut buffers, graph);
             assert!(!graph.tables.ancestry[node.as_index()].is_empty());
-            // println!("{node:?} -> {changed}");
-
-            // TODO: the next steps should be a new fn
-            if buffers.edges.is_empty() {
-                // Node has gone extinct
-                graph.free_nodes.push(node.as_index());
-                graph.tables.nodes.birth_time[node.as_index()] = -1;
-            }
-            buffers.sort_edges();
-            {
-                let node_edges = &mut graph.tables.edges[node.as_index()];
-                node_edges.clear();
-                let mut last_right: Option<i64> = None;
-                let mut last_child: Option<Node> = None;
-                for edge in buffers.edges.iter() {
-                    let to_squash = if let Some(lright) = last_right {
-                        lright == edge.left && last_child == Some(edge.child)
-                    } else {
-                        false
-                    };
-                    if to_squash {
-                        let len = node_edges.right.len() - 1;
-                        node_edges.right[len] = edge.right;
-                    } else {
-                        node_edges.left.push(edge.left);
-                        node_edges.right.push(edge.right);
-                        node_edges.child.push(edge.child);
-                    }
-                    last_right = Some(edge.right);
-                    last_child = Some(edge.child);
-                }
-            }
-            std::mem::swap(
-                &mut graph.tables.ancestry[node.as_index()],
-                &mut buffers.ancestry,
-            );
-            for &c in buffers.children.iter() {
-                debug_assert!(!graph.tables.parents[c.as_index()].contains(&node));
-                graph.tables.parents[c.as_index()].push(node);
-            }
-            std::mem::swap(
-                &mut graph.tables.children[node.as_index()],
-                &mut buffers.children,
-            );
-
-            // TODO: parent queuing should be a separate fn
-            if changed {
-                debug_assert_ne!(graph.tables.ancestry[node.as_index()], buffers.ancestry);
-                for &parent in graph.tables.parents[node.as_index()].iter() {
-                    enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
-                }
-            }
-
-            #[cfg(debug_assertions)]
-            if !changed {
-                debug_assert_eq!(graph.tables.ancestry[node.as_index()], buffers.ancestry);
-            }
-            buffers.clear();
+            post_processing(node, changed, graph, &mut buffers);
         }
     }
 }
