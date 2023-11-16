@@ -4,7 +4,7 @@ use crate::QueuedNode;
 
 #[derive(Default, Debug)]
 struct NodeHeap {
-    queued_nodes: Vec<usize>,
+    queued_nodes: Vec<bool>,
     node_queue: std::collections::BinaryHeap<QueuedNode>,
 }
 
@@ -530,11 +530,11 @@ fn process_queued_node(
 }
 
 pub fn propagate_changes(parents: &[Node], graph: &mut Graph) {
-    graph.node_heap.queued_nodes.fill(0);
+    graph.node_heap.queued_nodes.fill(false);
     graph
         .node_heap
         .queued_nodes
-        .resize(graph.tables.nodes.birth_time.len(), 0);
+        .resize(graph.tables.nodes.birth_time.len(), false);
     for p in parents.iter().cloned() {
         graph.enqueue_parent(p)
     }
@@ -650,8 +650,8 @@ pub fn propagate_changes(parents: &[Node], graph: &mut Graph) {
 }
 
 fn enqueue_parent(parent: Node, birth_time: &[i64], node_heap: &mut NodeHeap) {
-    if node_heap.queued_nodes[parent.as_index()] == 0 {
-        node_heap.queued_nodes[parent.as_index()] += 1;
+    if !node_heap.queued_nodes[parent.as_index()]  {
+        node_heap.queued_nodes[parent.as_index()] = true;
         node_heap.node_queue.push(QueuedNode {
             node: parent,
             birth_time: birth_time[parent.as_index()],
@@ -738,7 +738,7 @@ fn validate_reachable_nodes(graph: &Graph, alive: &[Node]) {
     // FIXME: HACK
     node_heap
         .queued_nodes
-        .resize(graph.tables.nodes.birth_time.len(), 0);
+        .resize(graph.tables.nodes.birth_time.len(), false);
     for &node in alive {
         for &parent in graph.tables.parents[node.as_index()].iter() {
             enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut node_heap);
