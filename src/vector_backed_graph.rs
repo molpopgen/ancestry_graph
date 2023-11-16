@@ -288,6 +288,7 @@ impl TempBuffers {
         //self.edges.push(Edge { left, right, child })
     }
 
+    #[inline(never)]
     fn push_output_edge(&mut self, left: i64, right: i64, child: Node) {
         if let Some(index) = self.edges.child.iter().rev().position(|c| c == &child) {
             let index = self.edges.child.len() - 1 - index;
