@@ -393,7 +393,7 @@ fn process_queued_node(
         let mut last_right: Option<i64> = None;
         let mut last_input_unary: Option<Node> = None;
         while let Some((left, right, overlaps)) = current_overlaps {
-            if left > aright {
+            if left > aright || aright < right {
                 break;
             }
             if right > aleft && aright > left {
@@ -433,9 +433,6 @@ fn process_queued_node(
                         last_right = Some(right);
                     }
                 }
-            }
-            if aright < right {
-                break;
             }
             current_overlaps = overlapper.calculate_next_overlap_set();
         }
