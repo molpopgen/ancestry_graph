@@ -409,6 +409,9 @@ fn process_queued_node(
         let mut last_right: Option<i64> = None;
         let mut last_input_unary: Option<Node> = None;
         while let Some((left, right, overlaps)) = current_overlaps {
+            // NOTE: the interval_overlap tests
+            // in the mod below will fail
+            // with these tests done this way??
             if left > aright || aright < right {
                 break;
             }
@@ -1541,50 +1544,34 @@ mod design_list_difference_calculations {
     }
 
     fn interval_delta(a: &[Interval], b: &[Interval]) -> Vec<Interval> {
-        // We can, on paper, think of this as an iterator
-        // problem: given a and the last interval that did overlap,
-        // we can output the next sub-interval, etc..
-        todo!("consider this as an iterator problem");
-        let mut rv = vec![];
-
         let mut ai = 0_usize;
         let mut bi = 0_usize;
-        while ai < a.len() && bi < b.len() {
-            while ai < a.len() && a[ai].right < b[bi].left {
-                // segments entirely lost from a b4 anything in b exists
-                rv.push(a[ai]);
-                ai += 1;
-            }
-            if ai >= a.len() {
-                break;
-            }
+        let mut rv = vec![];
 
+        while ai < a.len() {
             let aleft = a[ai].left;
             let aright = a[ai].right;
-            let bleft = b[bi].left;
-            let bright = b[bi].right;
-
-            if aright > bleft && bright > aleft {
-                if aleft != bleft {
-                    rv.push(Interval::new(
-                        std::cmp::min(aleft, bleft),
-                        std::cmp::max(aleft, bleft),
-                    ))
+            let mut last_left = -1;
+            let mut last_right = i64::MAX;
+            while bi < b.len() {
+                let bleft = b[bi].left;
+                let bright = b[bi].right;
+                if bleft >= aright {
+                    break;
                 }
-                if aright != bright {
-                    rv.push(Interval::new(
-                        std::cmp::min(aright, bright),
-                        std::cmp::max(aright, bright),
-                    ))
+                println!("{:?} {:?}", a[ai], b[bi]);
+                if bright > aleft && aright > bleft {
+                    rv.push(Interval::new(aleft, aright));
+                    last_left = std::cmp::max(aleft, bleft);
+                    last_right = std::cmp::min(aright, bright);
                 }
+                if aright < bright {
+                    break;
+                }
+                bi += 1;
             }
+            println!("{aleft} {aright} {last_left} {last_right}");
             ai += 1;
-            bi += 1;
-        }
-
-        // segments at the end of a not found in b
-        for i in &a[ai..] {
-            rv.push(*i)
         }
 
         rv
