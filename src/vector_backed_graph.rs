@@ -1565,7 +1565,7 @@ mod design_list_difference_calculations {
                 }
                 println!("{:?} {:?}", a[ai], b[bi]);
                 if bright > aleft && aright > bleft {
-                    rv.push(Interval::new(aleft, aright));
+                    //rv.push(Interval::new(aleft, aright));
                     last_left = std::cmp::max(aleft, bleft);
                     last_right = std::cmp::min(aright, bright);
                 }
@@ -1575,6 +1575,24 @@ mod design_list_difference_calculations {
                 bi += 1;
             }
             println!("{aleft} {aright} {last_left} {last_right}");
+            if last_left == -1 {
+                // entire interval was skipped
+                rv.push(Interval::new(aleft, aright))
+            } else {
+                if last_left != aleft {
+                    rv.push(Interval::new(
+                        std::cmp::min(last_left, aleft),
+                        std::cmp::max(last_left, aleft),
+                    ))
+                }
+
+                if last_right != aright {
+                    rv.push(Interval::new(
+                        std::cmp::min(last_right, aright),
+                        std::cmp::max(last_right, aright),
+                    ))
+                }
+            }
             ai += 1;
         }
 
