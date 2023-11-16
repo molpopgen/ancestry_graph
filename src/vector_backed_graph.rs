@@ -412,9 +412,10 @@ fn process_queued_node(
             // NOTE: the interval_overlap tests
             // in the mod below will fail
             // with these tests done this way??
-            if left > aright || aright < right {
+            if left > aright {
                 break;
             }
+
             if right > aleft && aright > left {
                 if overlaps.len() == 1 {
                     let unary_mapping = match overlaps[0].unary_mapping {
@@ -452,6 +453,9 @@ fn process_queued_node(
                         last_right = Some(right);
                     }
                 }
+            }
+            if aright < right {
+                break;
             }
             current_overlaps = overlapper.calculate_next_overlap_set();
         }
