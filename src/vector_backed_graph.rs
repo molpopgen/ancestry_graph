@@ -734,6 +734,11 @@ fn ancestry_contains(
 #[cfg(test)]
 fn validate_reachable_nodes(graph: &Graph, alive: &[Node]) {
     let mut node_heap = NodeHeap::default();
+
+    // FIXME: HACK
+    node_heap
+        .queued_nodes
+        .resize(graph.tables.nodes.birth_time.len(), 0);
     for &node in alive {
         for &parent in graph.tables.parents[node.as_index()].iter() {
             enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut node_heap);
@@ -821,10 +826,10 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
         //println!("{gen}");
         graph.current_time += 1;
         for _ in 0..popsize {
-            for &i in &parents {
-                // mark them as "dead".
-                graph.enqueue_parent(i);
-            }
+            //for &i in &parents {
+            //    // mark them as "dead".
+            //    graph.enqueue_parent(i);
+            //}
             let child = graph.add_birth();
             children.push(child);
             let tsk_child = tables
@@ -849,12 +854,10 @@ fn haploid_wf(popsize: usize, ngenerations: i64, genome_length: i64, seed: u64) 
                     tsk_child,
                 )
                 .unwrap();
-            graph.enqueue_parent(left_parent);
-            graph.enqueue_parent(right_parent);
             graph.record_transmission(0, breakpoint, left_parent, child);
             graph.record_transmission(breakpoint, genome_length, right_parent, child);
         }
-        propagate_changes(&mut graph);
+        propagate_changes(&parents, &mut graph);
 
         validate_reachable_nodes(&graph, &children);
 
@@ -1044,11 +1047,9 @@ mod single_tree_tests {
             graph.tables.parents[unary_child].push(Node(node))
         }
 
-        for node in [1, 3] {
-            graph.enqueue_parent(Node(node))
-        }
+        let parents = vec![Node(1), Node(3)];
 
-        propagate_changes(&mut graph);
+        propagate_changes(&parents, &mut graph);
 
         assert_eq!(graph.tables.children[0].len(), 2);
         for node in [4, 5] {
@@ -1126,8 +1127,8 @@ mod single_tree_tests {
         graph.tables.parents.push(vec![Node(2)]);
         graph.tables.parents.push(vec![Node(0)]);
 
-        graph.enqueue_parent(Node(1));
-        propagate_changes(&mut graph);
+        let parents = vec![Node(1)];
+        propagate_changes(&parents, &mut graph);
 
         assert_eq!(graph.tables.children[0].len(), 2);
         for i in [2, 4] {
@@ -1241,11 +1242,9 @@ mod multi_tree_tests {
             graph.tables.children.push(vec![]);
         }
 
-        for &i in graph.tables.parents[5].iter() {
-            enqueue_parent(i, &graph.tables.nodes.birth_time, &mut graph.node_heap);
-        }
         assert!(!graph.tables.parents[5].is_empty());
-        propagate_changes(&mut graph);
+        let parents = vec![Node(5)];
+        propagate_changes(&parents, &mut graph);
 
         for node in [1, 2] {
             assert_eq!(
@@ -1292,12 +1291,10 @@ mod multi_tree_tests {
 
         assert!(graph.tables.parents[5].is_empty());
 
-        // NOTE: 5 is not in the list because we have
-        // manually forced it to be "extinct".
-        for node in [0] {
+        for node in [0, 5] {
             assert!(graph.free_nodes.contains(&node), "{node}")
         }
-        assert_eq!(graph.free_nodes.len(), 1)
+        assert_eq!(graph.free_nodes.len(), 2, "{:?}", graph.free_nodes)
     }
 
     // Tree 0:
@@ -1384,11 +1381,12 @@ mod multi_tree_tests {
         graph.tables.children.push(vec![Node(6)]);
         graph.tables.children.push(vec![]);
 
+        let mut parents = vec![];
         for node in [3, 4, 5] {
-            graph.enqueue_parent(Node(node));
+            parents.push(Node(node));
         }
 
-        propagate_changes(&mut graph);
+        propagate_changes(&parents, &mut graph);
 
         assert!(graph.tables.parents[6].is_empty());
         assert_eq!(graph.tables.ancestry[6].len(), 1);
