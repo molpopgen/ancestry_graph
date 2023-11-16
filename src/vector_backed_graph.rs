@@ -86,11 +86,11 @@ impl Ancestry {
     }
 }
 
-struct Edge {
-    left: i64,
-    right: i64,
-    child: Node,
-}
+// struct Edge {
+//     left: i64,
+//     right: i64,
+//     child: Node,
+// }
 
 #[derive(Default, Debug)]
 pub struct Edges {
@@ -269,7 +269,7 @@ impl<'q> Overlapper<'q> {
 
 #[derive(Default)]
 struct TempBuffers {
-    edges: Vec<Edge>,
+    edges: Edges,
     ancestry: Ancestry,
     children: Vec<Node>,
 }
@@ -282,12 +282,28 @@ impl TempBuffers {
     }
 
     fn push_edge(&mut self, left: i64, right: i64, child: Node) {
-        self.edges.push(Edge { left, right, child })
+        self.edges.left.push(left);
+        self.edges.right.push(right);
+        self.edges.child.push(child);
+        //self.edges.push(Edge { left, right, child })
     }
 
-    fn sort_edges(&mut self) {
-        self.edges.sort_unstable_by_key(|e| (e.child, e.left));
+    fn push_output_edge(&mut self, left: i64, right: i64, child: Node) {
+        if let Some(index) = self.edges.child.iter().rev().position(|c| c == &child) {
+            let index = self.edges.child.len() - 1 - index;
+            if self.edges.right[index] == left {
+                self.edges.right[index] = right
+            } else {
+                self.push_edge(left, right, child)
+            }
+        } else {
+            self.push_edge(left, right, child)
+        }
     }
+
+    //fn sort_edges(&mut self) {
+    //    self.edges.sort_unstable_by_key(|e| (e.child, e.left));
+    //}
 }
 
 #[inline(never)]
@@ -417,7 +433,7 @@ fn process_queued_node(
                             Some(u) => u,
                             None => o.node,
                         };
-                        buffers.push_edge(left, right, child);
+                        buffers.push_output_edge(left, right, child);
 
                         // Should be faster than a hash for scores of children.
                         if !buffers.children.contains(&child) {
@@ -461,30 +477,31 @@ fn process_queued_node(
 
 #[inline(never)]
 fn squash_output_edges(node: Node, graph: &mut Graph, buffers: &mut TempBuffers) {
-    buffers.sort_edges();
-    {
-        let node_edges = &mut graph.tables.edges[node.as_index()];
-        node_edges.clear();
-        let mut last_right: Option<i64> = None;
-        let mut last_child: Option<Node> = None;
-        for edge in buffers.edges.iter() {
-            let to_squash = if let Some(lright) = last_right {
-                lright == edge.left && last_child == Some(edge.child)
-            } else {
-                false
-            };
-            if to_squash {
-                let len = node_edges.right.len() - 1;
-                node_edges.right[len] = edge.right;
-            } else {
-                node_edges.left.push(edge.left);
-                node_edges.right.push(edge.right);
-                node_edges.child.push(edge.child);
-            }
-            last_right = Some(edge.right);
-            last_child = Some(edge.child);
-        }
-    }
+    std::mem::swap(&mut graph.tables.edges[node.as_index()], &mut buffers.edges);
+    //buffers.sort_edges();
+    //{
+    //    let node_edges = &mut graph.tables.edges[node.as_index()];
+    //    node_edges.clear();
+    //    let mut last_right: Option<i64> = None;
+    //    let mut last_child: Option<Node> = None;
+    //    for edge in buffers.edges.iter() {
+    //        let to_squash = if let Some(lright) = last_right {
+    //            lright == edge.left && last_child == Some(edge.child)
+    //        } else {
+    //            false
+    //        };
+    //        if to_squash {
+    //            let len = node_edges.right.len() - 1;
+    //            node_edges.right[len] = edge.right;
+    //        } else {
+    //            node_edges.left.push(edge.left);
+    //            node_edges.right.push(edge.right);
+    //            node_edges.child.push(edge.child);
+    //        }
+    //        last_right = Some(edge.right);
+    //        last_child = Some(edge.child);
+    //    }
+    //}
 }
 
 #[inline(never)]
