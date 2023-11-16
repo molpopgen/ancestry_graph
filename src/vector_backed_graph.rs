@@ -322,7 +322,8 @@ fn ancestry_intersection(
             if aleft >= eright {
                 break;
             }
-            if eright > aleft && aright > eleft {
+            // NOTE: previous check implise eright > aleft
+            if aright > eleft {
                 let left = std::cmp::max(eleft, aleft);
                 let right = std::cmp::min(eright, aright);
                 queue.push(AncestryIntersection {
