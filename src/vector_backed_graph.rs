@@ -471,10 +471,7 @@ pub fn propagate_changes(parents: &[Node], graph: &mut Graph) {
     }
     let mut queue = vec![];
     let mut buffers = TempBuffers::default();
-    let mut visited = 0;
-    let mut ttl_changed = 0;
     while let Some(node) = graph.node_heap.pop() {
-        visited += 1;
         // println!("processing {node:?}");
         //graph.node_heap.queued_nodes.remove(&node);
         ancestry_intersection(
@@ -491,13 +488,13 @@ pub fn propagate_changes(parents: &[Node], graph: &mut Graph) {
             // TODO: this logic can be a separate fn
 
             #[cfg(debug_assertions)]
-            for &c in graph.tables.edges[node.as_index()].child.iter() {
-                assert!(!graph.tables.parents[c.as_index()].contains(&node))
-            }
-            // FIXME: remove b/c this is only for testing
-            #[cfg(debug_assertions)]
-            for &c in graph.tables.children[node.as_index()].iter() {
-                assert!(!graph.tables.parents[c.as_index()].contains(&node))
+            {
+                for &c in graph.tables.edges[node.as_index()].child.iter() {
+                    assert!(!graph.tables.parents[c.as_index()].contains(&node))
+                }
+                for &c in graph.tables.children[node.as_index()].iter() {
+                    assert!(!graph.tables.parents[c.as_index()].contains(&node))
+                }
             }
 
             // clearing edges is the "mark" of a node
@@ -564,7 +561,6 @@ pub fn propagate_changes(parents: &[Node], graph: &mut Graph) {
 
             // TODO: parent queuing should be a separate fn
             if changed {
-                ttl_changed += 1;
                 debug_assert_ne!(graph.tables.ancestry[node.as_index()], buffers.ancestry);
                 for &parent in graph.tables.parents[node.as_index()].iter() {
                     enqueue_parent(parent, &graph.tables.nodes.birth_time, &mut graph.node_heap)
