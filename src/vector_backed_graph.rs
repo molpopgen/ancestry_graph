@@ -439,19 +439,6 @@ fn process_queued_node(
             }
             current_overlaps = overlapper.calculate_next_overlap_set();
         }
-        //if let Some((left, right, overlaps)) = current_overlaps {
-        //    while input_ancestry < input_ancestry_len
-        //        && graph.tables.ancestry[node.as_index()].right[input_ancestry] <= left
-        //    {
-        //        changed = true;
-        //        input_ancestry += 1;
-        //    }
-        //    let (input_left, input_right, input_unary) =
-        //        graph.tables.ancestry[node.as_index()].ancestry(input_ancestry);
-        //    assert!(input_right > left && right > input_left);
-        //} else {
-        //    break;
-        //}
         if let Some(left) = last_left {
             let right = last_right.unwrap();
             let a = &graph.tables.ancestry[node.as_index()];
@@ -467,58 +454,6 @@ fn process_queued_node(
 
         input_ancestry += 1;
     }
-    //while let Some((left, right, overlaps)) = current_overlaps {
-    //    println!("{left} {right} {overlaps:?} | {input_ancestry} {input_ancestry_len}");
-    //    if input_ancestry < input_ancestry_len {
-    //        println!(
-    //            "{:?}",
-    //            graph.tables.ancestry[node.as_index()].ancestry(input_ancestry)
-    //        )
-    //    }
-    //    while input_ancestry < input_ancestry_len
-    //        && graph.tables.ancestry[node.as_index()].left[input_ancestry] > right
-    //    {
-    //        changed = true;
-    //        println!("increment early");
-    //        input_ancestry += 1;
-    //    }
-    //    let (input_left, input_right, input_unary) =
-    //        graph.tables.ancestry[node.as_index()].ancestry(input_ancestry);
-    //    if left != input_left || right != input_right {
-    //        changed = true;
-    //    }
-    //    // println!("{left},{right},{overlaps:?}");
-    //    if overlaps.len() == 1 {
-    //        let unary_mapping = match overlaps[0].unary_mapping {
-    //            // Propagate the unary mapping up the graph
-    //            Some(u) => Some(u),
-    //            // The unary mapping becomes the overlapped child node
-    //            None => Some(overlaps[0].node),
-    //        };
-    //        // println!("unary {unary_mapping:?} <-> {input_unary:?}");
-    //        if unary_mapping != input_unary {
-    //            changed = true;
-    //        }
-    //        buffers.ancestry.push(left, right, unary_mapping);
-    //    } else {
-    //        for o in overlaps.iter() {
-    //            let child = match o.unary_mapping {
-    //                Some(u) => u,
-    //                None => o.node,
-    //            };
-    //            buffers.push_edge(left, right, child);
-
-    //            // Should be faster than a hash for scores of children.
-    //            if !buffers.children.contains(&child) {
-    //                buffers.children.push(child);
-    //            }
-    //        }
-    //        buffers.ancestry.push(left, right, None);
-    //    }
-    //    current_overlaps = overlapper.calculate_next_overlap_set();
-    //    println!("increment late");
-    //    input_ancestry += 1;
-    //}
 
     debug_assert_eq!(input_ancestry, input_ancestry_len);
     #[cfg(debug_assertions)]
