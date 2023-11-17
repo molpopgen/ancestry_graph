@@ -1557,13 +1557,14 @@ mod design_list_difference_calculations {
             let aright = a[ai].right;
             let mut last_left = -1;
             let mut last_right = i64::MAX;
+            println!("a: {aleft} {aright}");
             while bi < b.len() {
                 let bleft = b[bi].left;
                 let bright = b[bi].right;
                 if bleft >= aright {
                     break;
                 }
-                println!("{:?} {:?}", a[ai], b[bi]);
+                println!("b {bleft:?} {bright:?}");
                 if bright > aleft && aright > bleft {
                     if aleft != last_left {
                         println!("{aleft} {last_left}");
