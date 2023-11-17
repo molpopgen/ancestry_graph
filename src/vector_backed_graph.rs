@@ -1557,6 +1557,7 @@ mod design_list_difference_calculations {
             let aright = a[ai].right;
             let mut last_left = -1;
             let mut last_right = i64::MAX;
+            let mut lright = 0;
             println!("a: {aleft} {aright}");
             while bi < b.len() {
                 let bleft = b[bi].left;
@@ -1564,13 +1565,16 @@ mod design_list_difference_calculations {
                 if bleft >= aright {
                     break;
                 }
-                println!("b {bleft:?} {bright:?}");
+                if bleft != lright {
+                    println!("overhang: {lright} {bleft}");
+                }
+                println!("b {bleft:?} {bright:?} -> {lright}");
                 if bright > aleft && aright > bleft {
                     if aleft != last_left {
                         println!("{aleft} {last_left}");
-                            if last_left != -1 && aleft < last_left {
-                                rv.push(Interval::new(aleft,last_left))
-                            }
+                        if last_left != -1 && aleft < last_left {
+                            rv.push(Interval::new(aleft, last_left))
+                        }
                     }
                     //rv.push(Interval::new(aleft, aright));
                     last_left = std::cmp::max(aleft, bleft);
@@ -1579,14 +1583,14 @@ mod design_list_difference_calculations {
                 if aright < bright {
                     break;
                 }
+                lright = bright;
                 bi += 1;
             }
             println!("{aleft} {aright} {last_left} {last_right}");
             if last_left == -1 {
                 // entire interval was skipped
                 rv.push(Interval::new(aleft, aright))
-            } 
-            else {
+            } else {
                 if last_left != aleft {
                     rv.push(Interval::new(
                         std::cmp::min(last_left, aleft),
