@@ -8,16 +8,17 @@ def interval_delta(a, b):
         left = a[ai][0]
         match = False
         while bi < len(b) and b[bi][0] < right:
+            bleft = b[bi][0]
+            bright = b[bi][1]
             print(a[ai], b[bi])
-            if b[bi][0] < right:
+            if bleft < right:
                 match = True
-                if b[bi][0] > left:
-                    rv.append((left, b[bi][0]))
-            if b[bi][1] != right:
+                if bleft > left:
+                    rv.append((left, bleft))
+            if bright != right:
                 match = True
-                rv.append((min(right, b[bi][1]), max((right, b[bi][1]))))
-            if b[bi][0] < right:
-                bi += 1
+                rv.append((min(right, bright), max((right, bright))))
+            bi += 1
             print(rv)
         if not match:
             rv.append((left, right))
