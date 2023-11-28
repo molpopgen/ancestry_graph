@@ -43,3 +43,17 @@ def test1():
     b = [(50, 73)]
     c = interval_delta(a, b)
     validate(c, [(0, 10), (10, 50), (73, 100)])
+
+
+def test2():
+    a = [(0, 10), (40, 80), (90, 100)]
+    b = [(50, 73)]
+    c = interval_delta(a, b)
+    validate(c, [(0, 10), (40, 50), (73, 80), (90, 100)])
+
+
+def test3():
+    a = [(0, 10)]
+    b = [(0, 10)]
+    c = interval_delta(a, b)
+    validate(c, [])
