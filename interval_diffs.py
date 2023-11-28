@@ -11,13 +11,15 @@ def interval_delta(a, b):
             bleft = b[bi][0]
             bright = b[bi][1]
             print(a[ai], b[bi])
-            if bleft < right:
+            if right > bleft and bright > left:
                 match = True
-                if bleft > left:
-                    rv.append((left, bleft))
-            if bright != right:
-                match = True
-                rv.append((min(right, bright), max((right, bright))))
+                if bleft < right:
+                    if bleft > left:
+                        rv.append((left, bleft))
+                if bright != right:
+                    rv.append((min(right, bright), max((right, bright))))
+            else:
+                break
             bi += 1
             print(rv)
         if not match:
