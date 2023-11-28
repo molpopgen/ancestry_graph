@@ -1,5 +1,40 @@
 def interval_delta(a, b):
     rv = []
+    k = 0
+    last_right = a[0][0]
+    for ai in a:
+        matched = False
+        for bi in b[k:]:
+            if ai[0] >= bi[1]:
+                break
+            if bi[1] > ai[0] and ai[1] > bi[0]:
+                matched = True
+                if ai[0] < bi[0]:
+                    rv.append((ai[0], bi[0]))
+                # if bi[1] != ai[1]:
+                #     mr = min(bi[1], ai[1])
+                #     tl = min(mr, last_right)
+                #     tr = max(mr, last_right)
+                #     rv.append((tl, tr))
+                last_right = bi[1]
+                k += 1
+            else:
+                last_right = ai[1]
+                if matched is True:
+                    break
+                rv.append(ai)
+        if last_right < ai[1]:
+            # rv.append((last_right, ai[1]))
+            # last_right=ai[1]
+            print(f"derp: {last_right} < {ai}")
+    if last_right != a[-1][1]:
+        assert last_right < a[-1][1], f"{last_right}, {a[-1]}"
+        rv.append((last_right, a[-1][1]))
+    return rv
+
+
+def interval_delta_old(a, b):
+    rv = []
     ai = 0
     bi = 0
 
