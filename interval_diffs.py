@@ -16,7 +16,8 @@ def interval_delta(a, b):
             if b[bi][1] != right:
                 match = True
                 rv.append((min(right, b[bi][1]), max((right, b[bi][1]))))
-            bi += 1
+            if b[bi][0] < right:
+                bi += 1
             print(rv)
         if not match:
             rv.append((left, right))
