@@ -10,14 +10,17 @@ def interval_delta(a, b):
         while bi < len(b) and b[bi][0] < right:
             bleft = b[bi][0]
             bright = b[bi][1]
-            print(a[ai], b[bi])
             if right > bleft and bright > left:
                 match = True
-                if bleft < right:
-                    if bleft > left:
-                        rv.append((left, bleft))
+                print(f"{left}, {right} | {bleft}, {bright}")
+                if bleft > left:
+                    print(f"left {left} {bleft}")
+                    rv.append((left, bleft))
                 if bright != right:
-                    rv.append((min(right, bright), max((right, bright))))
+                    mr = min(right, bright)
+                    mxr = max(right, bright)
+                    print(f"right {mr} {mxr}")
+                    rv.append((mr, mxr))
             else:
                 break
             bi += 1
