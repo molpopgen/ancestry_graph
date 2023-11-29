@@ -521,6 +521,27 @@ fn post_processing(node: Node, changed: bool, graph: &mut Graph, buffers: &mut T
         graph.tables.nodes.birth_time[node.as_index()] = -1;
     }
     squash_output_edges(node, graph, buffers);
+    #[cfg(debug_assertions)]
+    {
+        let mut input_len = 0;
+        for (&i, &j) in graph.tables.ancestry[node.as_index()]
+            .left
+            .iter()
+            .zip(graph.tables.ancestry[node.as_index()].right.iter())
+        {
+            input_len += j - i
+        }
+        let mut output_len = 0;
+        for (&i, &j) in buffers
+            .ancestry
+            .left
+            .iter()
+            .zip(buffers.ancestry.right.iter())
+        {
+            output_len += j - i
+        }
+        assert!(output_len <= input_len);
+    }
     std::mem::swap(
         &mut graph.tables.ancestry[node.as_index()],
         &mut buffers.ancestry,
