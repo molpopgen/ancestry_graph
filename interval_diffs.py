@@ -18,13 +18,14 @@ def interval_subraction(i, j):
         print(i, j, ml, mr, left, right)
         return (left, right)
     else:
-        return (None, None)
+        return None
 
 
 def interval_delta(a, b):
     rv = []
     i = 0
     j = 0
+    last_right = None
     while i < len(a):
         print("a[i] = ", a[i])
         while j < len(b) and b[j][1] < a[i][0]:
@@ -32,25 +33,28 @@ def interval_delta(a, b):
             j += 1
         if j == len(b):
             break
+        last_right = None
         while j < len(b):
             print("b[j] = ", b[j])
-            l, r = interval_subraction(a[i], b[j])
-            print("x", l, r)
-            if r is None and l is None:
+            o = interval_subraction(a[i], b[j])
+            print(o)
+            if o is None:
                 break
-            if r is None:
-                if l is not None:
-                    rv.append(l)
-            while r is not None:
-                if l is not None:
-                    rv.append(l)
+            while o is not None:
+                if o[0] is not None:
+                    rv.append(o[0])
                 else:
                     break
-                l, r = interval_subraction(r, b[j])
-                print(f"got {l} {r}")
+                if o[1] is None:
+                    break
+                last_right = o[1]
+                o = interval_subraction(o[1], b[j])
+                print(f"got {o}")
             j += 1
         i += 1
-    print("dun", i, len(a))
+    print("dun", i, len(a), last_right)
+    if last_right is not None:
+        rv.append(last_right)
     for ai in a[i:]:
         rv.append(ai)
     return rv
