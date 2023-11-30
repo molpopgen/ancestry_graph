@@ -26,38 +26,33 @@ def interval_delta(a, b):
     i = 0
     j = 0
     while i < len(a):
+        print("a[i] = ", a[i])
         while j < len(b) and b[j][1] < a[i][0]:
             rv.append(b[j])
             j += 1
-        print(f"i = {i}")
-        # if j >= len(b):
-        #     rv.append(a[i])
-        matched = False
+        if j == len(b):
+            break
         while j < len(b):
-            print(f"{a[i]} {b[j]}")
-            if b[j][1] > a[i][0] and a[i][1] > b[j][0]:
-                print("overlap")
-                matched = True
-                if b[j][0] > a[i][0]:
-                    rv.append((a[i][0], b[j][0]))
-                    print("left:", rv[-1])
-                if b[j][1] != a[i][1]:
-                    tl = min(b[j][1], a[i][1])
-                    tr = max(b[j][1], a[i][1])
-                    rv.append((tl, tr))
-                    print("right:", rv[-1])
-                j += 1
-            else:
-                print(f"no overlap: {a[i]}")
-                if not matched:
-                    matched = True
-                    rv.append(a[i])
+            print("b[j] = ", b[j])
+            l, r = interval_subraction(a[i], b[j])
+            print("x", l, r)
+            if r is None and l is None:
                 break
-        print(f"{i} {j}")
-        if not matched:
-            rv.append(a[i])
+            if r is None:
+                if l is not None:
+                    rv.append(l)
+            while r is not None:
+                if l is not None:
+                    rv.append(l)
+                else:
+                    break
+                l, r = interval_subraction(l, b[j])
+                print(f"got {l} {r}")
+            j += 1
         i += 1
     print("dun", i, len(a))
+    for ai in a[i:]:
+        rv.append(ai)
     return rv
 
 
