@@ -46,7 +46,7 @@ def interval_delta(a, b):
                     rv.append(l)
                 else:
                     break
-                l, r = interval_subraction(l, b[j])
+                l, r = interval_subraction(r, b[j])
                 print(f"got {l} {r}")
             j += 1
         i += 1
