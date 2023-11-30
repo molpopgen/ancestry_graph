@@ -159,9 +159,24 @@ def test_subtract3():
     a = (0, 10)
     b = (0, 7)
     c = interval_subraction(a, b)
-    print(c)
     assert c[0] is None
     assert c[1] == (7, 10)
+
+
+def test_subtract4():
+    a = (0, 10)
+    b = (7, 14)
+    c = interval_subraction(a, b)
+    assert c[0] == (0, 7)
+    assert c[1] is None
+
+
+def test_subtract5():
+    a = (7, 10)
+    b = (7, 14)
+    c = interval_subraction(a, b)
+    assert c[0] is None
+    assert c[1] is None
 
 
 def test0():
