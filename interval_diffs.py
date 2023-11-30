@@ -1,7 +1,19 @@
 def interval_subraction(i, j):
     if i[1] > j[0] and j[1] > i[0]:
+        # get the minimal overlap
+        ml = max(i[0], j[0])
+        mr = min(i[1], j[1])
+        if ml != i[0]:
+            left = (min(i[0], j[0]), ml)
+        else:
+            left = None
+        if mr != i[1]:
+            right = (mr, max(i[1], j[1]))
+        else:
+            right = None
+        print(i, j, ml, mr, left, right)
         if i[0] < j[0]:
-            return ((i[0], j[0]), (j[0], j[1]))
+            return (left, right)
     else:
         return (None, None)
 
@@ -126,7 +138,7 @@ def test_subtract0():
     b = (6, 10)
     c = interval_subraction(a, b)
     assert c[0] == (0, 6)
-    assert c[1] == (6, 10)
+    assert c[1] is None
 
 
 def test_subtract1():
@@ -134,6 +146,14 @@ def test_subtract1():
     b = (6, 10)
     c = interval_subraction(a, b)
     assert c == (None, None)
+
+
+def test_subtract2():
+    a = (0, 10)
+    b = (3, 7)
+    c = interval_subraction(a, b)
+    assert c[0] == (0, 3)
+    assert c[1] == (7, 10)
 
 
 def test0():
