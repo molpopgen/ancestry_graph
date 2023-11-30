@@ -3,10 +3,14 @@ def interval_subraction(i, j):
         # get the minimal overlap
         ml = max(i[0], j[0])
         mr = min(i[1], j[1])
+        # Extract the left overhang,
+        # if it exists
         if ml != i[0]:
             left = (min(i[0], j[0]), ml)
         else:
             left = None
+        # Calculate the right-hand remainder
+        # of i, if it exists
         if mr != i[1]:
             right = (mr, max(i[1], j[1]))
         else:
