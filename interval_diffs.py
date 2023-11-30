@@ -12,8 +12,7 @@ def interval_subraction(i, j):
         else:
             right = None
         print(i, j, ml, mr, left, right)
-        if i[0] < j[0]:
-            return (left, right)
+        return (left, right)
     else:
         return (None, None)
 
@@ -153,6 +152,15 @@ def test_subtract2():
     b = (3, 7)
     c = interval_subraction(a, b)
     assert c[0] == (0, 3)
+    assert c[1] == (7, 10)
+
+
+def test_subtract3():
+    a = (0, 10)
+    b = (0, 7)
+    c = interval_subraction(a, b)
+    print(c)
+    assert c[0] is None
     assert c[1] == (7, 10)
 
 
