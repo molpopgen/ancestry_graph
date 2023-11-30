@@ -1,3 +1,11 @@
+def interval_subraction(i, j):
+    if i[1] > j[0] and j[1] > i[0]:
+        if i[0] < j[0]:
+            return ((i[0], j[0]), (j[0], j[1]))
+    else:
+        return (None, None)
+
+
 def interval_delta(a, b):
     rv = []
     i = 0
@@ -111,6 +119,21 @@ def validate(delta, expected):
     assert len(delta) == len(expected)
     for e in expected:
         assert e in delta
+
+
+def test_subtract0():
+    a = (0, 10)
+    b = (6, 10)
+    c = interval_subraction(a, b)
+    assert c[0] == (0, 6)
+    assert c[1] == (6, 10)
+
+
+def test_subtract1():
+    a = (0, 4)
+    b = (6, 10)
+    c = interval_subraction(a, b)
+    assert c == (None, None)
 
 
 def test0():
